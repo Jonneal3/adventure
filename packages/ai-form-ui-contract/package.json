@@ -1,0 +1,21 @@
+{
+  "name": "@adventure/ai-form-ui-contract",
+  "version": "0.0.0",
+  "private": true,
+  "sideEffects": false,
+  "files": [
+    "index.ts",
+    "schema"
+  ],
+  "exports": {
+    ".": {
+      "types": "./index.ts"
+    },
+    "./schema/ui_step.types": {
+      "types": "./schema/ui_step.types.ts"
+    },
+    "./schema/ui_step.schema.json": "./schema/ui_step.schema.json",
+    "./schema/schema_version.txt": "./schema/schema_version.txt"
+  }
+}
+

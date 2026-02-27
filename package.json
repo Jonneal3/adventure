@@ -1,0 +1,25 @@
+{
+  "name": "adventure-monorepo",
+  "private": true,
+  "packageManager": "npm@10.2.4",
+  "workspaces": [
+    "adv-designer",
+    "adv-widget",
+    "adv-shopify",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:designer": "npm -w adv-designer run dev",
+    "dev:widget": "npm -w adv-widget run dev",
+    "dev:shopify": "npm -w adv-shopify run dev",
+    "build:designer": "npm -w adv-designer run build",
+    "build:widget": "npm -w adv-widget run build",
+    "build:shopify": "npm -w adv-shopify run build",
+    "lint:designer": "npm -w adv-designer run lint",
+    "lint:widget": "npm -w adv-widget run lint",
+    "lint:shopify": "npm -w adv-shopify run lint",
+    "db:update": "node scripts/update-supabase.js",
+    "sort:configs": "node scripts/sort-configs.js"
+  }
+}
+
