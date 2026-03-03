@@ -1,0 +1,3 @@
+# Centralized env management
+env/.env.shared.local
+env/generated/

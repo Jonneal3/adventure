@@ -19,7 +19,21 @@
     "lint:widget": "npm -w adv-widget run lint",
     "lint:shopify": "npm -w adv-shopify run lint",
     "db:update": "node scripts/update-supabase.js",
-    "sort:configs": "node scripts/sort-configs.js"
+    "sort:configs": "node scripts/sort-configs.js",
+    "env:doctor": "node scripts/vercel-env-manager.js doctor",
+    "env:diff": "node scripts/vercel-env-manager.js diff",
+    "env:pull": "node scripts/vercel-env-manager.js pull",
+    "env:push": "node scripts/vercel-env-manager.js push",
+    "env:cleanup-local": "node scripts/sync-local-envs.js",
+    "prod:designer": "sh -c 'cd adv-designer && vercel --prod --yes'",
+    "prod:widget": "sh -c 'cd adv-widget && vercel --prod --yes'",
+    "prod:ai-form-service": "sh -c 'cd adv-ai-form-service && vercel --prod --yes'",
+    "prod": "sh -c 'npm run prod:designer & npm run prod:widget & npm run prod:ai-form-service & wait'",
+    "deploy:designer": "npm run prod:designer",
+    "deploy:widget": "npm run prod:widget",
+    "deploy:ai-form-service": "npm run prod:ai-form-service",
+    "deploy:apps": "npm run prod",
+    "deploy": "npm run prod"
   }
 }
 
