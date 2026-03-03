@@ -1,3 +1,4 @@
 # Centralized env management
 env/.env.shared.local
+env/.env.shared.production
 env/generated/

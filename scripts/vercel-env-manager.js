@@ -7,7 +7,7 @@ const { spawnSync } = require("child_process");
 const REPO_ROOT = path.resolve(__dirname, "..");
 const ENV_DIR = path.join(REPO_ROOT, "env");
 const SCHEMA_PATH = path.join(ENV_DIR, "schema.json");
-const SOURCE_ENV_PATH = path.join(ENV_DIR, ".env.shared.local");
+const DEFAULT_SOURCE_ENV_PATH = path.join(ENV_DIR, ".env.shared.local");
 const GENERATED_DIR = path.join(ENV_DIR, "generated");
 
 function fail(message) {
@@ -66,6 +66,12 @@ function parseEnvFile(filePath) {
   return out;
 }
 
+function resolveSourceEnvPath(options) {
+  const source = String(options.source || "").trim();
+  if (!source) return DEFAULT_SOURCE_ENV_PATH;
+  return path.isAbsolute(source) ? source : path.join(REPO_ROOT, source);
+}
+
 function toList(value, fallback) {
   if (!value) return fallback;
   return String(value)
@@ -122,6 +128,16 @@ function buildFlatLocalMap(sourceMap) {
     const normalized = String(value ?? "").trim();
     if (!normalized) continue;
     out[key] = normalized;
+  }
+  return out;
+}
+
+function buildScopedLocalMap(rows) {
+  const out = {};
+  for (const row of rows) {
+    const normalized = String(row.value ?? "").trim();
+    if (!normalized) continue;
+    out[row.name] = normalized;
   }
   return out;
 }
@@ -214,7 +230,8 @@ function commandDiff(schema, sourceMap, options) {
 
   for (const app of apps) {
     for (const target of targets) {
-      const localMap = buildFlatLocalMap(sourceMap);
+      const localRows = resolveVarsFor(schema, app, target, sourceMap);
+      const localMap = buildScopedLocalMap(localRows);
       const pulledPath = pullRemoteFile(schema, app, target, scope);
       const remoteMap = parseEnvFile(pulledPath);
 
@@ -303,7 +320,7 @@ function commandPush(schema, sourceMap, options) {
         );
       }
 
-      const localMap = buildFlatLocalMap(sourceMap);
+      const localMap = buildScopedLocalMap(localRows);
       const pulledPath = pullRemoteFile(schema, app, target, scope);
       const remoteMap = parseEnvFile(pulledPath);
 
@@ -327,11 +344,48 @@ function commandPush(schema, sourceMap, options) {
   }
 }
 
-function loadSourceMap() {
-  const master = parseEnvFile(SOURCE_ENV_PATH);
+function commandReset(schema, options) {
+  const scope = getScope(schema, options);
+  if (!scope) fail("Missing scope. Pass --scope or set VERCEL_SCOPE.");
+  ensureVercelAvailable();
+
+  const dryRun = Boolean(options["dry-run"]);
+  const force = Boolean(options.yes);
+  if (!dryRun && !force) {
+    fail("Reset is destructive. Re-run with --yes (or use --dry-run first).");
+  }
+
+  const apps = selectedApps(schema, options);
+  const targets = selectedTargets(schema, options);
+
+  for (const app of apps) {
+    for (const target of targets) {
+      const pulledPath = pullRemoteFile(schema, app, target, scope);
+      const remoteMap = parseEnvFile(pulledPath);
+      const keys = Object.keys(remoteMap);
+
+      console.log(`\n=== resetting ${app} / ${target} ===`);
+      if (keys.length === 0) {
+        console.log("No vars found.");
+        continue;
+      }
+
+      for (const key of keys) {
+        removeEnvVar(schema, app, target, scope, key, dryRun);
+      }
+
+      console.log(
+        `${dryRun ? "[dry-run] " : ""}Removed ${keys.length} env var(s) from ${app}/${target}.`
+      );
+    }
+  }
+}
+
+function loadSourceMap(sourceEnvPath) {
+  const master = parseEnvFile(sourceEnvPath);
   if (Object.keys(master).length === 0) {
     fail(
-      `Missing ${SOURCE_ENV_PATH}. Create it and add your env values before running env commands.`
+      `Missing ${sourceEnvPath}. Create it and add your env values before running env commands.`
     );
   }
   return master;
@@ -339,10 +393,11 @@ function loadSourceMap() {
 
 function printHelp() {
   console.log(`Usage:
-  node scripts/vercel-env-manager.js doctor [--app app1,app2] [--target production] [--scope team]
-  node scripts/vercel-env-manager.js diff   [--app app1,app2] [--target production] [--scope team]
+  node scripts/vercel-env-manager.js doctor [--source env/.env.shared.local] [--app app1,app2] [--target production] [--scope team]
+  node scripts/vercel-env-manager.js diff   [--source env/.env.shared.local] [--app app1,app2] [--target production] [--scope team]
   node scripts/vercel-env-manager.js pull   [--app app1,app2] [--target production] [--scope team]
-  node scripts/vercel-env-manager.js push   [--app app1,app2] [--target production] [--scope team] [--prune] [--dry-run]
+  node scripts/vercel-env-manager.js push   [--source env/.env.shared.local] [--app app1,app2] [--target production] [--scope team] [--prune] [--dry-run]
+  node scripts/vercel-env-manager.js reset  [--app app1,app2] [--target production] [--scope team] [--yes] [--dry-run]
 `);
 }
 
@@ -354,7 +409,8 @@ function main() {
   }
 
   const schema = loadSchema();
-  const sourceMap = command === "pull" ? {} : loadSourceMap();
+  const sourceEnvPath = resolveSourceEnvPath(options);
+  const sourceMap = command === "pull" ? {} : loadSourceMap(sourceEnvPath);
 
   switch (command) {
     case "doctor":
@@ -368,6 +424,9 @@ function main() {
       return;
     case "push":
       commandPush(schema, sourceMap, options);
+      return;
+    case "reset":
+      commandReset(schema, options);
       return;
     default:
       fail(`Unknown command: ${command}`);

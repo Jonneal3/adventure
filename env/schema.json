@@ -31,14 +31,6 @@
       "default": "vercel"
     },
     {
-      "name": "DEPLOYMENT_URL",
-      "group": "deployment",
-      "apps": ["adv-widget", "adv-designer"],
-      "targets": ["development", "preview", "production"],
-      "required": false,
-      "secret": false
-    },
-    {
       "name": "NEXT_PUBLIC_SITE_URL",
       "group": "deployment",
       "apps": ["adv-widget", "adv-designer"],
