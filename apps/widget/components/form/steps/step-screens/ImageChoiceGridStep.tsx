@@ -1,0 +1,154 @@
+"use client";
+
+import React from "react";
+import type { StepDefinition } from "@/types/ai-form";
+import type { MultipleChoiceUI } from "@/types/ai-form-ui-contract";
+import { StepLayout } from "../ui-layout/StepLayout";
+import { ImageChoiceGrid } from "../input-controls/ImageChoiceGridControl";
+
+interface ImageChoiceGridStepProps {
+  step: StepDefinition | MultipleChoiceUI;
+  stepData?: any;
+  onComplete: (data: any) => void;
+  onBack?: () => void;
+  canGoBack: boolean;
+  isLoading: boolean;
+  headerInlineControl?: React.ReactNode;
+  guidedThumbnailMode?: boolean;
+  actionsVariant?: "default" | "sticky_mobile" | "icon_only";
+  compactInPreview?: boolean;
+}
+
+type PriceTier = "$" | "$$" | "$$$" | "$$$$";
+type Opt = { label: string; value?: string; description?: string; imageUrl?: string; priceTier?: PriceTier };
+
+type ImageChoiceVariant = "swipe" | "selectors";
+
+function normalizeOptions(raw: any[]): Opt[] {
+  const normalizePriceTier = (v: unknown): PriceTier | undefined => {
+    const t = typeof v === "string" ? v.trim() : "";
+    if (t === "$" || t === "$$" || t === "$$$" || t === "$$$$") return t;
+    return undefined;
+  };
+  return (Array.isArray(raw) ? raw : []).map((o) => {
+    if (typeof o === "string") return { label: o, value: o };
+    const imageUrl =
+      typeof o?.imageUrl === "string"
+        ? o.imageUrl
+        : typeof o?.image_url === "string"
+          ? o.image_url
+          : typeof o?.image === "string"
+            ? o.image
+            : undefined;
+    return {
+      label: String(o?.label || o?.value || ""),
+      value: String(o?.value || o?.label || ""),
+      description: typeof o?.description === "string" ? o.description : undefined,
+      imageUrl,
+      priceTier: normalizePriceTier(o?.price_tier ?? o?.priceTier),
+    };
+  });
+}
+
+function isOtherOption(option: Opt): boolean {
+  const label = String(option.label || "").trim().toLowerCase();
+  const value = String(option.value || "").trim().toLowerCase();
+  return label === "other" || value === "other";
+}
+
+function useIsNarrowViewport(maxWidthPx: number): boolean {
+  const [isNarrow, setIsNarrow] = React.useState(false);
+
+  React.useEffect(() => {
+    if (typeof window === "undefined" || typeof window.matchMedia !== "function") return;
+    const mql = window.matchMedia(`(max-width: ${Math.max(0, Math.floor(maxWidthPx))}px)`);
+    const onChange = () => setIsNarrow(Boolean(mql.matches));
+    onChange();
+    if (typeof mql.addEventListener === "function") {
+      mql.addEventListener("change", onChange);
+      return () => mql.removeEventListener("change", onChange);
+    }
+    // Safari < 14
+    // eslint-disable-next-line deprecation/deprecation
+    mql.addListener(onChange);
+    // eslint-disable-next-line deprecation/deprecation
+    return () => mql.removeListener(onChange);
+  }, [maxWidthPx]);
+
+  return isNarrow;
+}
+
+function coerceImageChoiceVariant(raw: unknown): ImageChoiceVariant | null {
+  if (raw === "swipe" || raw === "selectors") return raw;
+  return null;
+}
+
+export function ImageChoiceGridStep({
+  step,
+  stepData,
+  onComplete,
+  onBack,
+  canGoBack,
+  isLoading,
+  headerInlineControl,
+  guidedThumbnailMode,
+  actionsVariant,
+  compactInPreview,
+}: ImageChoiceGridStepProps) {
+  const isUIStep = "type" in (step as any) && !("componentType" in (step as any));
+  const optionsRaw = isUIStep
+    ? (step as MultipleChoiceUI).options
+    : (step as StepDefinition).content?.options || (step as StepDefinition).data?.options || [];
+  const options = normalizeOptions(optionsRaw as any[]).filter((option) => !isOtherOption(option));
+  const multiple = isUIStep ? Boolean((step as MultipleChoiceUI).multi_select) : Boolean((step as StepDefinition).data?.multiple);
+  const [value, setValue] = React.useState<any>(stepData ?? (multiple ? [] : ""));
+  React.useEffect(() => {
+    if (stepData !== undefined) setValue(stepData);
+  }, [stepData]);
+
+  const isNarrowViewport = useIsNarrowViewport(768);
+  const backendVariant = isUIStep
+    ? coerceImageChoiceVariant((step as any)?.imageChoiceVariant ?? (step as any)?.variant)
+    : coerceImageChoiceVariant((step as any)?.data?.imageChoiceVariant ?? (step as any)?.data?.variant ?? (step as any)?.variant);
+  const effectiveVariant: ImageChoiceVariant = guidedThumbnailMode
+    ? "selectors"
+    : (backendVariant ?? (isNarrowViewport ? "swipe" : "selectors"));
+
+  const columns = isUIStep ? (step as any)?.columns : (step as any)?.data?.columns;
+  const normalizedColumns = Number.isFinite(Number(columns)) ? Math.max(1, Math.min(6, Math.floor(Number(columns)))) : undefined;
+
+  const selectedArray = Array.isArray(value) ? value : value ? [value] : [];
+  const canContinue = multiple ? selectedArray.length > 0 : Boolean(value);
+
+  return (
+    <StepLayout
+      step={step}
+      onComplete={() => onComplete(value)}
+      onBack={onBack}
+      canGoBack={canGoBack}
+      isLoading={isLoading}
+      canContinue={canContinue}
+      headerInlineControl={headerInlineControl}
+      actionsVariant={actionsVariant}
+      compactInPreview={compactInPreview}
+    >
+      <div className="flex h-full min-h-0 w-full min-w-0 flex-col justify-center overflow-hidden">
+        <ImageChoiceGrid
+          value={value}
+          onChange={setValue}
+          onSwipeComplete={(finalValue) => {
+            if (isLoading) return;
+            onComplete(finalValue);
+          }}
+          options={options}
+          multiple={multiple}
+          variant={effectiveVariant}
+          columns={normalizedColumns}
+          thumbnailMode={Boolean(guidedThumbnailMode || compactInPreview)}
+        />
+      </div>
+    </StepLayout>
+  );
+}
+
+

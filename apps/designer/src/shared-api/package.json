@@ -1,0 +1,27 @@
+{
+  "name": "@mage/shared-api",
+  "version": "0.1.0",
+  "private": true,
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": ["dist"],
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "typesVersions": {
+    "*": {
+      "*": ["dist/*", "dist/index.d.ts"]
+    }
+  },
+  "scripts": {
+    "build": "pnpm exec tsc -p tsconfig.build.json"
+  },
+  "dependencies": {
+    "replicate": "^0.25.2",
+    "openai": "^4.0.0"
+  }
+} 

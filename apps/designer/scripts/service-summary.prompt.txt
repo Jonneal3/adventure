@@ -1,0 +1,14 @@
+Write a short, clear description of what a [SERVICE NAME] is as a provider offering.
+
+Output must be 3–4 sentences, third person, plain text.
+
+Include:
+1) what the service is
+2) what types of places it applies to (give a few examples)
+3) what the provider typically provides (high‑level deliverables)
+4) the outcome/goal
+
+Do NOT describe steps/process/logistics.
+Avoid “site visit”, “installation”, “licensed”, “workflow”, “assessment”, “quote”, “scheduling”.
+
+Make each service summary feel uniquely written for that service (vary sentence openings and phrasing; avoid generic filler).

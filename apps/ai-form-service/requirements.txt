@@ -1,0 +1,13 @@
+fastapi==0.109.0
+uvicorn[standard]>=0.27.0
+
+# DSPy v3 (LiteLLM-backed)
+dspy-ai==3.0.4
+
+# Used by planner for optional fetches / general HTTP
+requests>=2.31.0
+
+# Environment variable loading (for local dev)
+python-dotenv>=1.0.0
+# Install the local package so `import api` works.
+-e .

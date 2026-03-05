@@ -1,0 +1,26 @@
+{
+  "buildCommand": "npm run build",
+  "installCommand": "npm ci --no-audit --no-fund",
+  "framework": "nextjs",
+  "outputDirectory": ".next",
+  "functions": {
+    "app/api/generate/route.ts": {
+      "maxDuration": 300
+    },
+    "app/api/generate/try-on/route.ts": {
+      "maxDuration": 300
+    },
+    "app/api/generate/scene/route.ts": {
+      "maxDuration": 300
+    },
+    "app/api/generate/scene-placement/route.ts": {
+      "maxDuration": 300
+    },
+    "app/api/leads/route.ts": {
+      "maxDuration": 60
+    },
+    "app/api/leads/bill/route.ts": {
+      "maxDuration": 60
+    }
+  }
+}

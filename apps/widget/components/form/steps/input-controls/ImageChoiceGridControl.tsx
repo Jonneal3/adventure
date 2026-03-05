@@ -1,0 +1,466 @@
+"use client";
+
+// Image Choice Grid Control
+import React from "react";
+import { useFormTheme } from "../../demo/FormThemeProvider";
+import { cn } from "@/lib/utils";
+import { animate, motion, useMotionValue, useTransform } from "framer-motion";
+import { Check, ChevronLeft, ChevronRight } from "lucide-react";
+import { useLayoutDensity } from "../ui-layout/layout-density";
+
+type ImageChoiceVariant = "swipe" | "selectors";
+type PriceTier = "$" | "$$" | "$$$" | "$$$$";
+
+interface ImageChoiceGridProps {
+  value?: string | string[];
+  onChange: (value: string | string[]) => void;
+  onSwipeComplete?: (value: string | string[]) => void;
+  options: Array<{ label: string; value?: string; imageUrl?: string; description?: string; priceTier?: PriceTier }>;
+  multiple?: boolean;
+  variant?: ImageChoiceVariant;
+  columns?: number;
+  className?: string;
+  thumbnailMode?: boolean;
+}
+
+function clampColumns(raw: unknown): number | undefined {
+  const n = Number(raw);
+  if (!Number.isFinite(n)) return undefined;
+  return Math.max(1, Math.floor(n));
+}
+
+function useIsNarrowViewport(maxWidthPx: number): boolean {
+  const [isNarrow, setIsNarrow] = React.useState(false);
+
+  React.useEffect(() => {
+    if (typeof window === "undefined" || typeof window.matchMedia !== "function") return;
+    const mql = window.matchMedia(`(max-width: ${Math.max(0, Math.floor(maxWidthPx))}px)`);
+    const onChange = () => setIsNarrow(Boolean(mql.matches));
+    onChange();
+    if (typeof mql.addEventListener === "function") {
+      mql.addEventListener("change", onChange);
+      return () => mql.removeEventListener("change", onChange);
+    }
+    // Safari < 14
+    // eslint-disable-next-line deprecation/deprecation
+    mql.addListener(onChange);
+    // eslint-disable-next-line deprecation/deprecation
+    return () => mql.removeListener(onChange);
+  }, [maxWidthPx]);
+
+  return isNarrow;
+}
+
+function normalizePriceTier(v: unknown): PriceTier | undefined {
+  const t = typeof v === "string" ? v.trim() : "";
+  if (t === "$" || t === "$$" || t === "$$$" || t === "$$$$") return t;
+  return undefined;
+}
+
+export function ImageChoiceGrid({
+  value,
+  onChange,
+  onSwipeComplete,
+  options,
+  multiple,
+  variant = "selectors",
+  columns,
+  className,
+  thumbnailMode = false,
+}: ImageChoiceGridProps) {
+  const { theme } = useFormTheme();
+  const density = useLayoutDensity();
+  const isCompact = density === "compact";
+  const selectedArray = Array.isArray(value) ? value : (value ? [value] : []);
+  const isNarrowViewport = useIsNarrowViewport(768);
+  const desktopThumbnailMode = thumbnailMode && !isNarrowViewport;
+
+  const toggle = (val: string) => {
+    if (multiple) {
+      if (selectedArray.includes(val)) {
+        onChange(selectedArray.filter((v) => v !== val));
+      } else {
+        onChange([...selectedArray, val]);
+      }
+    } else {
+      onChange(val);
+    }
+  };
+
+  const [activeIndex, setActiveIndex] = React.useState(0);
+  const [showSwipeHint, setShowSwipeHint] = React.useState(false);
+  const [isSwipeAnimating, setIsSwipeAnimating] = React.useState(false);
+  const maxIndex = Math.max(0, options.length - 1);
+  const SWIPE_HINT_STORAGE_KEY = "sif:image-choice-swipe-hint-seen:v1";
+  const dragIntentRef = React.useRef(false);
+  const swipeX = useMotionValue(0);
+  const swipeOpacity = useMotionValue(1);
+  const cardRotate = useTransform(swipeX, [-220, 0, 220], [-10, 0, 10]);
+  const likeOverlayOpacity = useTransform(swipeX, [0, 45, 130], [0, 0.35, 1]);
+  const nopeOverlayOpacity = useTransform(swipeX, [-130, -45, 0], [1, 0.35, 0]);
+  const active = options[activeIndex];
+  const activeKey = active ? active.value || active.label : "";
+
+  const cardRadius = `${theme.borderRadius * 1.5}px`;
+
+  React.useEffect(() => {
+    setActiveIndex((idx) => Math.min(Math.max(0, idx), maxIndex));
+  }, [maxIndex]);
+
+  React.useEffect(() => {
+    if (variant !== "swipe" || options.length <= 1) return;
+    if (typeof window === "undefined") return;
+    try {
+      const hasSeen = window.localStorage.getItem(SWIPE_HINT_STORAGE_KEY) === "1";
+      if (!hasSeen) setShowSwipeHint(true);
+    } catch {
+      setShowSwipeHint(true);
+    }
+  }, [options.length, variant]);
+
+  const dismissSwipeHint = React.useCallback(() => {
+    setShowSwipeHint(false);
+    if (typeof window === "undefined") return;
+    try {
+      window.localStorage.setItem(SWIPE_HINT_STORAGE_KEY, "1");
+    } catch {}
+  }, []);
+
+  React.useEffect(() => {
+    if (variant !== "swipe") return;
+    swipeX.set(0);
+    swipeOpacity.set(1);
+    dragIntentRef.current = false;
+    setIsSwipeAnimating(false);
+  }, [activeKey, swipeOpacity, swipeX, variant]);
+
+  if (variant === "swipe") {
+    const activePicked = activeKey ? selectedArray.includes(activeKey) : false;
+    const goPrev = () => {
+      if (isSwipeAnimating) return;
+      dismissSwipeHint();
+      setActiveIndex((idx) => Math.max(0, idx - 1));
+    };
+    const goNext = () => {
+      if (isSwipeAnimating) return;
+      dismissSwipeHint();
+      setActiveIndex((idx) => Math.min(maxIndex, idx + 1));
+    };
+
+    const computeNextPickedState = (val: string, shouldSelect: boolean): string | string[] => {
+      if (!val) return multiple ? selectedArray : (typeof value === "string" ? value : "");
+      if (multiple) {
+        if (shouldSelect) {
+          if (selectedArray.includes(val)) return selectedArray;
+          return [...selectedArray, val];
+        }
+        if (!selectedArray.includes(val)) return selectedArray;
+        return selectedArray.filter((v) => v !== val);
+      }
+      if (shouldSelect) {
+        return val;
+      }
+      if (value === val) return "";
+      return typeof value === "string" ? value : "";
+    };
+
+    const handleSwipeDecision = async (direction: "left" | "right") => {
+      if (isSwipeAnimating) return;
+      if (!activeKey) return;
+      const nextValue = direction === "right" ? computeNextPickedState(activeKey, true) : computeNextPickedState(activeKey, false);
+      if (nextValue !== undefined) onChange(nextValue);
+      dismissSwipeHint();
+      setIsSwipeAnimating(true);
+      const viewportWidth = typeof window !== "undefined" ? window.innerWidth : 420;
+      const exitDistance = Math.max(400, viewportWidth * 1.2);
+      const exitX = direction === "right" ? exitDistance : -exitDistance;
+      const animDuration = 0.28;
+      animate(swipeX, exitX, { duration: animDuration, ease: "easeIn" });
+      animate(swipeOpacity, 0.08, { duration: animDuration, ease: "easeIn" });
+      await new Promise((resolve) => window.setTimeout(resolve, animDuration * 1000 + 20));
+      // Single-select + swipe right: selection is final, auto-continue to next step
+      if (!multiple && direction === "right") {
+        onSwipeComplete?.(nextValue ?? (typeof value === "string" ? value : ""));
+        setIsSwipeAnimating(false);
+        return;
+      }
+      // Multi-select or swipe left: advance to next card; on last card, complete
+      if (activeIndex >= maxIndex) {
+        onSwipeComplete?.(nextValue ?? (multiple ? selectedArray : (typeof value === "string" ? value : "")));
+        setIsSwipeAnimating(false);
+        return;
+      }
+      setActiveIndex((idx) => Math.min(maxIndex, idx + 1));
+    };
+
+    return (
+      <div className={cn("w-full relative", className)}>
+        {active && (
+          <div className="relative w-full">
+          <motion.button
+            key={activeKey}
+            type="button"
+            onClick={() => {
+              if (dragIntentRef.current || isSwipeAnimating) return;
+              dismissSwipeHint();
+              toggle(activeKey);
+            }}
+            aria-pressed={activePicked}
+            drag="x"
+            dragConstraints={{ left: 0, right: 0 }}
+            dragDirectionLock
+            dragElastic={0.24}
+            dragMomentum
+            style={{ x: swipeX, rotate: cardRotate, opacity: swipeOpacity, borderRadius: cardRadius }}
+            transition={{ type: "spring", stiffness: 340, damping: 26 }}
+            onDragStart={() => {
+              dragIntentRef.current = false;
+            }}
+            onDrag={(_, info) => {
+              if (Math.abs(info.offset.x) > 8) dragIntentRef.current = true;
+            }}
+            onDragEnd={async (_, info) => {
+              const threshold = 44;
+              const velocityThreshold = 240;
+              const shouldLeft = info.offset.x <= -threshold || info.velocity.x <= -velocityThreshold;
+              const shouldRight = info.offset.x >= threshold || info.velocity.x >= velocityThreshold;
+              if (shouldLeft) {
+                await handleSwipeDecision("left");
+                return;
+              }
+              if (shouldRight) {
+                await handleSwipeDecision("right");
+                return;
+              }
+              animate(swipeX, 0, { type: "spring", stiffness: 340, damping: 26 });
+              animate(swipeOpacity, 1, { type: "spring", stiffness: 300, damping: 28 });
+            }}
+            className={cn(
+              "relative w-full overflow-hidden border-4 transition-all",
+              activePicked ? "border-primary" : "border-transparent bg-muted/20"
+            )}
+          >
+            <div className="relative aspect-[4/3] w-full overflow-hidden">
+              {active.imageUrl ? (
+                <img
+                  src={active.imageUrl}
+                  alt={active.label}
+                  loading="lazy"
+                  decoding="async"
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <div className="h-full w-full bg-muted/30" />
+              )}
+              <div className="absolute inset-x-0 bottom-0 p-3">
+                <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-black/10 to-transparent" />
+                <div className="relative z-10">
+                  <div className={cn(isCompact ? "text-[13px]" : "text-sm", "font-bold text-white")}>{active.label}</div>
+                  {active.description && (
+                    <div className={cn(isCompact ? "text-[11px]" : "text-xs", "text-white/85")}>{active.description}</div>
+                  )}
+                </div>
+              </div>
+              <div
+                className="pointer-events-none absolute left-3 top-3 rounded-md border border-emerald-200/80 bg-emerald-500/85 px-2 py-1 text-xs font-semibold text-white shadow"
+                style={{ opacity: likeOverlayOpacity as any }}
+              >
+                SELECT
+              </div>
+              <div
+                className="pointer-events-none absolute right-3 top-3 rounded-md border border-rose-200/80 bg-rose-500/85 px-2 py-1 text-xs font-semibold text-white shadow"
+                style={{ opacity: nopeOverlayOpacity as any }}
+              >
+                SKIP
+              </div>
+              {normalizePriceTier(active.priceTier) && (
+                <div className="absolute top-3 left-3 rounded-md bg-black/70 px-2 py-1 text-xs font-semibold text-white shadow">
+                  {normalizePriceTier(active.priceTier)}
+                </div>
+              )}
+              {activePicked && (
+                <div className="absolute top-3 right-3 bg-primary text-white p-1 rounded-full shadow-lg">
+                  <Check className="w-4 h-4" strokeWidth={3} />
+                </div>
+              )}
+            </div>
+          </motion.button>
+          {showSwipeHint && (
+            <div
+              className="absolute inset-0 z-50 flex flex-col items-center justify-center rounded-xl bg-black/60 backdrop-blur-sm p-4"
+              style={{ borderRadius: cardRadius }}
+            >
+              <div className="font-semibold text-white text-sm sm:text-base">How swiping works</div>
+              <div className="text-white/90 text-xs sm:text-sm mt-1 text-center">Right = select. Left = skip. You can still use arrows or tap.</div>
+              <div className="mt-4 relative w-24 h-16 overflow-hidden rounded-lg border border-white/30">
+                <div className="absolute left-1 top-1 text-[9px] font-semibold text-rose-300">SKIP</div>
+                <div className="absolute right-1 top-1 text-[9px] font-semibold text-emerald-300">SELECT</div>
+                <motion.div
+                  className="absolute left-1/2 top-1/2 h-8 w-12 -translate-x-1/2 -translate-y-1/2 rounded border bg-white/90"
+                  animate={{ x: [0, -24, 24, 0], rotate: [0, -6, 6, 0] }}
+                  transition={{ duration: 2.2, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut" }}
+                />
+              </div>
+              <button
+                type="button"
+                onClick={dismissSwipeHint}
+                className="mt-4 rounded-lg border border-white/40 bg-white/20 px-4 py-2 text-sm font-medium text-white hover:bg-white/30 transition-colors"
+              >
+                Got it
+              </button>
+            </div>
+          )}
+          </div>
+        )}
+
+        {options.length > 1 && (
+          <div className="mt-2 flex items-center justify-center gap-2">
+            <button
+              type="button"
+              onClick={goPrev}
+              disabled={activeIndex <= 0}
+              className="inline-flex h-8 w-8 items-center justify-center rounded-full border disabled:cursor-not-allowed disabled:opacity-40"
+              aria-label="Previous option"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+            <div className="min-w-[56px] text-center text-[11px] text-muted-foreground tabular-nums">
+              {activeIndex + 1} / {options.length}
+            </div>
+            <button
+              type="button"
+              onClick={goNext}
+              disabled={activeIndex >= maxIndex}
+              className="inline-flex h-8 w-8 items-center justify-center rounded-full border disabled:cursor-not-allowed disabled:opacity-40"
+              aria-label="Next option"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </div>
+        )}
+
+        {options.length > 1 && (
+          <div className="mt-1 flex items-center justify-center gap-1.5">
+            {options.map((_, idx) => (
+              <div
+                key={idx}
+                className={cn(
+                  "h-1.5 w-1.5 rounded-full transition-colors",
+                  idx === activeIndex ? "bg-foreground/70" : "bg-foreground/20"
+                )}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  const requestedColumns = clampColumns(columns);
+  const optionCount = Math.max(1, options.length);
+  const safeRequestedColumns = requestedColumns ? Math.min(requestedColumns, optionCount) : undefined;
+  const mobileColumns = thumbnailMode
+    ? (safeRequestedColumns ? Math.min(3, Math.max(1, safeRequestedColumns)) : (optionCount <= 2 ? 2 : 3))
+    : (safeRequestedColumns ? Math.min(2, Math.max(1, safeRequestedColumns)) : Math.min(2, optionCount));
+  const adaptiveDesktopColumns = safeRequestedColumns
+    ? (thumbnailMode ? Math.min(6, safeRequestedColumns + 1) : safeRequestedColumns)
+    : thumbnailMode
+      ? optionCount <= 2
+        ? 2
+        : optionCount <= 4
+          ? 4
+          : optionCount <= 6
+          ? 6
+            : 7
+      : optionCount <= 2
+        ? optionCount
+        : optionCount <= 4
+          ? 2
+          : optionCount <= 8
+            ? 3
+            : 4;
+  const gridColumns = isNarrowViewport ? mobileColumns : adaptiveDesktopColumns;
+  return (
+    <div
+      className={cn(
+        thumbnailMode
+          ? "flex h-full min-h-0 w-full flex-col overflow-y-auto overflow-x-hidden pr-1"
+          : "w-full h-full min-h-0 overflow-y-auto overflow-x-hidden pr-1"
+      )}
+    >
+      <div
+        className={cn(
+          "grid w-full min-w-0 content-start",
+          thumbnailMode ? "min-h-full flex-1 gap-2.5 py-0.5 place-content-center" : isCompact ? "gap-3" : "gap-4",
+          className
+        )}
+        style={{
+          gridTemplateColumns: `repeat(${Math.max(1, gridColumns)}, minmax(0, 1fr))`,
+        }}
+      >
+        {options.map((opt, index) => {
+          const key = opt.value || opt.label;
+          const picked = selectedArray.includes(key);
+
+          return (
+            <motion.button
+              key={key}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.05 }}
+              onClick={() => toggle(key)}
+              className={cn(
+                "group relative flex h-full min-h-0 min-w-0 flex-col transition-all",
+                thumbnailMode ? "overflow-hidden rounded-lg border" : "overflow-hidden rounded-2xl border-4",
+                desktopThumbnailMode ? "transform-gpu hover:scale-[1.06] hover:-translate-y-0.5 hover:z-10 hover:shadow-xl" : null,
+                thumbnailMode
+                  ? (picked ? "border-primary bg-transparent" : "border-black/10 bg-transparent hover:border-black/25")
+                  : (picked ? "border-primary" : "border-transparent bg-muted/20")
+              )}
+              style={{ borderRadius: cardRadius }}
+            >
+              <div
+                className={cn(
+                  "w-full overflow-hidden bg-muted/30 min-h-0",
+                  thumbnailMode ? "aspect-square min-w-0" : "aspect-[4/3] flex-1"
+                )}
+              >
+                {opt.imageUrl ? (
+                  <img
+                    src={opt.imageUrl}
+                    alt={opt.label}
+                    loading="lazy"
+                    decoding="async"
+                    className={cn("h-full w-full object-cover transition-transform", thumbnailMode ? "group-hover:scale-[1.02]" : "group-hover:scale-105")}
+                  />
+                ) : (
+                  <div className="h-full w-full" />
+                )}
+              </div>
+              {normalizePriceTier(opt.priceTier) && (
+                <div className="absolute top-2 left-2 rounded-md bg-black/70 px-2 py-1 text-xs font-semibold text-white shadow">
+                  {normalizePriceTier(opt.priceTier)}
+                </div>
+              )}
+              <div className={cn(thumbnailMode ? "shrink-0 p-1.5 sm:p-2" : isCompact ? "p-2.5" : "p-3", "text-left")}>
+              <div className={cn(thumbnailMode ? "text-[10px] sm:text-[11px]" : isCompact ? "text-[13px] sm:text-sm" : null, "font-bold leading-tight line-clamp-1")}>
+                  {opt.label}
+                </div>
+              {!thumbnailMode && opt.description && (
+                  <div className={cn(thumbnailMode ? "text-[10px]" : isCompact ? "text-[11px]" : "text-xs", "text-muted-foreground")}>
+                    {opt.description}
+                  </div>
+                )}
+              </div>
+              {picked && (
+              <div className={cn("absolute bg-primary text-white rounded-full", thumbnailMode ? "top-1 right-1 p-0.5" : "top-2 right-2 p-1 shadow-lg")}>
+                <Check className={cn(thumbnailMode ? "w-3 h-3" : "w-4 h-4")} strokeWidth={3} />
+                </div>
+              )}
+            </motion.button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}

@@ -1,0 +1,26 @@
+{
+  "name": "@mage/supabase",
+  "version": "0.1.0",
+  "private": true,
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./server": {
+      "types": "./dist/server.d.ts",
+      "import": "./dist/server.js"
+    }
+  },
+  "files": ["dist"],
+  "typesVersions": {
+    "*": {
+      "*": ["dist/*", "dist/index.d.ts"]
+    }
+  },
+  "scripts": {
+    "build": "pnpm exec tsc -p tsconfig.build.json"
+  }
+} 

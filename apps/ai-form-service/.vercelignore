@@ -1,0 +1,12 @@
+.venv
+.venv_sandbox
+__pycache__
+*.pyc
+.git
+.cursor
+tests
+examples/next_steps_examples.optimized.jsonl
+scripts/sync_ui_truth.py
+scripts/import_contract.py
+node_modules
+

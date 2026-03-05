@@ -1,0 +1,246 @@
+from __future__ import annotations
+
+import json
+from pathlib import Path
+from typing import Any
+
+import dspy
+
+from programs.dspy_demos import as_dspy_examples
+from programs.question_planner.copywriting.context import DEFAULT_COPY_CONTEXT
+
+
+DEFAULT_MAX_STEPS = 12
+DEFAULT_ALLOWED_MINI_TYPES: list[str] = [
+    "multiple_choice",
+    "slider",
+]
+
+_PRICE_TIERS = ("$", "$$", "$$$", "$$$$")
+_PRICE_RELEVANT_KEY_HINTS = (
+    "style",
+    "material",
+    "finish",
+    "product",
+    "fixture",
+    "component",
+    "design",
+)
+
+
+def _compact_json(obj: Any) -> str:
+    return json.dumps(obj, ensure_ascii=True, separators=(",", ":"), sort_keys=True)
+
+
+def _load_examples_json() -> list[dict]:
+    path = Path(__file__).with_name("demo_examples.json")
+    if not path.exists():
+        return []
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return []
+    return data if isinstance(data, list) else []
+
+def _ensure_json_str(v: Any) -> str:
+    """
+    Allow demos to store JSON inputs/outputs as either compact JSON strings
+    or native JSON objects (dict/list). DSPy sees only strings at runtime.
+    """
+    if isinstance(v, (dict, list)):
+        return _compact_json(v)
+    return str(v or "").strip()
+
+
+def _is_price_relevant_key(key: str) -> bool:
+    k = str(key or "").strip().lower()
+    return bool(k) and any(h in k for h in _PRICE_RELEVANT_KEY_HINTS)
+
+
+def _default_budget_step(min_v: int = 3000, max_v: int = 5000) -> dict:
+    span = max(500, int(round((max_v - min_v) / 8)))
+    return {
+        "key": "budget_range",
+        "question": "What budget range should we design around?",
+        "type_hint": "slider",
+        "min": int(min_v),
+        "max": int(max_v),
+        "step": int(span),
+        "currency": "USD",
+    }
+
+
+def _normalize_budget_range_item(item: dict) -> dict:
+    try:
+        min_raw = float(item.get("min"))
+        max_raw = float(item.get("max"))
+        if max_raw <= min_raw:
+            raise ValueError("invalid budget bounds")
+    except Exception:
+        return _default_budget_step()
+
+    baseline = (min_raw + max_raw) / 2.0
+    if baseline <= 0:
+        return _default_budget_step()
+    target_min = int(round(baseline * 0.8))
+    target_max = int(round(baseline * 1.2))
+    if target_max <= target_min:
+        target_max = target_min + 1000
+
+    # Keep ranges practical and avoid huge windows in demos.
+    target_min = max(500, target_min)
+    target_max = min(max(target_min + 500, target_max), 250000)
+    span = target_max - target_min
+    step = max(250, int(round(span / 8)))
+    if step >= 1000:
+        step = int(round(step / 500) * 500)
+    elif step >= 250:
+        step = int(round(step / 250) * 250)
+    return {
+        **item,
+        "type_hint": "slider",
+        "min": int(target_min),
+        "max": int(target_max),
+        "step": int(max(1, step)),
+        "currency": "USD",
+    }
+
+
+def _normalize_plan_for_budget_and_tiers(question_plan_json: Any) -> Any:
+    if not isinstance(question_plan_json, dict):
+        return question_plan_json
+    plan = question_plan_json.get("plan")
+    if not isinstance(plan, list):
+        return question_plan_json
+
+    next_plan: list[dict] = []
+    budget_item: dict | None = None
+    for raw_item in plan:
+        if not isinstance(raw_item, dict):
+            continue
+        item = dict(raw_item)
+        key = str(item.get("key") or "").strip().lower()
+        if key == "budget_range":
+            budget_item = _normalize_budget_range_item(item)
+            continue
+
+        option_hints = item.get("option_hints")
+        if isinstance(option_hints, list):
+            relevant = _is_price_relevant_key(key)
+            normalized_opts = []
+            for idx, opt in enumerate(option_hints):
+                if isinstance(opt, dict):
+                    o = dict(opt)
+                    if relevant:
+                        if str(o.get("price_tier") or "").strip() not in _PRICE_TIERS:
+                            o["price_tier"] = _PRICE_TIERS[min(idx, len(_PRICE_TIERS) - 1)]
+                    else:
+                        o.pop("price_tier", None)
+                        o.pop("priceTier", None)
+                    normalized_opts.append(o)
+                else:
+                    normalized_opts.append(opt)
+            item["option_hints"] = normalized_opts
+        next_plan.append(item)
+
+    if budget_item is None:
+        budget_item = _default_budget_step()
+    next_plan.append(budget_item)
+    return {**question_plan_json, "plan": next_plan}
+
+
+def default_design_demos() -> list[dspy.Example]:
+    """
+    Load pretty-printed JSON examples and convert to DSPy demos.
+
+    Supported formats (per list item):
+
+    1) Explicit DSPy record (preferred):
+      { "inputs": {...}, "outputs": {...} }
+
+      Inputs should match the signature:
+        - planner_context_json: str | dict
+        - max_steps: int
+        - allowed_mini_types: [str, ...]
+      Outputs:
+        - question_plan_json: str | dict (object with top-level `plan` array)
+
+    2) Legacy human-friendly format (back-compat):
+      { "services_summary": str, "plan": [ { "key": str, "question": str }, ... ] }
+    """
+
+    records: list[dict] = []
+    for item in _load_examples_json():
+        if not isinstance(item, dict):
+            continue
+
+        # Common implicit record: {"planner_context_json": ..., "max_steps": ..., "allowed_mini_types": ..., "question_plan_json": ...}
+        #
+        # This keeps `demo_examples.json` human-friendly while still feeding DSPy the explicit
+        # {"inputs":..., "outputs":...} shape downstream.
+        if "inputs" not in item and "outputs" not in item and "planner_context_json" in item and "question_plan_json" in item:
+            inputs = {
+                "planner_context_json": item.get("planner_context_json"),
+                "max_steps": item.get("max_steps"),
+                "allowed_mini_types": item.get("allowed_mini_types"),
+            }
+            outputs = {"question_plan_json": item.get("question_plan_json")}
+            item = {"inputs": inputs, "outputs": outputs}
+
+        # Preferred explicit record: {"inputs": {...}, "outputs": {...}}
+        if isinstance(item.get("inputs"), dict) and isinstance(item.get("outputs"), dict):
+            inputs = dict(item["inputs"])
+            outputs = dict(item["outputs"])
+
+            # Fill defaults if omitted.
+            if "max_steps" not in inputs:
+                inputs["max_steps"] = int(DEFAULT_MAX_STEPS)
+            if "allowed_mini_types" not in inputs:
+                inputs["allowed_mini_types"] = list(DEFAULT_ALLOWED_MINI_TYPES)
+
+            # Keep examples aligned with production context shape.
+            #
+            # Examples may omit `copy_context` for human readability; default it during loading.
+            if isinstance(inputs.get("planner_context_json"), dict):
+                ctx = dict(inputs["planner_context_json"])
+                if "copy_context" not in ctx:
+                    ctx["copy_context"] = dict(DEFAULT_COPY_CONTEXT)
+                inputs["planner_context_json"] = ctx
+            if isinstance(outputs.get("question_plan_json"), dict):
+                outputs["question_plan_json"] = _normalize_plan_for_budget_and_tiers(outputs["question_plan_json"])
+
+            # Normalize JSON payloads to strings.
+            inputs["planner_context_json"] = _ensure_json_str(inputs.get("planner_context_json"))
+            outputs["question_plan_json"] = _ensure_json_str(outputs.get("question_plan_json"))
+
+            # Ensure required fields exist.
+            if not str(inputs.get("planner_context_json") or "").strip():
+                continue
+            if not outputs.get("question_plan_json"):
+                continue
+
+            records.append({"inputs": inputs, "outputs": outputs})
+            continue
+
+        # Legacy shape: {"services_summary": ..., "plan": [...]}
+        services_summary = str(item.get("services_summary") or "").strip()
+        plan = item.get("plan")
+        if not services_summary or not isinstance(plan, list) or not plan:
+            continue
+
+        context = {"services_summary": services_summary, "answered_qa": [], "asked_step_ids": []}
+        records.append(
+            {
+                "inputs": {
+                    "planner_context_json": _compact_json(context),
+                    "max_steps": int(DEFAULT_MAX_STEPS),
+                    "allowed_mini_types": list(DEFAULT_ALLOWED_MINI_TYPES),
+                },
+                "outputs": {"question_plan_json": _compact_json({"plan": plan})},
+            }
+        )
+
+    return as_dspy_examples(records, input_keys=["planner_context_json", "max_steps", "allowed_mini_types"])
+
+
+__all__ = ["DEFAULT_ALLOWED_MINI_TYPES", "DEFAULT_MAX_STEPS", "default_design_demos"]

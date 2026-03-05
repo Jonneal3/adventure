@@ -104,8 +104,8 @@ function sortDefaultDesignSettings(filePath) {
 function main() {
   const root = repoRoot();
   const files = [
-    path.join(root, "adv-designer", "src", "types", "design.ts"),
-    path.join(root, "adv-widget", "types", "design.ts"),
+    path.join(root, "apps", "designer", "src", "types", "design.ts"),
+    path.join(root, "apps", "widget", "types", "design.ts"),
   ];
 
   let successCount = 0;

@@ -5,13 +5,13 @@ const path = require("path");
 
 const REPO_ROOT = path.resolve(__dirname, "..");
 const FILES_TO_DELETE = [
-  "adv-designer/.env.local",
-  "adv-designer/.env.preview.local",
-  "adv-designer/.env.production.local",
-  "adv-ai-form-service/.env.example",
-  "adv-ai-form-service/.env.local",
-  "adv-ai-form-service/.env.local.bak",
-  "adv-widget/.env.local"
+  "apps/designer/.env.local",
+  "apps/designer/.env.preview.local",
+  "apps/designer/.env.production.local",
+  "apps/ai-form-service/.env.example",
+  "apps/ai-form-service/.env.local",
+  "apps/ai-form-service/.env.local.bak",
+  "apps/widget/.env.local"
 ];
 
 function fail(message) {

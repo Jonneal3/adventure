@@ -100,8 +100,8 @@ async function main() {
   const projectId = "xvpagpzufitqzoijoalz";
   const schema = "public";
 
-  const designerDir = path.join(root, "adv-designer");
-  const widgetDir = path.join(root, "adv-widget");
+  const designerDir = path.join(root, "apps", "designer");
+  const widgetDir = path.join(root, "apps", "widget");
 
   try {
     logStep(1, "Updating Designer app Supabase types...");
@@ -132,10 +132,10 @@ async function main() {
     const designerPackagePath = path.join(designerDir, "package.json");
     const designerPackage = JSON.parse(fs.readFileSync(designerPackagePath, "utf8"));
     if (!designerPackage.scripts["db:update"]) {
-      designerPackage.scripts["db:update"] = "node ../scripts/update-supabase.js";
+      designerPackage.scripts["db:update"] = "node ../../scripts/update-supabase.js";
     }
     if (!designerPackage.scripts["sort:configs"]) {
-      designerPackage.scripts["sort:configs"] = "node ../scripts/sort-configs.js";
+      designerPackage.scripts["sort:configs"] = "node ../../scripts/sort-configs.js";
     }
     fs.writeFileSync(designerPackagePath, JSON.stringify(designerPackage, null, 2) + "\n");
 
@@ -143,10 +143,10 @@ async function main() {
     const widgetPackagePath = path.join(widgetDir, "package.json");
     const widgetPackage = JSON.parse(fs.readFileSync(widgetPackagePath, "utf8"));
     if (!widgetPackage.scripts["db:update"]) {
-      widgetPackage.scripts["db:update"] = "node ../scripts/update-supabase.js";
+      widgetPackage.scripts["db:update"] = "node ../../scripts/update-supabase.js";
     }
     if (!widgetPackage.scripts["sort:configs"]) {
-      widgetPackage.scripts["sort:configs"] = "node ../scripts/sort-configs.js";
+      widgetPackage.scripts["sort:configs"] = "node ../../scripts/sort-configs.js";
     }
     fs.writeFileSync(widgetPackagePath, JSON.stringify(widgetPackage, null, 2) + "\n");
 

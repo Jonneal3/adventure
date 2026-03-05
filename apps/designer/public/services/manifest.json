@@ -1,0 +1,27 @@
+{
+  "bathroom": [
+    "/services/bathroom/bathroom1.png",
+    "/services/bathroom/bathroom2.png",
+    "/services/bathroom/bathroom3.png"
+  ],
+  "fashion": [
+    "/services/fashion/fashion1.png",
+    "/services/fashion/fashion2.png",
+    "/services/fashion/fashion3.png"
+  ],
+  "furniture": [
+    "/services/furniture/furniture1.png",
+    "/services/furniture/furniture2.png",
+    "/services/furniture/furniture3.png"
+  ],
+  "interior": [
+    "/services/interior/interior1.png",
+    "/services/interior/interior2.png",
+    "/services/interior/interior3.png"
+  ],
+  "landscaping": [
+    "/services/landscaping/landscaping1.png",
+    "/services/landscaping/landscaping2.png",
+    "/services/landscaping/landscaping3.png"
+  ]
+}

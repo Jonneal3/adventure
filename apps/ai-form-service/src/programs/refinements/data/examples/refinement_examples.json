@@ -1,0 +1,213 @@
+[
+  {
+    "planner_context_json": {
+      "services_summary": "Industry: Bathroom Remodeling. Service: Primary bathroom remodel concept. User has seen the first AI concept and wants visual refinements.",
+      "answered_qa": [
+        { "stepId": "step-service-primary", "answer": ["guest-bath-refresh"] },
+        { "stepId": "step-style-direction", "answer": ["bright_white_black"] },
+        { "stepId": "step-project-parts", "answer": ["vanity_counter"] },
+        { "stepId": "step-budget-range", "answer": 12000 }
+      ],
+      "asked_step_ids": ["step-service-primary", "step-style-direction", "step-project-parts", "step-budget-range"]
+    },
+    "max_steps": 8,
+    "allowed_mini_types": ["multiple_choice"],
+    "refinement_plan_json": {
+      "plan": [
+        {
+          "key": "shower_hardware_finish",
+          "question": "Which shower hardware finish should we try?",
+          "type_hint": "multiple_choice",
+          "option_hints": [
+            { "label": "Matte black", "value": "matte_black", "image_prompt": "modern bathroom with matte black shower handles and fixtures" },
+            { "label": "Brushed nickel", "value": "brushed_nickel", "image_prompt": "modern bathroom with brushed nickel shower handles and fixtures" },
+            { "label": "Polished chrome", "value": "polished_chrome", "image_prompt": "modern bathroom with polished chrome shower handles and fixtures" },
+            { "label": "Warm brass", "value": "warm_brass", "image_prompt": "modern bathroom with warm brass shower handles and fixtures" }
+          ]
+        },
+        {
+          "key": "tub_style",
+          "question": "What tub style fits this bathroom best?",
+          "type_hint": "multiple_choice",
+          "option_hints": [
+            { "label": "Freestanding oval", "value": "freestanding_oval", "image_prompt": "bathroom with a freestanding oval soaking tub as focal point" },
+            { "label": "Rectangular modern", "value": "rectangular_modern", "image_prompt": "bathroom with a modern rectangular freestanding tub" },
+            { "label": "Drop-in deck tub", "value": "drop_in_deck", "image_prompt": "bathroom with a drop-in deck tub integrated into tile surround" },
+            { "label": "No visible tub", "value": "no_visible_tub", "image_prompt": "bathroom concept focused on a large walk-in shower without a visible tub" }
+          ]
+        },
+        {
+          "key": "shower_tile_material",
+          "question": "Which shower tile material should we test?",
+          "type_hint": "multiple_choice",
+          "option_hints": [
+            { "label": "Large-format porcelain", "value": "large_format_porcelain", "image_prompt": "bathroom with large-format porcelain shower wall tiles in a clean modern layout" },
+            { "label": "Marble-look porcelain", "value": "marble_look_porcelain", "image_prompt": "bathroom with marble-look porcelain shower wall tile and subtle veining" },
+            { "label": "Glossy ceramic subway", "value": "glossy_subway", "image_prompt": "bathroom with glossy ceramic subway shower tile in a stacked layout" },
+            { "label": "Textured natural stone", "value": "textured_natural_stone", "image_prompt": "bathroom shower walls with textured natural stone tile and organic variation" }
+          ]
+        },
+        {
+          "key": "shower_tile_pattern",
+          "question": "What tile layout should we apply in the shower?",
+          "type_hint": "multiple_choice",
+          "option_hints": [
+            { "label": "Vertical stacked", "value": "vertical_stacked", "image_prompt": "bathroom shower tile in a vertical stacked layout with clean grout lines" },
+            { "label": "Classic offset", "value": "classic_offset", "image_prompt": "bathroom shower tile in a classic brick offset pattern" },
+            { "label": "Herringbone feature wall", "value": "herringbone_feature", "image_prompt": "bathroom shower with a herringbone tile feature wall" },
+            { "label": "Large slab look", "value": "large_slab_look", "image_prompt": "bathroom shower with large slab-look tile and minimal grout joints" }
+          ]
+        },
+        {
+          "key": "vanity_style",
+          "question": "Which vanity style should we swap in?",
+          "type_hint": "multiple_choice",
+          "option_hints": [
+            { "label": "Floating flat-panel", "value": "floating_flat_panel", "image_prompt": "bathroom with a floating flat-panel vanity and clean contemporary lines" },
+            { "label": "Furniture-style legs", "value": "furniture_legs", "image_prompt": "bathroom with a furniture-style vanity on legs and tailored detail" },
+            { "label": "Double-sink modern", "value": "double_sink_modern", "image_prompt": "bathroom with a wide modern double-sink vanity and integrated storage" },
+            { "label": "Compact single-sink", "value": "compact_single_sink", "image_prompt": "bathroom with a compact single-sink vanity for a streamlined layout" }
+          ]
+        },
+        {
+          "key": "toilet_profile",
+          "question": "What toilet profile should the concept show?",
+          "type_hint": "multiple_choice",
+          "option_hints": [
+            { "label": "One-piece skirted", "value": "one_piece_skirted", "image_prompt": "bathroom with a sleek one-piece skirted toilet and clean side profile" },
+            { "label": "Two-piece classic", "value": "two_piece_classic", "image_prompt": "bathroom with a classic two-piece toilet in a traditional modern blend" },
+            { "label": "Wall-hung minimalist", "value": "wall_hung_minimalist", "image_prompt": "bathroom with a wall-hung minimalist toilet and concealed tank look" },
+            { "label": "Compact elongated", "value": "compact_elongated", "image_prompt": "bathroom with a compact elongated toilet suited for tighter layouts" }
+          ]
+        },
+        {
+          "key": "mirror_shape",
+          "question": "Which mirror shape should we use above the vanity?",
+          "type_hint": "multiple_choice",
+          "option_hints": [
+            { "label": "Rounded rectangle", "value": "rounded_rectangle", "image_prompt": "bathroom vanity with a rounded rectangle mirror and modern clean frame" },
+            { "label": "Perfect circle", "value": "perfect_circle", "image_prompt": "bathroom vanity with a large circular mirror as a soft focal element" },
+            { "label": "Arched top", "value": "arched_top", "image_prompt": "bathroom vanity with an arched mirror adding classic architectural character" },
+            { "label": "Full-width slab mirror", "value": "full_width_slab", "image_prompt": "bathroom vanity with a full-width slab mirror for a minimal contemporary look" }
+          ]
+        },
+        {
+          "key": "vanity_lighting_fixture",
+          "question": "What vanity lighting fixture style should we try?",
+          "type_hint": "multiple_choice",
+          "option_hints": [
+            { "label": "Linear bar light", "value": "linear_bar", "image_prompt": "bathroom vanity with a modern linear bar light fixture above the mirror" },
+            { "label": "Dual sconces", "value": "dual_sconces", "image_prompt": "bathroom vanity with dual wall sconces flanking the mirror for balanced lighting" },
+            { "label": "Globe fixture", "value": "globe_fixture", "image_prompt": "bathroom vanity with globe vanity lights and a soft contemporary glow" },
+            { "label": "Slim pendant pair", "value": "slim_pendant_pair", "image_prompt": "bathroom vanity with a pair of slim pendant lights for a high-end modern look" }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "planner_context_json": {
+      "services_summary": "Industry: Landscaping. Service: Backyard design concept. User has seen the first concept and wants stylistic inpainting refinements.",
+      "answered_qa": [
+        { "stepId": "step-service-primary", "answer": ["patio-design"] },
+        { "stepId": "step-style-direction", "answer": ["modern_outdoor"] },
+        { "stepId": "step-update-areas", "answer": ["patio_hardscape"] }
+      ],
+      "asked_step_ids": ["step-service-primary", "step-style-direction", "step-update-areas"]
+    },
+    "max_steps": 8,
+    "allowed_mini_types": ["multiple_choice"],
+    "refinement_plan_json": {
+      "plan": [
+        {
+          "key": "firepit_style",
+          "question": "Which firepit style should we place in the yard?",
+          "type_hint": "multiple_choice",
+          "option_hints": [
+            { "label": "Modern linear gas", "value": "modern_linear_gas", "image_prompt": "backyard patio with a modern linear gas firepit and clean rectangular form" },
+            { "label": "Round conversation pit", "value": "round_conversation", "image_prompt": "backyard with a round firepit and built-in conversation seating" },
+            { "label": "Sunken lounge firepit", "value": "sunken_lounge", "image_prompt": "backyard with a sunken lounge area centered around a firepit" },
+            { "label": "Rustic stone firepit", "value": "rustic_stone", "image_prompt": "backyard with a rustic natural stone firepit and warm outdoor ambiance" }
+          ]
+        },
+        {
+          "key": "paver_pattern",
+          "question": "What paver pattern should we test?",
+          "type_hint": "multiple_choice",
+          "option_hints": [
+            { "label": "Running bond", "value": "running_bond", "image_prompt": "backyard patio with pavers laid in a running bond pattern" },
+            { "label": "Herringbone", "value": "herringbone", "image_prompt": "backyard patio with pavers laid in a herringbone pattern" },
+            { "label": "Large-grid modular", "value": "large_grid_modular", "image_prompt": "modern backyard patio with large modular grid paver pattern" },
+            { "label": "Random ashlar", "value": "random_ashlar", "image_prompt": "backyard hardscape with random ashlar paver pattern and natural variation" }
+          ]
+        },
+        {
+          "key": "paver_material",
+          "question": "Which paver material direction looks best?",
+          "type_hint": "multiple_choice",
+          "option_hints": [
+            { "label": "Concrete pavers", "value": "concrete_pavers", "image_prompt": "backyard patio built with contemporary concrete pavers in neutral tones" },
+            { "label": "Natural travertine", "value": "natural_travertine", "image_prompt": "backyard patio with natural travertine pavers and upscale resort look" },
+            { "label": "Textured porcelain pavers", "value": "textured_porcelain", "image_prompt": "backyard patio with textured porcelain pavers and modern minimal styling" },
+            { "label": "Tumbled stone look", "value": "tumbled_stone_look", "image_prompt": "backyard patio with tumbled stone look pavers and softer rustic character" }
+          ]
+        },
+        {
+          "key": "shade_structure",
+          "question": "What shade structure should we add?",
+          "type_hint": "multiple_choice",
+          "option_hints": [
+            { "label": "Modern slat pergola", "value": "modern_slat_pergola", "image_prompt": "backyard patio with a modern slat pergola and black frame" },
+            { "label": "Wood beam pergola", "value": "wood_beam_pergola", "image_prompt": "backyard patio with a warm wood beam pergola and natural texture" },
+            { "label": "Covered pavilion roof", "value": "covered_pavilion", "image_prompt": "backyard with a covered pavilion style roof over the main patio zone" },
+            { "label": "Open sky no structure", "value": "open_sky", "image_prompt": "backyard patio with open sky and no permanent shade structure" }
+          ]
+        },
+        {
+          "key": "outdoor_lighting_style",
+          "question": "Which outdoor lighting style should we switch to?",
+          "type_hint": "multiple_choice",
+          "option_hints": [
+            { "label": "Warm cafe string lights", "value": "warm_string_lights", "image_prompt": "backyard patio with warm cafe string lights over seating area" },
+            { "label": "Architectural linear lights", "value": "architectural_linear", "image_prompt": "modern backyard with architectural linear outdoor lighting integrated into hardscape" },
+            { "label": "Path and uplighting", "value": "path_and_uplighting", "image_prompt": "backyard with low path lights and tree uplighting for layered night scene" },
+            { "label": "Lantern-style sconces", "value": "lantern_sconces", "image_prompt": "backyard patio with lantern-style wall sconces and classic evening glow" }
+          ]
+        },
+        {
+          "key": "planting_palette",
+          "question": "What planting palette should we apply around the hardscape?",
+          "type_hint": "multiple_choice",
+          "option_hints": [
+            { "label": "Structured modern grasses", "value": "structured_modern_grasses", "image_prompt": "backyard with structured planting beds using ornamental grasses and clean edging" },
+            { "label": "Mediterranean drought-tolerant", "value": "mediterranean_drought_tolerant", "image_prompt": "backyard landscaping with Mediterranean drought-tolerant plants and gravel accents" },
+            { "label": "Lush layered greenery", "value": "lush_layered_greenery", "image_prompt": "backyard with lush layered greenery and soft organic planting massing" },
+            { "label": "Low-maintenance minimal", "value": "low_maintenance_minimal", "image_prompt": "backyard with low-maintenance minimal planting and clean modern beds" }
+          ]
+        },
+        {
+          "key": "seating_layout",
+          "question": "How should we lay out the main seating zone?",
+          "type_hint": "multiple_choice",
+          "option_hints": [
+            { "label": "Sectional around firepit", "value": "sectional_around_firepit", "image_prompt": "backyard patio with an outdoor sectional arranged around a central firepit" },
+            { "label": "Four lounge chairs", "value": "four_lounge_chairs", "image_prompt": "backyard patio with four matching lounge chairs around a low table" },
+            { "label": "Dining plus lounge split", "value": "dining_lounge_split", "image_prompt": "backyard with two zones, one outdoor dining area and one separate lounge area" },
+            { "label": "Built-in bench seating", "value": "built_in_bench", "image_prompt": "backyard patio with built-in bench seating integrated into hardscape edges" }
+          ]
+        },
+        {
+          "key": "water_feature_type",
+          "question": "What water feature should we introduce?",
+          "type_hint": "multiple_choice",
+          "option_hints": [
+            { "label": "Modern sheet fountain", "value": "modern_sheet_fountain", "image_prompt": "backyard patio with a modern sheet-style wall fountain and clean geometry" },
+            { "label": "Bubbling urn accents", "value": "bubbling_urns", "image_prompt": "backyard with bubbling urn water features adding soft movement and sound" },
+            { "label": "Reflecting basin", "value": "reflecting_basin", "image_prompt": "backyard with a shallow reflecting basin feature in a minimalist design" },
+            { "label": "No water feature", "value": "no_water_feature", "image_prompt": "backyard patio concept with no water feature and a clean uninterrupted hardscape layout" }
+          ]
+        }
+      ]
+    }
+  }
+]

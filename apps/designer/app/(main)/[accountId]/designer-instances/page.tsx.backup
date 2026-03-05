@@ -1,0 +1,221 @@
+"use client";
+
+import { useAuth } from '@/contexts/AuthContext';
+import { useAccount } from '@/contexts/AccountContext';
+import { useInstance } from '@/contexts/InstanceContext';
+import { useEffect, useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { useRouter, useParams } from 'next/navigation';
+import { Loader2, Plus, Grid3X3, List, Trash2 } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+
+export default function DesignerInstancesPage() {
+  console.log('🔍 DESIGNER INSTANCES PAGE: rendering');
+  
+  const { session } = useAuth();
+  const { currentAccount } = useAccount();
+  const { allInstances, isLoadingInstances, loadAllInstances, deleteInstance } = useInstance();
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [deletingInstance, setDeletingInstance] = useState<string | null>(null);
+  const router = useRouter();
+  const params = useParams();
+  const { toast } = useToast();
+  
+  const accountId = params.accountId as string;
+  
+  console.log('🔍 DESIGNER INSTANCES: Component rendered - accountId:', accountId, 'currentAccount:', currentAccount?.name);
+
+  // Load instances when component mounts
+  useEffect(() => {
+    if (session?.user && accountId) {
+      loadAllInstances(accountId);
+    }
+  }, [session?.user, accountId, loadAllInstances]);
+
+  const handleCreateNew = () => {
+    router.push(`/${accountId}/designer-instances/new`);
+  };
+
+  const handleEditInstance = (instanceId: string) => {
+    console.log('🔍 CLICK FLOW: User clicked instance:', instanceId);
+    console.log('🔍 CLICK FLOW: Current user:', session?.user?.id);
+    // Provide immediate feedback by starting navigation right away
+    router.push(`/${accountId}/designer-instances/${instanceId}`);
+  };
+
+  const handleDeleteInstance = async (instanceId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    
+    if (!confirm('Are you sure you want to delete this instance? This action cannot be undone.')) {
+      return;
+    }
+
+    setDeletingInstance(instanceId);
+    
+    try {
+      await deleteInstance(instanceId);
+    } catch (error) {
+      // Error is already handled in the context
+    } finally {
+      setDeletingInstance(null);
+    }
+  };
+
+  const formatDate = (date: string | null) => {
+    if (!date) return 'Unknown date';
+    return new Date(date).toLocaleDateString();
+  };
+
+  if (isLoadingInstances) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+          <p className="text-muted-foreground">Loading instances...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="container mx-auto px-4 py-8">
+      <div className="flex justify-between items-center mb-8">
+        <div>
+          <h1 className="text-3xl font-bold">
+            {currentAccount?.name ? `${currentAccount.name} - Design Instances` : 'Design Instances'}
+          </h1>
+          <p className="text-muted-foreground mt-1">
+            Manage your widget instances
+          </p>
+        </div>
+        <div className="flex items-center gap-4">
+          <div className="flex items-center border rounded-lg p-1 bg-card">
+            <Button
+              variant={viewMode === 'list' ? 'default' : 'ghost'}
+              size="sm"
+              className="h-8 w-8 p-0"
+              onClick={() => setViewMode('list')}
+            >
+              <List className="h-4 w-4" />
+            </Button>
+            <Button
+              variant={viewMode === 'grid' ? 'default' : 'ghost'}
+              size="sm"
+              className="h-8 w-8 p-0"
+              onClick={() => setViewMode('grid')}
+            >
+              <Grid3X3 className="h-4 w-4" />
+            </Button>
+          </div>
+          <Button onClick={handleCreateNew}>
+            <Plus className="h-4 w-4 mr-2" />
+            Create Instance
+          </Button>
+        </div>
+      </div>
+
+      {allInstances.length === 0 ? (
+        <div className="text-center py-12 bg-card border rounded-lg">
+          <h2 className="text-xl font-semibold mb-2">No instances yet</h2>
+          <p className="text-muted-foreground mb-6">
+            Create your first widget instance to get started
+          </p>
+          <Button onClick={handleCreateNew}>
+            <Plus className="h-4 w-4 mr-2" />
+            Create Your First Instance
+          </Button>
+        </div>
+      ) : viewMode === 'list' ? (
+        <div className="bg-card border rounded-lg overflow-hidden">
+          <div className="px-6 py-4 border-b bg-muted/50">
+            <div className="grid grid-cols-12 gap-4 text-sm font-medium text-muted-foreground">
+              <div className="col-span-4">Name</div>
+              <div className="col-span-5">Description</div>
+              <div className="col-span-2">Created</div>
+              <div className="col-span-1">Actions</div>
+            </div>
+          </div>
+          <div className="divide-y">
+            {allInstances.map((instance) => (
+              <div
+                key={instance.id}
+                className="px-6 py-4 hover:bg-muted/20 transition-colors cursor-pointer"
+                onClick={() => handleEditInstance(instance.id)}
+              >
+                <div className="grid grid-cols-12 gap-4">
+                  <div className="col-span-4">
+                    <h3 className="font-medium">{instance.name || 'Untitled Instance'}</h3>
+                  </div>
+                  <div className="col-span-5">
+                    <p className="text-muted-foreground text-sm">
+                      {instance.description || 'No description'}
+                    </p>
+                  </div>
+                  <div className="col-span-2">
+                    <span className="text-sm text-muted-foreground">
+                      {formatDate(instance.created_at)}
+                    </span>
+                  </div>
+                  <div className="col-span-1">
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="h-8 px-2 text-xs text-destructive hover:text-destructive"
+                      onClick={(e) => handleDeleteInstance(instance.id, e)}
+                      disabled={deletingInstance === instance.id}
+                    >
+                      {deletingInstance === instance.id ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Trash2 className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {allInstances.map((instance) => (
+            <div
+              key={instance.id}
+              className="group bg-card border rounded-xl p-6 hover:border-primary/50 hover:shadow-lg transition-all duration-200 cursor-pointer"
+              onClick={() => handleEditInstance(instance.id)}
+            >
+              <div className="space-y-4">
+                <h3 className="font-medium text-lg line-clamp-2">
+                  {instance.name || 'Untitled Instance'}
+                </h3>
+                <p className="text-muted-foreground text-sm line-clamp-3">
+                  {instance.description || 'No description'}
+                </p>
+                <div className="flex items-center justify-between pt-2">
+                  <span className="text-xs text-muted-foreground">
+                    Created: {formatDate(instance.created_at)}
+                  </span>
+                  <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="h-8 px-2 text-xs text-destructive hover:text-destructive"
+                      onClick={(e) => handleDeleteInstance(instance.id, e)}
+                      disabled={deletingInstance === instance.id}
+                    >
+                      {deletingInstance === instance.id ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Trash2 className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

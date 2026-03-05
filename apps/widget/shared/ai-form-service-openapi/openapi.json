@@ -1,0 +1,439 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "sif-ai-form-service consolidated API",
+    "version": "0.3.0",
+    "description": "Consolidated OpenAPI contract used to keep frontend and backend JSON shapes in sync."
+  },
+  "paths": {
+    "/api/ai-form/{instanceId}/generate-steps": {
+      "post": {
+        "summary": "Generate steps",
+        "description": "Widget endpoint for generating the next batch of steps.",
+        "operationId": "aiFormGenerateSteps",
+        "tags": [
+          "ai-form"
+        ],
+        "parameters": [
+          {
+            "name": "instanceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NewBatchRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NewBatchResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/ai-form/{instanceId}/generate-image": {
+      "post": {
+        "summary": "Generate image",
+        "description": "Widget endpoint for generating preview images from the current form state. NOTE: client-supplied prompts are not supported; prompts are generated server-side.",
+        "operationId": "aiFormGenerateImage",
+        "tags": [
+          "ai-form"
+        ],
+        "parameters": [
+          {
+            "name": "instanceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GenerateImageRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GenerateImageResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "GenericObject": {
+        "type": "object",
+        "additionalProperties": true
+      },
+      "NullableString": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "StringArray": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "NullableGenericObject": {
+        "anyOf": [
+          {
+            "$ref": "#/components/schemas/GenericObject"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "AnsweredQAItem": {
+        "type": "object",
+        "additionalProperties": true,
+        "required": [
+          "stepId",
+          "question",
+          "answer"
+        ],
+        "properties": {
+          "stepId": {
+            "type": "string",
+            "description": "Stable step identifier (e.g. \"step-bathroom-features\").",
+            "example": "step-bathroom-features"
+          },
+          "question": {
+            "type": "string",
+            "description": "Human-readable question text (preferred over IDs/keys).",
+            "example": "What bathroom features matter most to you?"
+          },
+          "answer": {
+            "description": "The buyer's answer. Shape depends on the step (string/number/boolean/array/object).",
+            "example": [
+              "fixture_cohesion"
+            ]
+          }
+        }
+      },
+      "FormState": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {
+          "formId": {
+            "type": "string"
+          },
+          "batchIndex": {
+            "type": "integer"
+          },
+          "maxBatches": {
+            "type": "integer"
+          },
+          "tokenBudgetTotal": {
+            "type": "integer"
+          },
+          "tokensUsedSoFar": {
+            "type": "integer"
+          },
+          "schemaVersion": {
+            "type": "string"
+          }
+        }
+      },
+      "MiniStep": {
+        "$ref": "#/components/schemas/GenericObject"
+      },
+      "InstanceContext": {
+        "type": "object",
+        "additionalProperties": false,
+        "description": "Instance context with industry/service information. Supports both single values (back-compat) and arrays (new format).",
+        "properties": {
+          "serviceSummary": {
+            "$ref": "#/components/schemas/NullableString",
+            "description": "Optional: human-readable summary of what the service does (seeded from instance DB column `company_summary`, optionally appended with per-service `service_summary`)."
+          },
+          "industry": {
+            "type": "object",
+            "description": "Single industry (deprecated - use categories array instead)",
+            "properties": {
+              "id": {
+                "$ref": "#/components/schemas/NullableString"
+              },
+              "name": {
+                "$ref": "#/components/schemas/NullableString"
+              }
+            }
+          },
+          "service": {
+            "type": "object",
+            "description": "Single service (deprecated - use subcategories array instead)",
+            "properties": {
+              "id": {
+                "$ref": "#/components/schemas/NullableString"
+              },
+              "name": {
+                "$ref": "#/components/schemas/NullableString"
+              }
+            }
+          },
+          "categories": {
+            "type": "array",
+            "description": "Array of categories (industries) - preferred format",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "$ref": "#/components/schemas/NullableString"
+                },
+                "name": {
+                  "$ref": "#/components/schemas/NullableString"
+                }
+              }
+            }
+          },
+          "subcategories": {
+            "type": "array",
+            "description": "Array of subcategories (services) - preferred format",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "$ref": "#/components/schemas/NullableString"
+                },
+                "name": {
+                  "$ref": "#/components/schemas/NullableString"
+                },
+                "categoryId": {
+                  "$ref": "#/components/schemas/NullableString",
+                  "description": "Optional: parent category ID"
+                }
+              }
+            }
+          }
+        }
+      },
+      "NewBatchRequest": {
+        "type": "object",
+        "additionalProperties": true,
+        "required": [
+          "sessionId"
+        ],
+        "properties": {
+          "sessionId": {
+            "type": "string"
+          },
+          "stepDataSoFar": {
+            "$ref": "#/components/schemas/GenericObject"
+          },
+          "askedStepIds": {
+            "$ref": "#/components/schemas/StringArray"
+          },
+          "answeredQA": {
+            "type": "array",
+            "description": "Optional: plain-English memory (question + answer pairs) provided by the client.",
+            "items": {
+              "$ref": "#/components/schemas/AnsweredQAItem"
+            }
+          },
+          "existingStepIds": {
+            "$ref": "#/components/schemas/StringArray"
+          },
+          "questionStepIds": {
+            "$ref": "#/components/schemas/StringArray"
+          },
+          "formState": {
+            "$ref": "#/components/schemas/FormState"
+          },
+          "useCase": {
+            "type": "string"
+          },
+          "instanceContext": {
+            "$ref": "#/components/schemas/InstanceContext",
+            "description": "Optional: instance context with industry/service information (supports arrays for multiple categories/subcategories)"
+          },
+          "noCache": {
+            "type": "boolean",
+            "description": "If true, treat as debug intent (may affect logging)."
+          }
+        }
+      },
+      "NewBatchResponse": {
+        "type": "object",
+        "additionalProperties": true,
+        "required": [
+          "requestId",
+          "miniSteps"
+        ],
+        "properties": {
+          "requestId": {
+            "type": "string"
+          },
+          "schemaVersion": {
+            "$ref": "#/components/schemas/NullableString"
+          },
+          "miniSteps": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MiniStep"
+            }
+          },
+          "lmUsage": {
+            "$ref": "#/components/schemas/NullableGenericObject"
+          }
+        }
+      },
+      "GenerateImageRequest": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/NewBatchRequest"
+          },
+          {
+            "type": "object",
+            "additionalProperties": true,
+            "properties": {
+              "numOutputs": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 8,
+                "description": "Number of images to generate."
+              },
+              "referenceImages": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Optional reference image URLs."
+              },
+              "sceneImage": {
+                "description": "Optional scene/base image (URL or structured object).",
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "$ref": "#/components/schemas/GenericObject"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "productImage": {
+                "description": "Optional product image (URL or structured object).",
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "$ref": "#/components/schemas/GenericObject"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "negativePrompt": {
+                "type": "string",
+                "description": "Optional negative prompt guidance."
+              },
+              "outputFormat": {
+                "type": "string",
+                "description": "Optional provider output format."
+              },
+              "modelId": {
+                "type": "string",
+                "description": "Optional provider model id."
+              },
+              "width": {
+                "type": "integer",
+                "description": "Optional output width."
+              },
+              "height": {
+                "type": "integer",
+                "description": "Optional output height."
+              },
+              "numInferenceSteps": {
+                "type": "integer",
+                "description": "Optional number of inference steps."
+              },
+              "guidanceScale": {
+                "type": "number",
+                "description": "Optional guidance scale."
+              }
+            }
+          }
+        ]
+      },
+      "GenerateImageResponse": {
+        "type": "object",
+        "additionalProperties": true,
+        "required": [
+          "images"
+        ],
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "images": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "predictionId": {
+            "$ref": "#/components/schemas/NullableString"
+          },
+          "status": {
+            "$ref": "#/components/schemas/NullableString"
+          },
+          "provider": {
+            "$ref": "#/components/schemas/NullableString"
+          },
+          "modelId": {
+            "$ref": "#/components/schemas/NullableString"
+          },
+          "instanceId": {
+            "$ref": "#/components/schemas/NullableString"
+          },
+          "useCase": {
+            "$ref": "#/components/schemas/NullableString"
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,1490 @@
+[
+  {
+    "slug": "airbnb-makeovers",
+    "demo_template_config": {
+      "brand_name": "Airbnb Makeovers Company",
+      "logo_url": "https://api.iconify.design/mdi:hvac.svg?color=%231f2937",
+      "theme_key": "neutral"
+    }
+  },
+  {
+    "slug": "all-accesories",
+    "demo_template_config": {
+      "brand_name": "All Accesories Works",
+      "logo_url": "https://api.iconify.design/mdi:hvac.svg?color=%23ef4444",
+      "theme_key": "neutral"
+    }
+  },
+  {
+    "slug": "all-ecomm-",
+    "demo_template_config": {
+      "brand_name": "Silverline All Ecomm.",
+      "logo_url": "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMjgiIGhlaWdodD0iMTI4IiB2aWV3Qm94PSIwIDAgMTI4IDEyOCI+CiAgPGRlZnM+CiAgICA8c3R5bGU+CiAgICAgIC50ZXh0IHsgZm9udC1mYW1pbHk6IEludGVyLCBzeXN0ZW0tdWksIC1hcHBsZS1zeXN0ZW0sIFNlZ29lIFVJLCBSb2JvdG8sIFVidW50dSwgQ2FudGFyZWxsLCBOb3RvIFNhbnMsIEhlbHZldGljYSBOZXVlLCBBcmlhbCwgIkFwcGxlIENvbG9yIEVtb2ppIiwgIlNlZ29lIFVJIEVtb2ppIjsgZm9udC13ZWlnaHQ6IDcwMDsgfQogICAgPC9zdHlsZT4KICA8L2RlZnM+CiAgPHJlY3Qgd2lkdGg9IjEyOCIgaGVpZ2h0PSIxMjgiIHJ4PSIxNiIgZmlsbD0iIzBlYTVlOSIvPgogIDx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjZmZmZmZmIiBmb250LXNpemU9IjU2IiBjbGFzcz0idGV4dCI+QUU8L3RleHQ+Cjwvc3ZnPg==",
+      "theme_key": "neutral"
+    }
+  },
+  {
+    "slug": "architecture",
+    "demo_template_config": {
+      "brand_name": "Keystone Architecture Co",
+      "logo_url": "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMjgiIGhlaWdodD0iMTI4IiB2aWV3Qm94PSIwIDAgMTI4IDEyOCI+CiAgPGRlZnM+CiAgICA8c3R5bGU+CiAgICAgIC50ZXh0IHsgZm9udC1mYW1pbHk6IEludGVyLCBzeXN0ZW0tdWksIC1hcHBsZS1zeXN0ZW0sIFNlZ29lIFVJLCBSb2JvdG8sIFVidW50dSwgQ2FudGFyZWxsLCBOb3RvIFNhbnMsIEhlbHZldGljYSBOZXVlLCBBcmlhbCwgIkFwcGxlIENvbG9yIEVtb2ppIiwgIlNlZ29lIFVJIEVtb2ppIjsgZm9udC13ZWlnaHQ6IDcwMDsgfQogICAgPC9zdHlsZT4KICA8L2RlZnM+CiAgPHJlY3Qgd2lkdGg9IjEyOCIgaGVpZ2h0PSIxMjgiIHJ4PSIxNiIgZmlsbD0iI2E4NTVmNyIvPgogIDx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjZmZmZmZmIiBmb250LXNpemU9IjU2IiBjbGFzcz0idGV4dCI+QTwvdGV4dD4KPC9zdmc+",
+      "theme_key": "neutral"
+    }
+  },
+  {
+    "slug": "artwork-wall-decor",
+    "demo_template_config": {
+      "brand_name": "Artwork & Wall Decor LLC",
+      "logo_url": "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMjgiIGhlaWdodD0iMTI4IiB2aWV3Qm94PSIwIDAgMTI4IDEyOCI+CiAgPGRlZnM+CiAgICA8c3R5bGU+CiAgICAgIC50ZXh0IHsgZm9udC1mYW1pbHk6IEludGVyLCBzeXN0ZW0tdWksIC1hcHBsZS1zeXN0ZW0sIFNlZ29lIFVJLCBSb2JvdG8sIFVidW50dSwgQ2FudGFyZWxsLCBOb3RvIFNhbnMsIEhlbHZldGljYSBOZXVlLCBBcmlhbCwgIkFwcGxlIENvbG9yIEVtb2ppIiwgIlNlZ29lIFVJIEVtb2ppIjsgZm9udC13ZWlnaHQ6IDcwMDsgfQogICAgPC9zdHlsZT4KICA8L2RlZnM+CiAgPHJlY3Qgd2lkdGg9IjEyOCIgaGVpZ2h0PSIxMjgiIHJ4PSIxNiIgZmlsbD0iI2VhNTgwYyIvPgogIDx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjZmZmZmZmIiBmb250LXNpemU9IjU2IiBjbGFzcz0idGV4dCI+QVc8L3RleHQ+Cjwvc3ZnPg==",
+      "theme_key": "neutral"
+    }
+  },
+  {
+    "slug": "attic-conversion",
+    "demo_template_config": {
+      "brand_name": "FirstChoice Attic Conversion Pros",
+      "logo_url": "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMjgiIGhlaWdodD0iMTI4IiB2aWV3Qm94PSIwIDAgMTI4IDEyOCI+CiAgPGRlZnM+CiAgICA8c3R5bGU+CiAgICAgIC50ZXh0IHsgZm9udC1mYW1pbHk6IEludGVyLCBzeXN0ZW0tdWksIC1hcHBsZS1zeXN0ZW0sIFNlZ29lIFVJLCBSb2JvdG8sIFVidW50dSwgQ2FudGFyZWxsLCBOb3RvIFNhbnMsIEhlbHZldGljYSBOZXVlLCBBcmlhbCwgIkFwcGxlIENvbG9yIEVtb2ppIiwgIlNlZ29lIFVJIEVtb2ppIjsgZm9udC13ZWlnaHQ6IDcwMDsgfQogICAgPC9zdHlsZT4KICA8L2RlZnM+CiAgPHJlY3Qgd2lkdGg9IjEyOCIgaGVpZ2h0PSIxMjgiIHJ4PSIxNiIgZmlsbD0iI2VhNTgwYyIvPgogIDx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjZmZmZmZmIiBmb250LXNpemU9IjU2IiBjbGFzcz0idGV4dCI+QUM8L3RleHQ+Cjwvc3ZnPg==",
+      "theme_key": "neutral"
+    }
+  },
+  {
+    "slug": "basement-desgin",
+    "demo_template_config": {
+      "brand_name": "ProCare Basement Desgin",
+      "logo_url": "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMjgiIGhlaWdodD0iMTI4IiB2aWV3Qm94PSIwIDAgMTI4IDEyOCI+CiAgPGRlZnM+CiAgICA8c3R5bGU+CiAgICAgIC50ZXh0IHsgZm9udC1mYW1pbHk6IEludGVyLCBzeXN0ZW0tdWksIC1hcHBsZS1zeXN0ZW0sIFNlZ29lIFVJLCBSb2JvdG8sIFVidW50dSwgQ2FudGFyZWxsLCBOb3RvIFNhbnMsIEhlbHZldGljYSBOZXVlLCBBcmlhbCwgIkFwcGxlIENvbG9yIEVtb2ppIiwgIlNlZ29lIFVJIEVtb2ppIjsgZm9udC13ZWlnaHQ6IDcwMDsgfQogICAgPC9zdHlsZT4KICA8L2RlZnM+CiAgPHJlY3Qgd2lkdGg9IjEyOCIgaGVpZ2h0PSIxMjgiIHJ4PSIxNiIgZmlsbD0iI2E4NTVmNyIvPgogIDx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjZmZmZmZmIiBmb250LXNpemU9IjU2IiBjbGFzcz0idGV4dCI+QkQ8L3RleHQ+Cjwvc3ZnPg==",
+      "theme_key": "neutral"
+    }
+  },
+  {
+    "slug": "bathroom-remodeling",
+    "demo_template_config": {
+      "brand_name": "Bathroom Remodeling Pros",
+      "logo_url": "https://api.iconify.design/mdi:shower.svg?color=%23f59e0b",
+      "theme_key": "neutral"
+    }
+  },
+  {
+    "slug": "before-after-house-flips",
+    "demo_template_config": {
+      "brand_name": "Apex Before/After House Flips Co",
+      "logo_url": "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMjgiIGhlaWdodD0iMTI4IiB2aWV3Qm94PSIwIDAgMTI4IDEyOCI+CiAgPGRlZnM+CiAgICA8c3R5bGU+CiAgICAgIC50ZXh0IHsgZm9udC1mYW1pbHk6IEludGVyLCBzeXN0ZW0tdWksIC1hcHBsZS1zeXN0ZW0sIFNlZ29lIFVJLCBSb2JvdG8sIFVidW50dSwgQ2FudGFyZWxsLCBOb3RvIFNhbnMsIEhlbHZldGljYSBOZXVlLCBBcmlhbCwgIkFwcGxlIENvbG9yIEVtb2ppIiwgIlNlZ29lIFVJIEVtb2ppIjsgZm9udC13ZWlnaHQ6IDcwMDsgfQogICAgPC9zdHlsZT4KICA8L2RlZnM+CiAgPHJlY3Qgd2lkdGg9IjEyOCIgaGVpZ2h0PSIxMjgiIHJ4PSIxNiIgZmlsbD0iIzA2YjZkNCIvPgogIDx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjZmZmZmZmIiBmb250LXNpemU9IjU2IiBjbGFzcz0idGV4dCI+QkE8L3RleHQ+Cjwvc3ZnPg==",
+      "theme_key": "neutral"
+    }
+  },
+  {
+    "slug": "breast-implants",
+    "demo_template_config": {
+      "brand_name": "NextGen Breast Implants",
+      "logo_url": "https://api.iconify.design/mdi:account.svg?color=%230f766e",
+      "theme_key": "neutral"
+    }
+  },
+  {
+    "slug": "campground-layout",
+    "demo_template_config": {
+      "brand_name": "Campground Layout Inc",
+      "logo_url": "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMjgiIGhlaWdodD0iMTI4IiB2aWV3Qm94PSIwIDAgMTI4IDEyOCI+CiAgPGRlZnM+CiAgICA8c3R5bGU+CiAgICAgIC50ZXh0IHsgZm9udC1mYW1pbHk6IEludGVyLCBzeXN0ZW0tdWksIC1hcHBsZS1zeXN0ZW0sIFNlZ29lIFVJLCBSb2JvdG8sIFVidW50dSwgQ2FudGFyZWxsLCBOb3RvIFNhbnMsIEhlbHZldGljYSBOZXVlLCBBcmlhbCwgIkFwcGxlIENvbG9yIEVtb2ppIiwgIlNlZ29lIFVJIEVtb2ppIjsgZm9udC13ZWlnaHQ6IDcwMDsgfQogICAgPC9zdHlsZT4KICA8L2RlZnM+CiAgPHJlY3Qgd2lkdGg9IjEyOCIgaGVpZ2h0PSIxMjgiIHJ4PSIxNiIgZmlsbD0iI2Y1OWUwYiIvPgogIDx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjZmZmZmZmIiBmb250LXNpemU9IjU2IiBjbGFzcz0idGV4dCI+Q0w8L3RleHQ+Cjwvc3ZnPg==",
+      "theme_key": "neutral"
+    }
+  },
+  {
+    "slug": "carpeting",
+    "demo_template_config": {
+      "brand_name": "Pioneer Sample Carpeting",
+      "logo_url": "https://api.iconify.design/mdi:floor-plan.svg?color=%238b5cf6",
+      "theme_key": "violet"
+    }
+  },
+  {
+    "slug": "closet-storage-solutions",
+    "demo_template_config": {
+      "brand_name": "Silverline Closet & Storage Solutions Company",
+      "logo_url": "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMjgiIGhlaWdodD0iMTI4IiB2aWV3Qm94PSIwIDAgMTI4IDEyOCI+CiAgPGRlZnM+CiAgICA8c3R5bGU+CiAgICAgIC50ZXh0IHsgZm9udC1mYW1pbHk6IEludGVyLCBzeXN0ZW0tdWksIC1hcHBsZS1zeXN0ZW0sIFNlZ29lIFVJLCBSb2JvdG8sIFVidW50dSwgQ2FudGFyZWxsLCBOb3RvIFNhbnMsIEhlbHZldGljYSBOZXVlLCBBcmlhbCwgIkFwcGxlIENvbG9yIEVtb2ppIiwgIlNlZ29lIFVJIEVtb2ppIjsgZm9udC13ZWlnaHQ6IDcwMDsgfQogICAgPC9zdHlsZT4KICA8L2RlZnM+CiAgPHJlY3Qgd2lkdGg9IjEyOCIgaGVpZ2h0PSIxMjgiIHJ4PSIxNiIgZmlsbD0iI2VhNTgwYyIvPgogIDx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjZmZmZmZmIiBmb250LXNpemU9IjU2IiBjbGFzcz0idGV4dCI+Q1M8L3RleHQ+Cjwvc3ZnPg==",
+      "theme_key": "neutral"
+    }
+  },
+  {
+    "slug": "custom-metal-fabrication-visualization",
+    "demo_template_config": {
+      "brand_name": "Silverline Sample Custom Metal / Fabrication Visualization Inc",
+      "logo_url": "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMjgiIGhlaWdodD0iMTI4IiB2aWV3Qm94PSIwIDAgMTI4IDEyOCI+CiAgPGRlZnM+CiAgICA8c3R5bGU+CiAgICAgIC50ZXh0IHsgZm9udC1mYW1pbHk6IEludGVyLCBzeXN0ZW0tdWksIC1hcHBsZS1zeXN0ZW0sIFNlZ29lIFVJLCBSb2JvdG8sIFVidW50dSwgQ2FudGFyZWxsLCBOb3RvIFNhbnMsIEhlbHZldGljYSBOZXVlLCBBcmlhbCwgIkFwcGxlIENvbG9yIEVtb2ppIiwgIlNlZ29lIFVJIEVtb2ppIjsgZm9udC13ZWlnaHQ6IDcwMDsgfQogICAgPC9zdHlsZT4KICA8L2RlZnM+CiAgPHJlY3Qgd2lkdGg9IjEyOCIgaGVpZ2h0PSIxMjgiIHJ4PSIxNiIgZmlsbD0iI2E4NTVmNyIvPgogIDx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjZmZmZmZmIiBmb250LXNpemU9IjU2IiBjbGFzcz0idGV4dCI+Q008L3RleHQ+Cjwvc3ZnPg==",
+      "theme_key": "neutral"
+    }
+  },
+  {
+    "slug": "custom-tailoring",
+    "demo_template_config": {
+      "brand_name": "Vertex Sample Custom Tailoring",
+      "logo_url": "https://api.iconify.design/mdi:tshirt-crew.svg?color=%23111827",
+      "theme_key": "neutral"
+    }
+  },
+  {
+    "slug": "door-garage-door-design",
+    "demo_template_config": {
+      "brand_name": "Apex Door & Garage Door Design Solutions",
+      "logo_url": "https://api.iconify.design/mdi:garage.svg?color=%230ea5e9",
+      "theme_key": "cyan"
+    }
+  },
+  {
+    "slug": "exterior-painting",
+    "demo_template_config": {
+      "brand_name": "BrightPath Exterior Painting",
+      "logo_url": "https://api.iconify.design/mdi:format-paint.svg?color=%23f59e0b",
+      "theme_key": "amber"
+    }
+  },
+  {
+    "slug": "facial-hair",
+    "demo_template_config": {
+      "brand_name": "Facial Hair Pros",
+      "logo_url": "https://api.iconify.design/mdi:hvac.svg?color=%23f59e0b",
+      "theme_key": "amber"
+    }
+  },
+  {
+    "slug": "fence-design",
+    "demo_template_config": {
+      "brand_name": "Atlas Fence Design LLC",
+      "logo_url": "https://api.iconify.design/mdi:fence.svg?color=%23ea580c",
+      "theme_key": "neutral"
+    }
+  },
+  {
+    "slug": "fire-pit-designs",
+    "demo_template_config": {
+      "brand_name": "ClearView Sample Fire Pit Designs Design",
+      "logo_url": "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMjgiIGhlaWdodD0iMTI4IiB2aWV3Qm94PSIwIDAgMTI4IDEyOCI+CiAgPGRlZnM+CiAgICA8c3R5bGU+CiAgICAgIC50ZXh0IHsgZm9udC1mYW1pbHk6IEludGVyLCBzeXN0ZW0tdWksIC1hcHBsZS1zeXN0ZW0sIFNlZ29lIFVJLCBSb2JvdG8sIFVidW50dSwgQ2FudGFyZWxsLCBOb3RvIFNhbnMsIEhlbHZldGljYSBOZXVlLCBBcmlhbCwgIkFwcGxlIENvbG9yIEVtb2ppIiwgIlNlZ29lIFVJIEVtb2ppIjsgZm9udC13ZWlnaHQ6IDcwMDsgfQogICAgPC9zdHlsZT4KICA8L2RlZnM+CiAgPHJlY3Qgd2lkdGg9IjEyOCIgaGVpZ2h0PSIxMjgiIHJ4PSIxNiIgZmlsbD0iIzA2YjZkNCIvPgogIDx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjZmZmZmZmIiBmb250LXNpemU9IjU2IiBjbGFzcz0idGV4dCI+RlA8L3RleHQ+Cjwvc3ZnPg==",
+      "theme_key": "neutral"
+    }
+  },
+  {
+    "slug": "fireplace",
+    "demo_template_config": {
+      "brand_name": "Fireplace Inc",
+      "logo_url": "https://api.iconify.design/mdi:hvac.svg?color=%23ea580c",
+      "theme_key": "neutral"
+    }
+  },
+  {
+    "slug": "flooring",
+    "demo_template_config": {
+      "brand_name": "ClearView Flooring Design",
+      "logo_url": "https://api.iconify.design/mdi:floor-plan.svg?color=%238b5cf6",
+      "theme_key": "violet"
+    }
+  },
+  {
+    "slug": "furniture",
+    "demo_template_config": {
+      "brand_name": "BrightPath Furniture Solutions",
+      "logo_url": "https://api.iconify.design/mdi:sofa.svg?color=%238b5cf6",
+      "theme_key": "violet"
+    }
+  },
+  {
+    "slug": "garage",
+    "demo_template_config": {
+      "brand_name": "Garage LLC",
+      "logo_url": "https://api.iconify.design/mdi:garage.svg?color=%230ea5e9",
+      "theme_key": "cyan"
+    }
+  },
+  {
+    "slug": "gazebo-pergola",
+    "demo_template_config": {
+      "brand_name": "ProCare Gazebo / Pergola",
+      "logo_url": "https://api.iconify.design/mdi:deck.svg?color=%23b45309",
+      "theme_key": "amber"
+    }
+  },
+  {
+    "slug": "general-all-other-home-furnishings-stores",
+    "demo_template_config": {
+      "brand_name": "ClearView Sample General All Other Home Furnishings Stores Co",
+      "logo_url": "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMjgiIGhlaWdodD0iMTI4IiB2aWV3Qm94PSIwIDAgMTI4IDEyOCI+CiAgPGRlZnM+CiAgICA8c3R5bGU+CiAgICAgIC50ZXh0IHsgZm9udC1mYW1pbHk6IEludGVyLCBzeXN0ZW0tdWksIC1hcHBsZS1zeXN0ZW0sIFNlZ29lIFVJLCBSb2JvdG8sIFVidW50dSwgQ2FudGFyZWxsLCBOb3RvIFNhbnMsIEhlbHZldGljYSBOZXVlLCBBcmlhbCwgIkFwcGxlIENvbG9yIEVtb2ppIiwgIlNlZ29lIFVJIEVtb2ppIjsgZm9udC13ZWlnaHQ6IDcwMDsgfQogICAgPC9zdHlsZT4KICA8L2RlZnM+CiAgPHJlY3Qgd2lkdGg9IjEyOCIgaGVpZ2h0PSIxMjgiIHJ4PSIxNiIgZmlsbD0iIzBlYTVlOSIvPgogIDx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjZmZmZmZmIiBmb250LXNpemU9IjU2IiBjbGFzcz0idGV4dCI+R0E8L3RleHQ+Cjwvc3ZnPg==",
+      "theme_key": "neutral"
+    }
+  },
+  {
+    "slug": "general-all-other-specialty-trade-contractors",
+    "demo_template_config": {
+      "brand_name": "Atlas Sample General All Other Specialty Trade Contractors Solutions",
+      "logo_url": "https://api.iconify.design/mdi:hvac.svg?color=%231f2937",
+      "theme_key": "neutral"
+    }
+  },
+  {
+    "slug": "general-architectural-services",
+    "demo_template_config": {
+      "brand_name": "General Architectural Services Co",
+      "logo_url": "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMjgiIGhlaWdodD0iMTI4IiB2aWV3Qm94PSIwIDAgMTI4IDEyOCI+CiAgPGRlZnM+CiAgICA8c3R5bGU+CiAgICAgIC50ZXh0IHsgZm9udC1mYW1pbHk6IEludGVyLCBzeXN0ZW0tdWksIC1hcHBsZS1zeXN0ZW0sIFNlZ29lIFVJLCBSb2JvdG8sIFVidW50dSwgQ2FudGFyZWxsLCBOb3RvIFNhbnMsIEhlbHZldGljYSBOZXVlLCBBcmlhbCwgIkFwcGxlIENvbG9yIEVtb2ppIiwgIlNlZ29lIFVJIEVtb2ppIjsgZm9udC13ZWlnaHQ6IDcwMDsgfQogICAgPC9zdHlsZT4KICA8L2RlZnM+CiAgPHJlY3Qgd2lkdGg9IjEyOCIgaGVpZ2h0PSIxMjgiIHJ4PSIxNiIgZmlsbD0iI2E4NTVmNyIvPgogIDx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjZmZmZmZmIiBmb250LXNpemU9IjU2IiBjbGFzcz0idGV4dCI+R0E8L3RleHQ+Cjwvc3ZnPg==",
+      "theme_key": "neutral"
+    }
+  },
+  {
+    "slug": "general-automobile-and-other-motor-vehicle-merchant-wholesalers",
+    "demo_template_config": {
+      "brand_name": "General Automobile And Other Motor Vehicle Merchant Wholesalers Inc",
+      "logo_url": "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMjgiIGhlaWdodD0iMTI4IiB2aWV3Qm94PSIwIDAgMTI4IDEyOCI+CiAgPGRlZnM+CiAgICA8c3R5bGU+CiAgICAgIC50ZXh0IHsgZm9udC1mYW1pbHk6IEludGVyLCBzeXN0ZW0tdWksIC1hcHBsZS1zeXN0ZW0sIFNlZ29lIFVJLCBSb2JvdG8sIFVidW50dSwgQ2FudGFyZWxsLCBOb3RvIFNhbnMsIEhlbHZldGljYSBOZXVlLCBBcmlhbCwgIkFwcGxlIENvbG9yIEVtb2ppIiwgIlNlZ29lIFVJIEVtb2ppIjsgZm9udC13ZWlnaHQ6IDcwMDsgfQogICAgPC9zdHlsZT4KICA8L2RlZnM+CiAgPHJlY3Qgd2lkdGg9IjEyOCIgaGVpZ2h0PSIxMjgiIHJ4PSIxNiIgZmlsbD0iI2Y1OWUwYiIvPgogIDx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjZmZmZmZmIiBmb250LXNpemU9IjU2IiBjbGFzcz0idGV4dCI+R0E8L3RleHQ+Cjwvc3ZnPg==",
+      "theme_key": "neutral"
+    }
+  },
+  {
+    "slug": "general-automotive-glass-replacement-shops",
+    "demo_template_config": {
+      "brand_name": "Prime Sample General Automotive Glass Replacement Shops",
+      "logo_url": "https://api.iconify.design/mdi:hvac.svg?color=%23111827",
+      "theme_key": "neutral"
+    }
+  },
+  {
+    "slug": "general-barber-shops",
+    "demo_template_config": {
+      "brand_name": "Apex Sample General Barber Shops",
+      "logo_url": "https://api.iconify.design/mdi:hair-dryer.svg?color=%23f59e0b",
+      "theme_key": "amber"
+    }
+  },
+  {
+    "slug": "general-beauty-salons",
+    "demo_template_config": {
+      "brand_name": "BrightPath General Beauty Salons",
+      "logo_url": "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMjgiIGhlaWdodD0iMTI4IiB2aWV3Qm94PSIwIDAgMTI4IDEyOCI+CiAgPGRlZnM+CiAgICA8c3R5bGU+CiAgICAgIC50ZXh0IHsgZm9udC1mYW1pbHk6IEludGVyLCBzeXN0ZW0tdWksIC1hcHBsZS1zeXN0ZW0sIFNlZ29lIFVJLCBSb2JvdG8sIFVidW50dSwgQ2FudGFyZWxsLCBOb3RvIFNhbnMsIEhlbHZldGljYSBOZXVlLCBBcmlhbCwgIkFwcGxlIENvbG9yIEVtb2ppIiwgIlNlZ29lIFVJIEVtb2ppIjsgZm9udC13ZWlnaHQ6IDcwMDsgfQogICAgPC9zdHlsZT4KICA8L2RlZnM+CiAgPHJlY3Qgd2lkdGg9IjEyOCIgaGVpZ2h0PSIxMjgiIHJ4PSIxNiIgZmlsbD0iI2Y1OWUwYiIvPgogIDx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjZmZmZmZmIiBmb250LXNpemU9IjU2IiBjbGFzcz0idGV4dCI+R0I8L3RleHQ+Cjwvc3ZnPg==",
+      "theme_key": "neutral"
+    }
+  },
+  {
+    "slug": "general-children-s-and-infants-clothing-stores",
+    "demo_template_config": {
+      "brand_name": "General Children's And Infants' Clothing Stores Inc",
+      "logo_url": "https://api.iconify.design/mdi:tshirt-crew.svg?color=%23111827",
+      "theme_key": "neutral"
+    }
+  },
+  {
+    "slug": "general-clothing-accessories-stores",
+    "demo_template_config": {
+      "brand_name": "General Clothing Accessories Stores Inc",
+      "logo_url": "https://api.iconify.design/mdi:hvac.svg?color=%23111827",
+      "theme_key": "neutral"
+    }
+  },
+  {
+    "slug": "general-commercial-and-institutional-building-construction",
+    "demo_template_config": {
+      "brand_name": "TrueClean General Commercial And Institutional Building Construction Inc",
+      "logo_url": "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMjgiIGhlaWdodD0iMTI4IiB2aWV3Qm94PSIwIDAgMTI4IDEyOCI+CiAgPGRlZnM+CiAgICA8c3R5bGU+CiAgICAgIC50ZXh0IHsgZm9udC1mYW1pbHk6IEludGVyLCBzeXN0ZW0tdWksIC1hcHBsZS1zeXN0ZW0sIFNlZ29lIFVJLCBSb2JvdG8sIFVidW50dSwgQ2FudGFyZWxsLCBOb3RvIFNhbnMsIEhlbHZldGljYSBOZXVlLCBBcmlhbCwgIkFwcGxlIENvbG9yIEVtb2ppIiwgIlNlZ29lIFVJIEVtb2ppIjsgZm9udC13ZWlnaHQ6IDcwMDsgfQogICAgPC9zdHlsZT4KICA8L2RlZnM+CiAgPHJlY3Qgd2lkdGg9IjEyOCIgaGVpZ2h0PSIxMjgiIHJ4PSIxNiIgZmlsbD0iI2E4NTVmNyIvPgogIDx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjZmZmZmZmIiBmb250LXNpemU9IjU2IiBjbGFzcz0idGV4dCI+R0M8L3RleHQ+Cjwvc3ZnPg==",
+      "theme_key": "neutral"
+    }
+  },
+  {
+    "slug": "general-commercial-industrial-and-institutional-electric-lighting-fixture-manufacturing",
+    "demo_template_config": {
+      "brand_name": "General Commercial, Industrial, And Institutional Electric Lighting Fixture Manufacturing Pros",
+      "logo_url": "https://api.iconify.design/mdi:hvac.svg?color=%2322c55e",
+      "theme_key": "green"
+    }
+  },
+  {
+    "slug": "general-custom-architectural-woodwork-and-millwork-manufacturing",
+    "demo_template_config": {
+      "brand_name": "General Custom Architectural Woodwork And Millwork Manufacturing Company",
+      "logo_url": "https://api.iconify.design/mdi:hvac.svg?color=%23111827",
+      "theme_key": "neutral"
+    }
+  },
+  {
+    "slug": "general-cut-and-sew-apparel-contractors",
+    "demo_template_config": {
+      "brand_name": "General Cut And Sew Apparel Contractors Inc",
+      "logo_url": "https://api.iconify.design/mdi:hvac.svg?color=%23111827",
+      "theme_key": "neutral"
+    }
+  },
+  {
+    "slug": "general-drywall-and-insulation-contractors",
+    "demo_template_config": {
+      "brand_name": "General Drywall And Insulation Contractors Co",
+      "logo_url": "https://api.iconify.design/mdi:hvac.svg?color=%23ef4444",
+      "theme_key": "neutral"
+    }
+  },
+  {
+    "slug": "general-electrical-contractors-and-other-wiring-installation-contractors",
+    "demo_template_config": {
+      "brand_name": "Apex General Electrical Contractors And Other Wiring Installation Contractors",
+      "logo_url": "https://api.iconify.design/mdi:hvac.svg?color=%2322c55e",
+      "theme_key": "green"
+    }
+  },
+  {
+    "slug": "general-family-clothing-stores",
+    "demo_template_config": {
+      "brand_name": "BrightPath General Family Clothing Stores",
+      "logo_url": "https://api.iconify.design/mdi:tshirt-crew.svg?color=%23111827",
+      "theme_key": "neutral"
+    }
+  },
+  {
+    "slug": "general-finish-carpentry-contractors",
+    "demo_template_config": {
+      "brand_name": "General Finish Carpentry Contractors Labs",
+      "logo_url": "https://api.iconify.design/mdi:hvac.svg?color=%231f2937",
+      "theme_key": "neutral"
+    }
+  },
+  {
+    "slug": "general-floor-covering-stores",
+    "demo_template_config": {
+      "brand_name": "General Floor Covering Stores Pros",
+      "logo_url": "https://api.iconify.design/mdi:floor-plan.svg?color=%238b5cf6",
+      "theme_key": "violet"
+    }
+  },
+  {
+    "slug": "general-flooring-contractors",
+    "demo_template_config": {
+      "brand_name": "Keystone General Flooring Contractors",
+      "logo_url": "https://api.iconify.design/mdi:floor-plan.svg?color=%238b5cf6",
+      "theme_key": "violet"
+    }
+  },
+  {
+    "slug": "general-full-service-restaurants",
+    "demo_template_config": {
+      "brand_name": "Northstar General Full Service Restaurants Pros",
+      "logo_url": "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMjgiIGhlaWdodD0iMTI4IiB2aWV3Qm94PSIwIDAgMTI4IDEyOCI+CiAgPGRlZnM+CiAgICA8c3R5bGU+CiAgICAgIC50ZXh0IHsgZm9udC1mYW1pbHk6IEludGVyLCBzeXN0ZW0tdWksIC1hcHBsZS1zeXN0ZW0sIFNlZ29lIFVJLCBSb2JvdG8sIFVidW50dSwgQ2FudGFyZWxsLCBOb3RvIFNhbnMsIEhlbHZldGljYSBOZXVlLCBBcmlhbCwgIkFwcGxlIENvbG9yIEVtb2ppIiwgIlNlZ29lIFVJIEVtb2ppIjsgZm9udC13ZWlnaHQ6IDcwMDsgfQogICAgPC9zdHlsZT4KICA8L2RlZnM+CiAgPHJlY3Qgd2lkdGg9IjEyOCIgaGVpZ2h0PSIxMjgiIHJ4PSIxNiIgZmlsbD0iI2E4NTVmNyIvPgogIDx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjZmZmZmZmIiBmb250LXNpemU9IjU2IiBjbGFzcz0idGV4dCI+R0Y8L3RleHQ+Cjwvc3ZnPg==",
+      "theme_key": "neutral"
+    }
+  },
+  {
+    "slug": "general-glass-and-glazing-contractors",
+    "demo_template_config": {
+      "brand_name": "Vertex General Glass And Glazing Contractors Solutions",
+      "logo_url": "https://api.iconify.design/mdi:hvac.svg?color=%231f2937",
+      "theme_key": "neutral"
+    }
+  },
+  {
+    "slug": "general-glass-container-manufacturing",
+    "demo_template_config": {
+      "brand_name": "NextGen General Glass Container Manufacturing Solutions",
+      "logo_url": "https://api.iconify.design/mdi:hvac.svg?color=%231f2937",
+      "theme_key": "neutral"
+    }
+  },
+  {
+    "slug": "general-glass-product-manufacturing-made-of-purchased-glass",
+    "demo_template_config": {
+      "brand_name": "General Glass Product Manufacturing Made Of Purchased Glass Pros",
+      "logo_url": "https://api.iconify.design/mdi:hvac.svg?color=%2306b6d4",
+      "theme_key": "neutral"
+    }
+  },
+  {
+    "slug": "general-highway-street-and-bridge-construction",
+    "demo_template_config": {
+      "brand_name": "General Highway, Street, And Bridge Construction Labs",
+      "logo_url": "https://api.iconify.design/mdi:grass.svg?color=%2316a34a",
+      "theme_key": "green"
+    }
+  },
+  {
+    "slug": "general-home-centers",
+    "demo_template_config": {
+      "brand_name": "TrueClean Sample General Home Centers",
+      "logo_url": "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMjgiIGhlaWdodD0iMTI4IiB2aWV3Qm94PSIwIDAgMTI4IDEyOCI+CiAgPGRlZnM+CiAgICA8c3R5bGU+CiAgICAgIC50ZXh0IHsgZm9udC1mYW1pbHk6IEludGVyLCBzeXN0ZW0tdWksIC1hcHBsZS1zeXN0ZW0sIFNlZ29lIFVJLCBSb2JvdG8sIFVidW50dSwgQ2FudGFyZWxsLCBOb3RvIFNhbnMsIEhlbHZldGljYSBOZXVlLCBBcmlhbCwgIkFwcGxlIENvbG9yIEVtb2ppIiwgIlNlZ29lIFVJIEVtb2ppIjsgZm9udC13ZWlnaHQ6IDcwMDsgfQogICAgPC9zdHlsZT4KICA8L2RlZnM+CiAgPHJlY3Qgd2lkdGg9IjEyOCIgaGVpZ2h0PSIxMjgiIHJ4PSIxNiIgZmlsbD0iI2VhNTgwYyIvPgogIDx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjZmZmZmZmIiBmb250LXNpemU9IjU2IiBjbGFzcz0idGV4dCI+R0g8L3RleHQ+Cjwvc3ZnPg==",
+      "theme_key": "neutral"
+    }
+  },
+  {
+    "slug": "general-home-furnishing-merchant-wholesalers",
+    "demo_template_config": {
+      "brand_name": "General Home Furnishing Merchant Wholesalers Labs",
+      "logo_url": "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMjgiIGhlaWdodD0iMTI4IiB2aWV3Qm94PSIwIDAgMTI4IDEyOCI+CiAgPGRlZnM+CiAgICA8c3R5bGU+CiAgICAgIC50ZXh0IHsgZm9udC1mYW1pbHk6IEludGVyLCBzeXN0ZW0tdWksIC1hcHBsZS1zeXN0ZW0sIFNlZ29lIFVJLCBSb2JvdG8sIFVidW50dSwgQ2FudGFyZWxsLCBOb3RvIFNhbnMsIEhlbHZldGljYSBOZXVlLCBBcmlhbCwgIkFwcGxlIENvbG9yIEVtb2ppIiwgIlNlZ29lIFVJIEVtb2ppIjsgZm9udC13ZWlnaHQ6IDcwMDsgfQogICAgPC9zdHlsZT4KICA8L2RlZnM+CiAgPHJlY3Qgd2lkdGg9IjEyOCIgaGVpZ2h0PSIxMjgiIHJ4PSIxNiIgZmlsbD0iIzBmNzY2ZSIvPgogIDx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjZmZmZmZmIiBmb250LXNpemU9IjU2IiBjbGFzcz0idGV4dCI+R0g8L3RleHQ+Cjwvc3ZnPg==",
+      "theme_key": "neutral"
+    }
+  },
+  {
+    "slug": "general-hotels-except-casino-hotels-and-motels",
+    "demo_template_config": {
+      "brand_name": "General Hotels (except Casino Hotels) And Motels Company",
+      "logo_url": "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMjgiIGhlaWdodD0iMTI4IiB2aWV3Qm94PSIwIDAgMTI4IDEyOCI+CiAgPGRlZnM+CiAgICA8c3R5bGU+CiAgICAgIC50ZXh0IHsgZm9udC1mYW1pbHk6IEludGVyLCBzeXN0ZW0tdWksIC1hcHBsZS1zeXN0ZW0sIFNlZ29lIFVJLCBSb2JvdG8sIFVidW50dSwgQ2FudGFyZWxsLCBOb3RvIFNhbnMsIEhlbHZldGljYSBOZXVlLCBBcmlhbCwgIkFwcGxlIENvbG9yIEVtb2ppIiwgIlNlZ29lIFVJIEVtb2ppIjsgZm9udC13ZWlnaHQ6IDcwMDsgfQogICAgPC9zdHlsZT4KICA8L2RlZnM+CiAgPHJlY3Qgd2lkdGg9IjEyOCIgaGVpZ2h0PSIxMjgiIHJ4PSIxNiIgZmlsbD0iIzBlYTVlOSIvPgogIDx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjZmZmZmZmIiBmb250LXNpemU9IjU2IiBjbGFzcz0idGV4dCI+R0g8L3RleHQ+Cjwvc3ZnPg==",
+      "theme_key": "neutral"
+    }
+  },
+  {
+    "slug": "general-household-appliances-electric-housewares-and-consumer-electronics-merchant-wholesalers",
+    "demo_template_config": {
+      "brand_name": "Summit Sample General Household Appliances, Electric Housewares, And Consumer Electronics Merchant Wholesalers",
+      "logo_url": "https://api.iconify.design/mdi:lightbulb-on-outline.svg?color=%2322c55e",
+      "theme_key": "green"
+    }
+  },
+  {
+    "slug": "general-household-furniture-except-wood-and-metal-manufacturing",
+    "demo_template_config": {
+      "brand_name": "Vertex Sample General Household Furniture (except Wood And Metal) Manufacturing Solutions",
+      "logo_url": "https://api.iconify.design/mdi:hvac.svg?color=%238b5cf6",
+      "theme_key": "violet"
+    }
+  },
+  {
+    "slug": "general-interior-design-services",
+    "demo_template_config": {
+      "brand_name": "BluePeak General Interior Design Services",
+      "logo_url": "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMjgiIGhlaWdodD0iMTI4IiB2aWV3Qm94PSIwIDAgMTI4IDEyOCI+CiAgPGRlZnM+CiAgICA8c3R5bGU+CiAgICAgIC50ZXh0IHsgZm9udC1mYW1pbHk6IEludGVyLCBzeXN0ZW0tdWksIC1hcHBsZS1zeXN0ZW0sIFNlZ29lIFVJLCBSb2JvdG8sIFVidW50dSwgQ2FudGFyZWxsLCBOb3RvIFNhbnMsIEhlbHZldGljYSBOZXVlLCBBcmlhbCwgIkFwcGxlIENvbG9yIEVtb2ppIiwgIlNlZ29lIFVJIEVtb2ppIjsgZm9udC13ZWlnaHQ6IDcwMDsgfQogICAgPC9zdHlsZT4KICA8L2RlZnM+CiAgPHJlY3Qgd2lkdGg9IjEyOCIgaGVpZ2h0PSIxMjgiIHJ4PSIxNiIgZmlsbD0iIzA2YjZkNCIvPgogIDx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjZmZmZmZmIiBmb250LXNpemU9IjU2IiBjbGFzcz0idGV4dCI+R0k8L3RleHQ+Cjwvc3ZnPg==",
+      "theme_key": "neutral"
+    }
+  },
+  {
+    "slug": "general-landscape-architectural-services",
+    "demo_template_config": {
+      "brand_name": "NextGen General Landscape Architectural Services",
+      "logo_url": "https://api.iconify.design/mdi:grass.svg?color=%2316a34a",
+      "theme_key": "green"
+    }
+  },
+  {
+    "slug": "general-landscaping-services",
+    "demo_template_config": {
+      "brand_name": "Summit General Landscaping Services",
+      "logo_url": "https://api.iconify.design/mdi:grass.svg?color=%23ef4444",
+      "theme_key": "neutral"
+    }
+  },
+  {
+    "slug": "general-leather-and-hide-tanning-and-finishing",
+    "demo_template_config": {
+      "brand_name": "General Leather And Hide Tanning And Finishing Works",
+      "logo_url": "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMjgiIGhlaWdodD0iMTI4IiB2aWV3Qm94PSIwIDAgMTI4IDEyOCI+CiAgPGRlZnM+CiAgICA8c3R5bGU+CiAgICAgIC50ZXh0IHsgZm9udC1mYW1pbHk6IEludGVyLCBzeXN0ZW0tdWksIC1hcHBsZS1zeXN0ZW0sIFNlZ29lIFVJLCBSb2JvdG8sIFVidW50dSwgQ2FudGFyZWxsLCBOb3RvIFNhbnMsIEhlbHZldGljYSBOZXVlLCBBcmlhbCwgIkFwcGxlIENvbG9yIEVtb2ppIiwgIlNlZ29lIFVJIEVtb2ppIjsgZm9udC13ZWlnaHQ6IDcwMDsgfQogICAgPC9zdHlsZT4KICA8L2RlZnM+CiAgPHJlY3Qgd2lkdGg9IjEyOCIgaGVpZ2h0PSIxMjgiIHJ4PSIxNiIgZmlsbD0iIzE2YTM0YSIvPgogIDx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjZmZmZmZmIiBmb250LXNpemU9IjU2IiBjbGFzcz0idGV4dCI+R0w8L3RleHQ+Cjwvc3ZnPg==",
+      "theme_key": "neutral"
+    }
+  },
+  {
+    "slug": "general-lessors-of-nonresidential-buildings-except-miniwarehouses-",
+    "demo_template_config": {
+      "brand_name": "General Lessors Of Nonresidential Buildings (except Miniwarehouses) Pros",
+      "logo_url": "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMjgiIGhlaWdodD0iMTI4IiB2aWV3Qm94PSIwIDAgMTI4IDEyOCI+CiAgPGRlZnM+CiAgICA8c3R5bGU+CiAgICAgIC50ZXh0IHsgZm9udC1mYW1pbHk6IEludGVyLCBzeXN0ZW0tdWksIC1hcHBsZS1zeXN0ZW0sIFNlZ29lIFVJLCBSb2JvdG8sIFVidW50dSwgQ2FudGFyZWxsLCBOb3RvIFNhbnMsIEhlbHZldGljYSBOZXVlLCBBcmlhbCwgIkFwcGxlIENvbG9yIEVtb2ppIiwgIlNlZ29lIFVJIEVtb2ppIjsgZm9udC13ZWlnaHQ6IDcwMDsgfQogICAgPC9zdHlsZT4KICA8L2RlZnM+CiAgPHJlY3Qgd2lkdGg9IjEyOCIgaGVpZ2h0PSIxMjgiIHJ4PSIxNiIgZmlsbD0iIzBmNzY2ZSIvPgogIDx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjZmZmZmZmIiBmb250LXNpemU9IjU2IiBjbGFzcz0idGV4dCI+R0w8L3RleHQ+Cjwvc3ZnPg==",
+      "theme_key": "neutral"
+    }
+  },
+  {
+    "slug": "general-lessors-of-other-real-estate-property",
+    "demo_template_config": {
+      "brand_name": "General Lessors Of Other Real Estate Property Inc",
+      "logo_url": "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMjgiIGhlaWdodD0iMTI4IiB2aWV3Qm94PSIwIDAgMTI4IDEyOCI+CiAgPGRlZnM+CiAgICA8c3R5bGU+CiAgICAgIC50ZXh0IHsgZm9udC1mYW1pbHk6IEludGVyLCBzeXN0ZW0tdWksIC1hcHBsZS1zeXN0ZW0sIFNlZ29lIFVJLCBSb2JvdG8sIFVidW50dSwgQ2FudGFyZWxsLCBOb3RvIFNhbnMsIEhlbHZldGljYSBOZXVlLCBBcmlhbCwgIkFwcGxlIENvbG9yIEVtb2ppIiwgIlNlZ29lIFVJIEVtb2ppIjsgZm9udC13ZWlnaHQ6IDcwMDsgfQogICAgPC9zdHlsZT4KICA8L2RlZnM+CiAgPHJlY3Qgd2lkdGg9IjEyOCIgaGVpZ2h0PSIxMjgiIHJ4PSIxNiIgZmlsbD0iIzE2YTM0YSIvPgogIDx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjZmZmZmZmIiBmb250LXNpemU9IjU2IiBjbGFzcz0idGV4dCI+R0w8L3RleHQ+Cjwvc3ZnPg==",
+      "theme_key": "neutral"
+    }
+  },
+  {
+    "slug": "general-lessors-of-residential-buildings-and-dwellings",
+    "demo_template_config": {
+      "brand_name": "FirstChoice General Lessors Of Residential Buildings And Dwellings Company",
+      "logo_url": "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMjgiIGhlaWdodD0iMTI4IiB2aWV3Qm94PSIwIDAgMTI4IDEyOCI+CiAgPGRlZnM+CiAgICA8c3R5bGU+CiAgICAgIC50ZXh0IHsgZm9udC1mYW1pbHk6IEludGVyLCBzeXN0ZW0tdWksIC1hcHBsZS1zeXN0ZW0sIFNlZ29lIFVJLCBSb2JvdG8sIFVidW50dSwgQ2FudGFyZWxsLCBOb3RvIFNhbnMsIEhlbHZldGljYSBOZXVlLCBBcmlhbCwgIkFwcGxlIENvbG9yIEVtb2ppIiwgIlNlZ29lIFVJIEVtb2ppIjsgZm9udC13ZWlnaHQ6IDcwMDsgfQogICAgPC9zdHlsZT4KICA8L2RlZnM+CiAgPHJlY3Qgd2lkdGg9IjEyOCIgaGVpZ2h0PSIxMjgiIHJ4PSIxNiIgZmlsbD0iIzFmMjkzNyIvPgogIDx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjZmZmZmZmIiBmb250LXNpemU9IjU2IiBjbGFzcz0idGV4dCI+R0w8L3RleHQ+Cjwvc3ZnPg==",
+      "theme_key": "neutral"
+    }
+  },
+  {
+    "slug": "general-light-truck-and-utility-vehicle-manufacturing",
+    "demo_template_config": {
+      "brand_name": "Acme General Light Truck And Utility Vehicle Manufacturing Solutions",
+      "logo_url": "https://api.iconify.design/mdi:hvac.svg?color=%2322c55e",
+      "theme_key": "green"
+    }
+  },
+  {
+    "slug": "general-lumber-plywood-millwork-and-wood-panel-merchant-wholesalers",
+    "demo_template_config": {
+      "brand_name": "General Lumber, Plywood, Millwork, And Wood Panel Merchant Wholesalers LLC",
+      "logo_url": "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMjgiIGhlaWdodD0iMTI4IiB2aWV3Qm94PSIwIDAgMTI4IDEyOCI+CiAgPGRlZnM+CiAgICA8c3R5bGU+CiAgICAgIC50ZXh0IHsgZm9udC1mYW1pbHk6IEludGVyLCBzeXN0ZW0tdWksIC1hcHBsZS1zeXN0ZW0sIFNlZ29lIFVJLCBSb2JvdG8sIFVidW50dSwgQ2FudGFyZWxsLCBOb3RvIFNhbnMsIEhlbHZldGljYSBOZXVlLCBBcmlhbCwgIkFwcGxlIENvbG9yIEVtb2ppIiwgIlNlZ29lIFVJIEVtb2ppIjsgZm9udC13ZWlnaHQ6IDcwMDsgfQogICAgPC9zdHlsZT4KICA8L2RlZnM+CiAgPHJlY3Qgd2lkdGg9IjEyOCIgaGVpZ2h0PSIxMjgiIHJ4PSIxNiIgZmlsbD0iIzE2YTM0YSIvPgogIDx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjZmZmZmZmIiBmb250LXNpemU9IjU2IiBjbGFzcz0idGV4dCI+R0w8L3RleHQ+Cjwvc3ZnPg==",
+      "theme_key": "neutral"
+    }
+  },
+  {
+    "slug": "general-masonry-contractors",
+    "demo_template_config": {
+      "brand_name": "General Masonry Contractors Inc",
+      "logo_url": "https://api.iconify.design/mdi:hvac.svg?color=%231f2937",
+      "theme_key": "neutral"
+    }
+  },
+  {
+    "slug": "general-men-s-and-boys-clothing-and-furnishings-merchant-wholesalers",
+    "demo_template_config": {
+      "brand_name": "General Men's And Boys' Clothing And Furnishings Merchant Wholesalers Inc",
+      "logo_url": "https://api.iconify.design/mdi:tshirt-crew.svg?color=%23111827",
+      "theme_key": "neutral"
+    }
+  },
+  {
+    "slug": "general-men-s-clothing-stores",
+    "demo_template_config": {
+      "brand_name": "FirstChoice General Men's Clothing Stores",
+      "logo_url": "https://api.iconify.design/mdi:tshirt-crew.svg?color=%23111827",
+      "theme_key": "neutral"
+    }
+  },
+  {
+    "slug": "general-metal-household-furniture-manufacturing",
+    "demo_template_config": {
+      "brand_name": "FirstChoice Sample General Metal Household Furniture Manufacturing Co",
+      "logo_url": "https://api.iconify.design/mdi:hvac.svg?color=%238b5cf6",
+      "theme_key": "violet"
+    }
+  },
+  {
+    "slug": "general-metal-service-centers-and-other-metal-merchant-wholesalers",
+    "demo_template_config": {
+      "brand_name": "Acme General Metal Service Centers And Other Metal Merchant Wholesalers Company",
+      "logo_url": "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMjgiIGhlaWdodD0iMTI4IiB2aWV3Qm94PSIwIDAgMTI4IDEyOCI+CiAgPGRlZnM+CiAgICA8c3R5bGU+CiAgICAgIC50ZXh0IHsgZm9udC1mYW1pbHk6IEludGVyLCBzeXN0ZW0tdWksIC1hcHBsZS1zeXN0ZW0sIFNlZ29lIFVJLCBSb2JvdG8sIFVidW50dSwgQ2FudGFyZWxsLCBOb3RvIFNhbnMsIEhlbHZldGljYSBOZXVlLCBBcmlhbCwgIkFwcGxlIENvbG9yIEVtb2ppIiwgIlNlZ29lIFVJIEVtb2ppIjsgZm9udC13ZWlnaHQ6IDcwMDsgfQogICAgPC9zdHlsZT4KICA8L2RlZnM+CiAgPHJlY3Qgd2lkdGg9IjEyOCIgaGVpZ2h0PSIxMjgiIHJ4PSIxNiIgZmlsbD0iIzFmMjkzNyIvPgogIDx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjZmZmZmZmIiBmb250LXNpemU9IjU2IiBjbGFzcz0idGV4dCI+R008L3RleHQ+Cjwvc3ZnPg==",
+      "theme_key": "neutral"
+    }
+  },
+  {
+    "slug": "general-metal-window-and-door-manufacturing",
+    "demo_template_config": {
+      "brand_name": "General Metal Window And Door Manufacturing Pros",
+      "logo_url": "https://api.iconify.design/mdi:window-closed.svg?color=%230ea5e9",
+      "theme_key": "cyan"
+    }
+  },
+  {
+    "slug": "general-mobile-food-services",
+    "demo_template_config": {
+      "brand_name": "Keystone General Mobile Food Services Pros",
+      "logo_url": "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMjgiIGhlaWdodD0iMTI4IiB2aWV3Qm94PSIwIDAgMTI4IDEyOCI+CiAgPGRlZnM+CiAgICA8c3R5bGU+CiAgICAgIC50ZXh0IHsgZm9udC1mYW1pbHk6IEludGVyLCBzeXN0ZW0tdWksIC1hcHBsZS1zeXN0ZW0sIFNlZ29lIFVJLCBSb2JvdG8sIFVidW50dSwgQ2FudGFyZWxsLCBOb3RvIFNhbnMsIEhlbHZldGljYSBOZXVlLCBBcmlhbCwgIkFwcGxlIENvbG9yIEVtb2ppIiwgIlNlZ29lIFVJIEVtb2ppIjsgZm9udC13ZWlnaHQ6IDcwMDsgfQogICAgPC9zdHlsZT4KICA8L2RlZnM+CiAgPHJlY3Qgd2lkdGg9IjEyOCIgaGVpZ2h0PSIxMjgiIHJ4PSIxNiIgZmlsbD0iI2Y1OWUwYiIvPgogIDx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjZmZmZmZmIiBmb250LXNpemU9IjU2IiBjbGFzcz0idGV4dCI+R008L3RleHQ+Cjwvc3ZnPg==",
+      "theme_key": "neutral"
+    }
+  },
+  {
+    "slug": "general-nail-salons",
+    "demo_template_config": {
+      "brand_name": "ProCare Sample General Nail Salons Solutions",
+      "logo_url": "https://api.iconify.design/mdi:hand.svg?color=%23e11d48",
+      "theme_key": "rose"
+    }
+  },
+  {
+    "slug": "general-new-car-dealers",
+    "demo_template_config": {
+      "brand_name": "General New Car Dealers Pros",
+      "logo_url": "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMjgiIGhlaWdodD0iMTI4IiB2aWV3Qm94PSIwIDAgMTI4IDEyOCI+CiAgPGRlZnM+CiAgICA8c3R5bGU+CiAgICAgIC50ZXh0IHsgZm9udC1mYW1pbHk6IEludGVyLCBzeXN0ZW0tdWksIC1hcHBsZS1zeXN0ZW0sIFNlZ29lIFVJLCBSb2JvdG8sIFVidW50dSwgQ2FudGFyZWxsLCBOb3RvIFNhbnMsIEhlbHZldGljYSBOZXVlLCBBcmlhbCwgIkFwcGxlIENvbG9yIEVtb2ppIiwgIlNlZ29lIFVJIEVtb2ppIjsgZm9udC13ZWlnaHQ6IDcwMDsgfQogICAgPC9zdHlsZT4KICA8L2RlZnM+CiAgPHJlY3Qgd2lkdGg9IjEyOCIgaGVpZ2h0PSIxMjgiIHJ4PSIxNiIgZmlsbD0iIzExMTgyNyIvPgogIDx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjZmZmZmZmIiBmb250LXNpemU9IjU2IiBjbGFzcz0idGV4dCI+R048L3RleHQ+Cjwvc3ZnPg==",
+      "theme_key": "neutral"
+    }
+  },
+  {
+    "slug": "general-new-housing-for-sale-builders",
+    "demo_template_config": {
+      "brand_name": "Apex General New Housing For Sale Builders",
+      "logo_url": "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMjgiIGhlaWdodD0iMTI4IiB2aWV3Qm94PSIwIDAgMTI4IDEyOCI+CiAgPGRlZnM+CiAgICA8c3R5bGU+CiAgICAgIC50ZXh0IHsgZm9udC1mYW1pbHk6IEludGVyLCBzeXN0ZW0tdWksIC1hcHBsZS1zeXN0ZW0sIFNlZ29lIFVJLCBSb2JvdG8sIFVidW50dSwgQ2FudGFyZWxsLCBOb3RvIFNhbnMsIEhlbHZldGljYSBOZXVlLCBBcmlhbCwgIkFwcGxlIENvbG9yIEVtb2ppIiwgIlNlZ29lIFVJIEVtb2ppIjsgZm9udC13ZWlnaHQ6IDcwMDsgfQogICAgPC9zdHlsZT4KICA8L2RlZnM+CiAgPHJlY3Qgd2lkdGg9IjEyOCIgaGVpZ2h0PSIxMjgiIHJ4PSIxNiIgZmlsbD0iIzA2YjZkNCIvPgogIDx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjZmZmZmZmIiBmb250LXNpemU9IjU2IiBjbGFzcz0idGV4dCI+R048L3RleHQ+Cjwvc3ZnPg==",
+      "theme_key": "neutral"
+    }
+  },
+  {
+    "slug": "general-nonresidential-property-managers",
+    "demo_template_config": {
+      "brand_name": "Evergreen General Nonresidential Property Managers",
+      "logo_url": "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMjgiIGhlaWdodD0iMTI4IiB2aWV3Qm94PSIwIDAgMTI4IDEyOCI+CiAgPGRlZnM+CiAgICA8c3R5bGU+CiAgICAgIC50ZXh0IHsgZm9udC1mYW1pbHk6IEludGVyLCBzeXN0ZW0tdWksIC1hcHBsZS1zeXN0ZW0sIFNlZ29lIFVJLCBSb2JvdG8sIFVidW50dSwgQ2FudGFyZWxsLCBOb3RvIFNhbnMsIEhlbHZldGljYSBOZXVlLCBBcmlhbCwgIkFwcGxlIENvbG9yIEVtb2ppIiwgIlNlZ29lIFVJIEVtb2ppIjsgZm9udC13ZWlnaHQ6IDcwMDsgfQogICAgPC9zdHlsZT4KICA8L2RlZnM+CiAgPHJlY3Qgd2lkdGg9IjEyOCIgaGVpZ2h0PSIxMjgiIHJ4PSIxNiIgZmlsbD0iIzBlYTVlOSIvPgogIDx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjZmZmZmZmIiBmb250LXNpemU9IjU2IiBjbGFzcz0idGV4dCI+R048L3RleHQ+Cjwvc3ZnPg==",
+      "theme_key": "neutral"
+    }
+  },
+  {
+    "slug": "general-nursery-garden-center-and-farm-supply-stores",
+    "demo_template_config": {
+      "brand_name": "General Nursery, Garden Center, And Farm Supply Stores LLC",
+      "logo_url": "https://api.iconify.design/mdi:grass.svg?color=%2316a34a",
+      "theme_key": "green"
+    }
+  },
+  {
+    "slug": "general-offices-of-physicians-except-mental-health-specialists-",
+    "demo_template_config": {
+      "brand_name": "ClearView General Offices Of Physicians (except Mental Health Specialists)",
+      "logo_url": "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMjgiIGhlaWdodD0iMTI4IiB2aWV3Qm94PSIwIDAgMTI4IDEyOCI+CiAgPGRlZnM+CiAgICA8c3R5bGU+CiAgICAgIC50ZXh0IHsgZm9udC1mYW1pbHk6IEludGVyLCBzeXN0ZW0tdWksIC1hcHBsZS1zeXN0ZW0sIFNlZ29lIFVJLCBSb2JvdG8sIFVidW50dSwgQ2FudGFyZWxsLCBOb3RvIFNhbnMsIEhlbHZldGljYSBOZXVlLCBBcmlhbCwgIkFwcGxlIENvbG9yIEVtb2ppIiwgIlNlZ29lIFVJIEVtb2ppIjsgZm9udC13ZWlnaHQ6IDcwMDsgfQogICAgPC9zdHlsZT4KICA8L2RlZnM+CiAgPHJlY3Qgd2lkdGg9IjEyOCIgaGVpZ2h0PSIxMjgiIHJ4PSIxNiIgZmlsbD0iIzA2YjZkNCIvPgogIDx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjZmZmZmZmIiBmb250LXNpemU9IjU2IiBjbGFzcz0idGV4dCI+R088L3RleHQ+Cjwvc3ZnPg==",
+      "theme_key": "neutral"
+    }
+  },
+  {
+    "slug": "general-offices-of-real-estate-agents-and-brokers",
+    "demo_template_config": {
+      "brand_name": "Nimbus General Offices Of Real Estate Agents And Brokers Co",
+      "logo_url": "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMjgiIGhlaWdodD0iMTI4IiB2aWV3Qm94PSIwIDAgMTI4IDEyOCI+CiAgPGRlZnM+CiAgICA8c3R5bGU+CiAgICAgIC50ZXh0IHsgZm9udC1mYW1pbHk6IEludGVyLCBzeXN0ZW0tdWksIC1hcHBsZS1zeXN0ZW0sIFNlZ29lIFVJLCBSb2JvdG8sIFVidW50dSwgQ2FudGFyZWxsLCBOb3RvIFNhbnMsIEhlbHZldGljYSBOZXVlLCBBcmlhbCwgIkFwcGxlIENvbG9yIEVtb2ppIiwgIlNlZ29lIFVJIEVtb2ppIjsgZm9udC13ZWlnaHQ6IDcwMDsgfQogICAgPC9zdHlsZT4KICA8L2RlZnM+CiAgPHJlY3Qgd2lkdGg9IjEyOCIgaGVpZ2h0PSIxMjgiIHJ4PSIxNiIgZmlsbD0iIzE2YTM0YSIvPgogIDx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjZmZmZmZmIiBmb250LXNpemU9IjU2IiBjbGFzcz0idGV4dCI+R088L3RleHQ+Cjwvc3ZnPg==",
+      "theme_key": "neutral"
+    }
+  },
+  {
+    "slug": "general-ornamental-and-architectural-metal-work-manufacturing",
+    "demo_template_config": {
+      "brand_name": "General Ornamental And Architectural Metal Work Manufacturing Inc",
+      "logo_url": "https://api.iconify.design/mdi:hvac.svg?color=%2316a34a",
+      "theme_key": "neutral"
+    }
+  },
+  {
+    "slug": "general-other-activities-related-to-real-estate",
+    "demo_template_config": {
+      "brand_name": "Apex General Other Activities Related To Real Estate Solutions",
+      "logo_url": "https://api.iconify.design/mdi:hvac.svg?color=%23ea580c",
+      "theme_key": "neutral"
+    }
+  },
+  {
+    "slug": "general-other-building-equipment-contractors",
+    "demo_template_config": {
+      "brand_name": "Keystone General Other Building Equipment Contractors Pros",
+      "logo_url": "https://api.iconify.design/mdi:hvac.svg?color=%230ea5e9",
+      "theme_key": "neutral"
+    }
+  },
+  {
+    "slug": "general-other-building-finishing-contractors",
+    "demo_template_config": {
+      "brand_name": "General Other Building Finishing Contractors Group",
+      "logo_url": "https://api.iconify.design/mdi:hvac.svg?color=%230f766e",
+      "theme_key": "neutral"
+    }
+  },
+  {
+    "slug": "general-other-building-material-dealers",
+    "demo_template_config": {
+      "brand_name": "FirstChoice Sample General Other Building Material Dealers Co",
+      "logo_url": "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMjgiIGhlaWdodD0iMTI4IiB2aWV3Qm94PSIwIDAgMTI4IDEyOCI+CiAgPGRlZnM+CiAgICA8c3R5bGU+CiAgICAgIC50ZXh0IHsgZm9udC1mYW1pbHk6IEludGVyLCBzeXN0ZW0tdWksIC1hcHBsZS1zeXN0ZW0sIFNlZ29lIFVJLCBSb2JvdG8sIFVidW50dSwgQ2FudGFyZWxsLCBOb3RvIFNhbnMsIEhlbHZldGljYSBOZXVlLCBBcmlhbCwgIkFwcGxlIENvbG9yIEVtb2ppIiwgIlNlZ29lIFVJIEVtb2ppIjsgZm9udC13ZWlnaHQ6IDcwMDsgfQogICAgPC9zdHlsZT4KICA8L2RlZnM+CiAgPHJlY3Qgd2lkdGg9IjEyOCIgaGVpZ2h0PSIxMjgiIHJ4PSIxNiIgZmlsbD0iIzFmMjkzNyIvPgogIDx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjZmZmZmZmIiBmb250LXNpemU9IjU2IiBjbGFzcz0idGV4dCI+R088L3RleHQ+Cjwvc3ZnPg==",
+      "theme_key": "neutral"
+    }
+  },
+  {
+    "slug": "general-other-clothing-stores",
+    "demo_template_config": {
+      "brand_name": "ClearView Sample General Other Clothing Stores Solutions",
+      "logo_url": "https://api.iconify.design/mdi:tshirt-crew.svg?color=%23111827",
+      "theme_key": "neutral"
+    }
+  },
+  {
+    "slug": "general-other-concrete-product-manufacturing",
+    "demo_template_config": {
+      "brand_name": "General Other Concrete Product Manufacturing Co",
+      "logo_url": "https://api.iconify.design/mdi:hvac.svg?color=%23374151",
+      "theme_key": "charcoal"
+    }
+  },
+  {
+    "slug": "general-other-heavy-and-civil-engineering-construction",
+    "demo_template_config": {
+      "brand_name": "General Other Heavy And Civil Engineering Construction Works",
+      "logo_url": "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMjgiIGhlaWdodD0iMTI4IiB2aWV3Qm94PSIwIDAgMTI4IDEyOCI+CiAgPGRlZnM+CiAgICA8c3R5bGU+CiAgICAgIC50ZXh0IHsgZm9udC1mYW1pbHk6IEludGVyLCBzeXN0ZW0tdWksIC1hcHBsZS1zeXN0ZW0sIFNlZ29lIFVJLCBSb2JvdG8sIFVidW50dSwgQ2FudGFyZWxsLCBOb3RvIFNhbnMsIEhlbHZldGljYSBOZXVlLCBBcmlhbCwgIkFwcGxlIENvbG9yIEVtb2ppIiwgIlNlZ29lIFVJIEVtb2ppIjsgZm9udC13ZWlnaHQ6IDcwMDsgfQogICAgPC9zdHlsZT4KICA8L2RlZnM+CiAgPHJlY3Qgd2lkdGg9IjEyOCIgaGVpZ2h0PSIxMjgiIHJ4PSIxNiIgZmlsbD0iIzE2YTM0YSIvPgogIDx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjZmZmZmZmIiBmb250LXNpemU9IjU2IiBjbGFzcz0idGV4dCI+R088L3RleHQ+Cjwvc3ZnPg==",
+      "theme_key": "neutral"
+    }
+  },
+  {
+    "slug": "general-other-personal-and-household-goods-repair-and-maintenance",
+    "demo_template_config": {
+      "brand_name": "Silverline General Other Personal And Household Goods Repair And Maintenance",
+      "logo_url": "https://api.iconify.design/mdi:hvac.svg?color=%231f2937",
+      "theme_key": "neutral"
+    }
+  },
+  {
+    "slug": "general-other-personal-care-services",
+    "demo_template_config": {
+      "brand_name": "Evergreen General Other Personal Care Services",
+      "logo_url": "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMjgiIGhlaWdodD0iMTI4IiB2aWV3Qm94PSIwIDAgMTI4IDEyOCI+CiAgPGRlZnM+CiAgICA8c3R5bGU+CiAgICAgIC50ZXh0IHsgZm9udC1mYW1pbHk6IEludGVyLCBzeXN0ZW0tdWksIC1hcHBsZS1zeXN0ZW0sIFNlZ29lIFVJLCBSb2JvdG8sIFVidW50dSwgQ2FudGFyZWxsLCBOb3RvIFNhbnMsIEhlbHZldGljYSBOZXVlLCBBcmlhbCwgIkFwcGxlIENvbG9yIEVtb2ppIiwgIlNlZ29lIFVJIEVtb2ppIjsgZm9udC13ZWlnaHQ6IDcwMDsgfQogICAgPC9zdHlsZT4KICA8L2RlZnM+CiAgPHJlY3Qgd2lkdGg9IjEyOCIgaGVpZ2h0PSIxMjgiIHJ4PSIxNiIgZmlsbD0iIzBmNzY2ZSIvPgogIDx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjZmZmZmZmIiBmb250LXNpemU9IjU2IiBjbGFzcz0idGV4dCI+R088L3RleHQ+Cjwvc3ZnPg==",
+      "theme_key": "neutral"
+    }
+  },
+  {
+    "slug": "general-other-pressed-and-blown-glass-and-glassware-manufacturing",
+    "demo_template_config": {
+      "brand_name": "General Other Pressed And Blown Glass And Glassware Manufacturing Inc",
+      "logo_url": "https://api.iconify.design/mdi:hvac.svg?color=%231f2937",
+      "theme_key": "neutral"
+    }
+  },
+  {
+    "slug": "general-other-specialized-design-services",
+    "demo_template_config": {
+      "brand_name": "TrueClean Sample General Other Specialized Design Services Solutions",
+      "logo_url": "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMjgiIGhlaWdodD0iMTI4IiB2aWV3Qm94PSIwIDAgMTI4IDEyOCI+CiAgPGRlZnM+CiAgICA8c3R5bGU+CiAgICAgIC50ZXh0IHsgZm9udC1mYW1pbHk6IEludGVyLCBzeXN0ZW0tdWksIC1hcHBsZS1zeXN0ZW0sIFNlZ29lIFVJLCBSb2JvdG8sIFVidW50dSwgQ2FudGFyZWxsLCBOb3RvIFNhbnMsIEhlbHZldGljYSBOZXVlLCBBcmlhbCwgIkFwcGxlIENvbG9yIEVtb2ppIiwgIlNlZ29lIFVJIEVtb2ppIjsgZm9udC13ZWlnaHQ6IDcwMDsgfQogICAgPC9zdHlsZT4KICA8L2RlZnM+CiAgPHJlY3Qgd2lkdGg9IjEyOCIgaGVpZ2h0PSIxMjgiIHJ4PSIxNiIgZmlsbD0iIzBmNzY2ZSIvPgogIDx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjZmZmZmZmIiBmb250LXNpemU9IjU2IiBjbGFzcz0idGV4dCI+R088L3RleHQ+Cjwvc3ZnPg==",
+      "theme_key": "neutral"
+    }
+  },
+  {
+    "slug": "general-outdoor-advertising",
+    "demo_template_config": {
+      "brand_name": "Acme General Outdoor Advertising",
+      "logo_url": "https://api.iconify.design/mdi:garage.svg?color=%230ea5e9",
+      "theme_key": "cyan"
+    }
+  },
+  {
+    "slug": "general-paint-and-coating-manufacturing",
+    "demo_template_config": {
+      "brand_name": "FirstChoice General Paint And Coating Manufacturing Solutions",
+      "logo_url": "https://api.iconify.design/mdi:format-paint.svg?color=%23f59e0b",
+      "theme_key": "amber"
+    }
+  },
+  {
+    "slug": "general-paint-and-wallpaper-stores",
+    "demo_template_config": {
+      "brand_name": "Evergreen General Paint And Wallpaper Stores",
+      "logo_url": "https://api.iconify.design/mdi:format-paint.svg?color=%23f59e0b",
+      "theme_key": "amber"
+    }
+  },
+  {
+    "slug": "general-painting-and-wall-covering-contractors",
+    "demo_template_config": {
+      "brand_name": "General Painting And Wall Covering Contractors Pros",
+      "logo_url": "https://api.iconify.design/mdi:format-paint.svg?color=%23f59e0b",
+      "theme_key": "amber"
+    }
+  },
+  {
+    "slug": "general-paint-varnish-and-supplies-merchant-wholesalers",
+    "demo_template_config": {
+      "brand_name": "General Paint, Varnish, And Supplies Merchant Wholesalers Pros",
+      "logo_url": "https://api.iconify.design/mdi:format-paint.svg?color=%23f59e0b",
+      "theme_key": "amber"
+    }
+  },
+  {
+    "slug": "general-pet-and-pet-supplies-stores",
+    "demo_template_config": {
+      "brand_name": "Northstar General Pet And Pet Supplies Stores Co",
+      "logo_url": "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMjgiIGhlaWdodD0iMTI4IiB2aWV3Qm94PSIwIDAgMTI4IDEyOCI+CiAgPGRlZnM+CiAgICA8c3R5bGU+CiAgICAgIC50ZXh0IHsgZm9udC1mYW1pbHk6IEludGVyLCBzeXN0ZW0tdWksIC1hcHBsZS1zeXN0ZW0sIFNlZ29lIFVJLCBSb2JvdG8sIFVidW50dSwgQ2FudGFyZWxsLCBOb3RvIFNhbnMsIEhlbHZldGljYSBOZXVlLCBBcmlhbCwgIkFwcGxlIENvbG9yIEVtb2ppIiwgIlNlZ29lIFVJIEVtb2ppIjsgZm9udC13ZWlnaHQ6IDcwMDsgfQogICAgPC9zdHlsZT4KICA8L2RlZnM+CiAgPHJlY3Qgd2lkdGg9IjEyOCIgaGVpZ2h0PSIxMjgiIHJ4PSIxNiIgZmlsbD0iIzExMTgyNyIvPgogIDx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjZmZmZmZmIiBmb250LXNpemU9IjU2IiBjbGFzcz0idGV4dCI+R1A8L3RleHQ+Cjwvc3ZnPg==",
+      "theme_key": "neutral"
+    }
+  },
+  {
+    "slug": "general-photography-studios-portrait",
+    "demo_template_config": {
+      "brand_name": "General Photography Studios, Portrait Inc",
+      "logo_url": "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMjgiIGhlaWdodD0iMTI4IiB2aWV3Qm94PSIwIDAgMTI4IDEyOCI+CiAgPGRlZnM+CiAgICA8c3R5bGU+CiAgICAgIC50ZXh0IHsgZm9udC1mYW1pbHk6IEludGVyLCBzeXN0ZW0tdWksIC1hcHBsZS1zeXN0ZW0sIFNlZ29lIFVJLCBSb2JvdG8sIFVidW50dSwgQ2FudGFyZWxsLCBOb3RvIFNhbnMsIEhlbHZldGljYSBOZXVlLCBBcmlhbCwgIkFwcGxlIENvbG9yIEVtb2ppIiwgIlNlZ29lIFVJIEVtb2ppIjsgZm9udC13ZWlnaHQ6IDcwMDsgfQogICAgPC9zdHlsZT4KICA8L2RlZnM+CiAgPHJlY3Qgd2lkdGg9IjEyOCIgaGVpZ2h0PSIxMjgiIHJ4PSIxNiIgZmlsbD0iI2E4NTVmNyIvPgogIDx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjZmZmZmZmIiBmb250LXNpemU9IjU2IiBjbGFzcz0idGV4dCI+R1A8L3RleHQ+Cjwvc3ZnPg==",
+      "theme_key": "neutral"
+    }
+  },
+  {
+    "slug": "general-plastics-plumbing-fixture-manufacturing",
+    "demo_template_config": {
+      "brand_name": "Keystone General Plastics Plumbing Fixture Manufacturing Solutions",
+      "logo_url": "https://api.iconify.design/mdi:hvac.svg?color=%230891b2",
+      "theme_key": "teal"
+    }
+  },
+  {
+    "slug": "general-plumbing-fixture-fitting-and-trim-manufacturing",
+    "demo_template_config": {
+      "brand_name": "General Plumbing Fixture Fitting And Trim Manufacturing Inc",
+      "logo_url": "https://api.iconify.design/mdi:hvac.svg?color=%230891b2",
+      "theme_key": "teal"
+    }
+  },
+  {
+    "slug": "general-plumbing-heating-and-air-conditioning-contractors",
+    "demo_template_config": {
+      "brand_name": "TrueClean Sample General Plumbing, Heating, And Air Conditioning Contractors Company",
+      "logo_url": "https://api.iconify.design/mdi:hvac.svg?color=%230891b2",
+      "theme_key": "teal"
+    }
+  },
+  {
+    "slug": "general-poured-concrete-foundation-and-structure-contractors",
+    "demo_template_config": {
+      "brand_name": "General Poured Concrete Foundation And Structure Contractors Group",
+      "logo_url": "https://api.iconify.design/mdi:hvac.svg?color=%23374151",
+      "theme_key": "charcoal"
+    }
+  },
+  {
+    "slug": "general-prefabricated-metal-building-and-component-manufacturing",
+    "demo_template_config": {
+      "brand_name": "Vertex General Prefabricated Metal Building And Component Manufacturing LLC",
+      "logo_url": "https://api.iconify.design/mdi:hvac.svg?color=%2316a34a",
+      "theme_key": "neutral"
+    }
+  },
+  {
+    "slug": "general-prefabricated-wood-building-manufacturing",
+    "demo_template_config": {
+      "brand_name": "Keystone General Prefabricated Wood Building Manufacturing",
+      "logo_url": "https://api.iconify.design/mdi:hvac.svg?color=%2316a34a",
+      "theme_key": "neutral"
+    }
+  },
+  {
+    "slug": "general-ready-mix-concrete-manufacturing",
+    "demo_template_config": {
+      "brand_name": "General Ready Mix Concrete Manufacturing Inc",
+      "logo_url": "https://api.iconify.design/mdi:hvac.svg?color=%23374151",
+      "theme_key": "charcoal"
+    }
+  },
+  {
+    "slug": "general-reconstituted-wood-product-manufacturing",
+    "demo_template_config": {
+      "brand_name": "General Reconstituted Wood Product Manufacturing Co",
+      "logo_url": "https://api.iconify.design/mdi:hvac.svg?color=%23ea580c",
+      "theme_key": "neutral"
+    }
+  },
+  {
+    "slug": "general-residential-electric-lighting-fixture-manufacturing",
+    "demo_template_config": {
+      "brand_name": "ProCare Sample General Residential Electric Lighting Fixture Manufacturing Solutions",
+      "logo_url": "https://api.iconify.design/mdi:hvac.svg?color=%2322c55e",
+      "theme_key": "green"
+    }
+  },
+  {
+    "slug": "general-residential-property-managers",
+    "demo_template_config": {
+      "brand_name": "General Residential Property Managers Inc",
+      "logo_url": "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMjgiIGhlaWdodD0iMTI4IiB2aWV3Qm94PSIwIDAgMTI4IDEyOCI+CiAgPGRlZnM+CiAgICA8c3R5bGU+CiAgICAgIC50ZXh0IHsgZm9udC1mYW1pbHk6IEludGVyLCBzeXN0ZW0tdWksIC1hcHBsZS1zeXN0ZW0sIFNlZ29lIFVJLCBSb2JvdG8sIFVidW50dSwgQ2FudGFyZWxsLCBOb3RvIFNhbnMsIEhlbHZldGljYSBOZXVlLCBBcmlhbCwgIkFwcGxlIENvbG9yIEVtb2ppIiwgIlNlZ29lIFVJIEVtb2ppIjsgZm9udC13ZWlnaHQ6IDcwMDsgfQogICAgPC9zdHlsZT4KICA8L2RlZnM+CiAgPHJlY3Qgd2lkdGg9IjEyOCIgaGVpZ2h0PSIxMjgiIHJ4PSIxNiIgZmlsbD0iI2VhNTgwYyIvPgogIDx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjZmZmZmZmIiBmb250LXNpemU9IjU2IiBjbGFzcz0idGV4dCI+R1I8L3RleHQ+Cjwvc3ZnPg==",
+      "theme_key": "neutral"
+    }
+  },
+  {
+    "slug": "general-residential-remodelers",
+    "demo_template_config": {
+      "brand_name": "General Residential Remodelers Works",
+      "logo_url": "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMjgiIGhlaWdodD0iMTI4IiB2aWV3Qm94PSIwIDAgMTI4IDEyOCI+CiAgPGRlZnM+CiAgICA8c3R5bGU+CiAgICAgIC50ZXh0IHsgZm9udC1mYW1pbHk6IEludGVyLCBzeXN0ZW0tdWksIC1hcHBsZS1zeXN0ZW0sIFNlZ29lIFVJLCBSb2JvdG8sIFVidW50dSwgQ2FudGFyZWxsLCBOb3RvIFNhbnMsIEhlbHZldGljYSBOZXVlLCBBcmlhbCwgIkFwcGxlIENvbG9yIEVtb2ppIiwgIlNlZ29lIFVJIEVtb2ppIjsgZm9udC13ZWlnaHQ6IDcwMDsgfQogICAgPC9zdHlsZT4KICA8L2RlZnM+CiAgPHJlY3Qgd2lkdGg9IjEyOCIgaGVpZ2h0PSIxMjgiIHJ4PSIxNiIgZmlsbD0iI2Y1OWUwYiIvPgogIDx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjZmZmZmZmIiBmb250LXNpemU9IjU2IiBjbGFzcz0idGV4dCI+R1I8L3RleHQ+Cjwvc3ZnPg==",
+      "theme_key": "neutral"
+    }
+  },
+  {
+    "slug": "general-retail-bakeries",
+    "demo_template_config": {
+      "brand_name": "General Retail Bakeries Pros",
+      "logo_url": "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMjgiIGhlaWdodD0iMTI4IiB2aWV3Qm94PSIwIDAgMTI4IDEyOCI+CiAgPGRlZnM+CiAgICA8c3R5bGU+CiAgICAgIC50ZXh0IHsgZm9udC1mYW1pbHk6IEludGVyLCBzeXN0ZW0tdWksIC1hcHBsZS1zeXN0ZW0sIFNlZ29lIFVJLCBSb2JvdG8sIFVidW50dSwgQ2FudGFyZWxsLCBOb3RvIFNhbnMsIEhlbHZldGljYSBOZXVlLCBBcmlhbCwgIkFwcGxlIENvbG9yIEVtb2ppIiwgIlNlZ29lIFVJIEVtb2ppIjsgZm9udC13ZWlnaHQ6IDcwMDsgfQogICAgPC9zdHlsZT4KICA8L2RlZnM+CiAgPHJlY3Qgd2lkdGg9IjEyOCIgaGVpZ2h0PSIxMjgiIHJ4PSIxNiIgZmlsbD0iIzFmMjkzNyIvPgogIDx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjZmZmZmZmIiBmb250LXNpemU9IjU2IiBjbGFzcz0idGV4dCI+R1I8L3RleHQ+Cjwvc3ZnPg==",
+      "theme_key": "neutral"
+    }
+  },
+  {
+    "slug": "general-roofing-contractors",
+    "demo_template_config": {
+      "brand_name": "General Roofing Contractors Pros",
+      "logo_url": "https://api.iconify.design/mdi:home-roof.svg?color=%231f2937",
+      "theme_key": "slate"
+    }
+  },
+  {
+    "slug": "general-roofing-siding-and-insulation-material-merchant-wholesalers",
+    "demo_template_config": {
+      "brand_name": "General Roofing, Siding, And Insulation Material Merchant Wholesalers Inc",
+      "logo_url": "https://api.iconify.design/mdi:home-roof.svg?color=%231f2937",
+      "theme_key": "slate"
+    }
+  },
+  {
+    "slug": "general-rv-recreational-vehicle-parks-and-campgrounds",
+    "demo_template_config": {
+      "brand_name": "General RV (Recreational Vehicle) Parks And Campgrounds Pros",
+      "logo_url": "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMjgiIGhlaWdodD0iMTI4IiB2aWV3Qm94PSIwIDAgMTI4IDEyOCI+CiAgPGRlZnM+CiAgICA8c3R5bGU+CiAgICAgIC50ZXh0IHsgZm9udC1mYW1pbHk6IEludGVyLCBzeXN0ZW0tdWksIC1hcHBsZS1zeXN0ZW0sIFNlZ29lIFVJLCBSb2JvdG8sIFVidW50dSwgQ2FudGFyZWxsLCBOb3RvIFNhbnMsIEhlbHZldGljYSBOZXVlLCBBcmlhbCwgIkFwcGxlIENvbG9yIEVtb2ppIiwgIlNlZ29lIFVJIEVtb2ppIjsgZm9udC13ZWlnaHQ6IDcwMDsgfQogICAgPC9zdHlsZT4KICA8L2RlZnM+CiAgPHJlY3Qgd2lkdGg9IjEyOCIgaGVpZ2h0PSIxMjgiIHJ4PSIxNiIgZmlsbD0iIzFmMjkzNyIvPgogIDx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjZmZmZmZmIiBmb250LXNpemU9IjU2IiBjbGFzcz0idGV4dCI+R1I8L3RleHQ+Cjwvc3ZnPg==",
+      "theme_key": "neutral"
+    }
+  },
+  {
+    "slug": "general-security-guards-and-patrol-services",
+    "demo_template_config": {
+      "brand_name": "Acme General Security Guards And Patrol Services",
+      "logo_url": "https://api.iconify.design/mdi:cctv.svg?color=%230ea5e9",
+      "theme_key": "cyan"
+    }
+  },
+  {
+    "slug": "general-sewing-needlework-and-piece-goods-stores",
+    "demo_template_config": {
+      "brand_name": "General Sewing, Needlework, And Piece Goods Stores LLC",
+      "logo_url": "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMjgiIGhlaWdodD0iMTI4IiB2aWV3Qm94PSIwIDAgMTI4IDEyOCI+CiAgPGRlZnM+CiAgICA8c3R5bGU+CiAgICAgIC50ZXh0IHsgZm9udC1mYW1pbHk6IEludGVyLCBzeXN0ZW0tdWksIC1hcHBsZS1zeXN0ZW0sIFNlZ29lIFVJLCBSb2JvdG8sIFVidW50dSwgQ2FudGFyZWxsLCBOb3RvIFNhbnMsIEhlbHZldGljYSBOZXVlLCBBcmlhbCwgIkFwcGxlIENvbG9yIEVtb2ppIiwgIlNlZ29lIFVJIEVtb2ppIjsgZm9udC13ZWlnaHQ6IDcwMDsgfQogICAgPC9zdHlsZT4KICA8L2RlZnM+CiAgPHJlY3Qgd2lkdGg9IjEyOCIgaGVpZ2h0PSIxMjgiIHJ4PSIxNiIgZmlsbD0iIzExMTgyNyIvPgogIDx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjZmZmZmZmIiBmb250LXNpemU9IjU2IiBjbGFzcz0idGV4dCI+R1M8L3RleHQ+Cjwvc3ZnPg==",
+      "theme_key": "neutral"
+    }
+  },
+  {
+    "slug": "general-shoe-stores",
+    "demo_template_config": {
+      "brand_name": "FirstChoice Sample General Shoe Stores Solutions",
+      "logo_url": "https://api.iconify.design/mdi:shoe-sneaker.svg?color=%23111827",
+      "theme_key": "neutral"
+    }
+  },
+  {
+    "slug": "general-siding-contractors",
+    "demo_template_config": {
+      "brand_name": "FirstChoice Sample General Siding Contractors",
+      "logo_url": "https://api.iconify.design/mdi:wall.svg?color=%230ea5e9",
+      "theme_key": "cyan"
+    }
+  },
+  {
+    "slug": "general-sign-manufacturing",
+    "demo_template_config": {
+      "brand_name": "General Sign Manufacturing Inc",
+      "logo_url": "https://api.iconify.design/mdi:hvac.svg?color=%231f2937",
+      "theme_key": "neutral"
+    }
+  },
+  {
+    "slug": "general-site-preparation-contractors",
+    "demo_template_config": {
+      "brand_name": "Summit General Site Preparation Contractors Company",
+      "logo_url": "https://api.iconify.design/mdi:hvac.svg?color=%2306b6d4",
+      "theme_key": "neutral"
+    }
+  },
+  {
+    "slug": "general-soil-preparation-planting-and-cultivating",
+    "demo_template_config": {
+      "brand_name": "Prime General Soil Preparation, Planting, And Cultivating",
+      "logo_url": "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMjgiIGhlaWdodD0iMTI4IiB2aWV3Qm94PSIwIDAgMTI4IDEyOCI+CiAgPGRlZnM+CiAgICA8c3R5bGU+CiAgICAgIC50ZXh0IHsgZm9udC1mYW1pbHk6IEludGVyLCBzeXN0ZW0tdWksIC1hcHBsZS1zeXN0ZW0sIFNlZ29lIFVJLCBSb2JvdG8sIFVidW50dSwgQ2FudGFyZWxsLCBOb3RvIFNhbnMsIEhlbHZldGljYSBOZXVlLCBBcmlhbCwgIkFwcGxlIENvbG9yIEVtb2ppIiwgIlNlZ29lIFVJIEVtb2ppIjsgZm9udC13ZWlnaHQ6IDcwMDsgfQogICAgPC9zdHlsZT4KICA8L2RlZnM+CiAgPHJlY3Qgd2lkdGg9IjEyOCIgaGVpZ2h0PSIxMjgiIHJ4PSIxNiIgZmlsbD0iI2VmNDQ0NCIvPgogIDx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjZmZmZmZmIiBmb250LXNpemU9IjU2IiBjbGFzcz0idGV4dCI+R1M8L3RleHQ+Cjwvc3ZnPg==",
+      "theme_key": "neutral"
+    }
+  },
+  {
+    "slug": "general-solar-electric-power-generation",
+    "demo_template_config": {
+      "brand_name": "Apex General Solar Electric Power Generation Co",
+      "logo_url": "https://api.iconify.design/mdi:lightbulb-on-outline.svg?color=%23f59e0b",
+      "theme_key": "amber"
+    }
+  },
+  {
+    "slug": "general-structural-steel-and-precast-concrete-contractors",
+    "demo_template_config": {
+      "brand_name": "General Structural Steel And Precast Concrete Contractors Pros",
+      "logo_url": "https://api.iconify.design/mdi:hvac.svg?color=%23374151",
+      "theme_key": "charcoal"
+    }
+  },
+  {
+    "slug": "general-textile-and-fabric-finishing-mills",
+    "demo_template_config": {
+      "brand_name": "Atlas General Textile And Fabric Finishing Mills Company",
+      "logo_url": "https://api.iconify.design/mdi:floor-plan.svg?color=%238b5cf6",
+      "theme_key": "violet"
+    }
+  },
+  {
+    "slug": "general-tile-and-terrazzo-contractors",
+    "demo_template_config": {
+      "brand_name": "Silverline General Tile And Terrazzo Contractors",
+      "logo_url": "https://api.iconify.design/mdi:floor-plan.svg?color=%238b5cf6",
+      "theme_key": "violet"
+    }
+  },
+  {
+    "slug": "general-travel-trailer-and-camper-manufacturing",
+    "demo_template_config": {
+      "brand_name": "General Travel Trailer And Camper Manufacturing Inc",
+      "logo_url": "https://api.iconify.design/mdi:hvac.svg?color=%2306b6d4",
+      "theme_key": "neutral"
+    }
+  },
+  {
+    "slug": "general-upholstered-household-furniture-manufacturing",
+    "demo_template_config": {
+      "brand_name": "General Upholstered Household Furniture Manufacturing Inc",
+      "logo_url": "https://api.iconify.design/mdi:hvac.svg?color=%238b5cf6",
+      "theme_key": "violet"
+    }
+  },
+  {
+    "slug": "general-used-merchandise-stores",
+    "demo_template_config": {
+      "brand_name": "Acme Sample General Used Merchandise Stores Solutions",
+      "logo_url": "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMjgiIGhlaWdodD0iMTI4IiB2aWV3Qm94PSIwIDAgMTI4IDEyOCI+CiAgPGRlZnM+CiAgICA8c3R5bGU+CiAgICAgIC50ZXh0IHsgZm9udC1mYW1pbHk6IEludGVyLCBzeXN0ZW0tdWksIC1hcHBsZS1zeXN0ZW0sIFNlZ29lIFVJLCBSb2JvdG8sIFVidW50dSwgQ2FudGFyZWxsLCBOb3RvIFNhbnMsIEhlbHZldGljYSBOZXVlLCBBcmlhbCwgIkFwcGxlIENvbG9yIEVtb2ppIiwgIlNlZ29lIFVJIEVtb2ppIjsgZm9udC13ZWlnaHQ6IDcwMDsgfQogICAgPC9zdHlsZT4KICA8L2RlZnM+CiAgPHJlY3Qgd2lkdGg9IjEyOCIgaGVpZ2h0PSIxMjgiIHJ4PSIxNiIgZmlsbD0iIzBlYTVlOSIvPgogIDx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjZmZmZmZmIiBmb250LXNpemU9IjU2IiBjbGFzcz0idGV4dCI+R1U8L3RleHQ+Cjwvc3ZnPg==",
+      "theme_key": "neutral"
+    }
+  },
+  {
+    "slug": "general-vending-machine-operators",
+    "demo_template_config": {
+      "brand_name": "Northstar General Vending Machine Operators Solutions",
+      "logo_url": "https://api.iconify.design/mdi:hvac.svg?color=%23a855f7",
+      "theme_key": "neutral"
+    }
+  },
+  {
+    "slug": "general-water-supply-and-irrigation-systems",
+    "demo_template_config": {
+      "brand_name": "General Water Supply And Irrigation Systems Inc",
+      "logo_url": "https://api.iconify.design/mdi:sprinkler.svg?color=%2316a34a",
+      "theme_key": "green"
+    }
+  },
+  {
+    "slug": "general-window-treatment-stores",
+    "demo_template_config": {
+      "brand_name": "Evergreen Sample General Window Treatment Stores Solutions",
+      "logo_url": "https://api.iconify.design/mdi:window-closed.svg?color=%230ea5e9",
+      "theme_key": "cyan"
+    }
+  },
+  {
+    "slug": "general-women-s-children-s-and-infants-clothing-and-accessories-merchant-wholesalers",
+    "demo_template_config": {
+      "brand_name": "Evergreen General Women's, Children's, And Infants' Clothing And Accessories Merchant Wholesalers Co",
+      "logo_url": "https://api.iconify.design/mdi:hvac.svg?color=%23111827",
+      "theme_key": "neutral"
+    }
+  },
+  {
+    "slug": "general-women-s-clothing-stores",
+    "demo_template_config": {
+      "brand_name": "General Women's Clothing Stores Inc",
+      "logo_url": "https://api.iconify.design/mdi:tshirt-crew.svg?color=%23111827",
+      "theme_key": "neutral"
+    }
+  },
+  {
+    "slug": "general-women-s-girls-and-infants-cut-and-sew-apparel-manufacturing",
+    "demo_template_config": {
+      "brand_name": "Silverline Sample General Women’s, Girls’, And Infants’ Cut And Sew Apparel Manufacturing",
+      "logo_url": "https://api.iconify.design/mdi:hvac.svg?color=%23111827",
+      "theme_key": "neutral"
+    }
+  },
+  {
+    "slug": "general-women-s-handbag-and-purse-manufacturing",
+    "demo_template_config": {
+      "brand_name": "General Women's Handbag And Purse Manufacturing Pros",
+      "logo_url": "https://api.iconify.design/mdi:hvac.svg?color=%23111827",
+      "theme_key": "neutral"
+    }
+  },
+  {
+    "slug": "general-wood-container-and-pallet-manufacturing",
+    "demo_template_config": {
+      "brand_name": "General Wood Container And Pallet Manufacturing Pros",
+      "logo_url": "https://api.iconify.design/mdi:hvac.svg?color=%23a855f7",
+      "theme_key": "neutral"
+    }
+  },
+  {
+    "slug": "general-wood-kitchen-cabinet-and-countertop-manufacturing",
+    "demo_template_config": {
+      "brand_name": "BluePeak Sample General Wood Kitchen Cabinet And Countertop Manufacturing Solutions",
+      "logo_url": "https://api.iconify.design/mdi:stove.svg?color=%23ea580c",
+      "theme_key": "orange"
+    }
+  },
+  {
+    "slug": "general-wood-office-furniture-manufacturing",
+    "demo_template_config": {
+      "brand_name": "General Wood Office Furniture Manufacturing Pros",
+      "logo_url": "https://api.iconify.design/mdi:hvac.svg?color=%238b5cf6",
+      "theme_key": "violet"
+    }
+  },
+  {
+    "slug": "general-wood-preservation",
+    "demo_template_config": {
+      "brand_name": "Keystone General Wood Preservation Solutions",
+      "logo_url": "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMjgiIGhlaWdodD0iMTI4IiB2aWV3Qm94PSIwIDAgMTI4IDEyOCI+CiAgPGRlZnM+CiAgICA8c3R5bGU+CiAgICAgIC50ZXh0IHsgZm9udC1mYW1pbHk6IEludGVyLCBzeXN0ZW0tdWksIC1hcHBsZS1zeXN0ZW0sIFNlZ29lIFVJLCBSb2JvdG8sIFVidW50dSwgQ2FudGFyZWxsLCBOb3RvIFNhbnMsIEhlbHZldGljYSBOZXVlLCBBcmlhbCwgIkFwcGxlIENvbG9yIEVtb2ppIiwgIlNlZ29lIFVJIEVtb2ppIjsgZm9udC13ZWlnaHQ6IDcwMDsgfQogICAgPC9zdHlsZT4KICA8L2RlZnM+CiAgPHJlY3Qgd2lkdGg9IjEyOCIgaGVpZ2h0PSIxMjgiIHJ4PSIxNiIgZmlsbD0iI2E4NTVmNyIvPgogIDx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjZmZmZmZmIiBmb250LXNpemU9IjU2IiBjbGFzcz0idGV4dCI+R1c8L3RleHQ+Cjwvc3ZnPg==",
+      "theme_key": "neutral"
+    }
+  },
+  {
+    "slug": "general-wood-window-and-door-manufacturing",
+    "demo_template_config": {
+      "brand_name": "General Wood Window And Door Manufacturing Group",
+      "logo_url": "https://api.iconify.design/mdi:window-closed.svg?color=%230ea5e9",
+      "theme_key": "cyan"
+    }
+  },
+  {
+    "slug": "greenhouse",
+    "demo_template_config": {
+      "brand_name": "Prime Greenhouse LLC",
+      "logo_url": "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMjgiIGhlaWdodD0iMTI4IiB2aWV3Qm94PSIwIDAgMTI4IDEyOCI+CiAgPGRlZnM+CiAgICA8c3R5bGU+CiAgICAgIC50ZXh0IHsgZm9udC1mYW1pbHk6IEludGVyLCBzeXN0ZW0tdWksIC1hcHBsZS1zeXN0ZW0sIFNlZ29lIFVJLCBSb2JvdG8sIFVidW50dSwgQ2FudGFyZWxsLCBOb3RvIFNhbnMsIEhlbHZldGljYSBOZXVlLCBBcmlhbCwgIkFwcGxlIENvbG9yIEVtb2ppIiwgIlNlZ29lIFVJIEVtb2ppIjsgZm9udC13ZWlnaHQ6IDcwMDsgfQogICAgPC9zdHlsZT4KICA8L2RlZnM+CiAgPHJlY3Qgd2lkdGg9IjEyOCIgaGVpZ2h0PSIxMjgiIHJ4PSIxNiIgZmlsbD0iIzFmMjkzNyIvPgogIDx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjZmZmZmZmIiBmb250LXNpemU9IjU2IiBjbGFzcz0idGV4dCI+RzwvdGV4dD4KPC9zdmc+",
+      "theme_key": "neutral"
+    }
+  },
+  {
+    "slug": "hair-extensions",
+    "demo_template_config": {
+      "brand_name": "NextGen Hair Extensions Co",
+      "logo_url": "https://api.iconify.design/mdi:hvac.svg?color=%23f59e0b",
+      "theme_key": "amber"
+    }
+  },
+  {
+    "slug": "hair-styling-color",
+    "demo_template_config": {
+      "brand_name": "Silverline Hair Styling & Color Pros",
+      "logo_url": "https://api.iconify.design/mdi:hvac.svg?color=%23f59e0b",
+      "theme_key": "amber"
+    }
+  },
+  {
+    "slug": "home-gym",
+    "demo_template_config": {
+      "brand_name": "Vertex Home Gym Inc",
+      "logo_url": "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMjgiIGhlaWdodD0iMTI4IiB2aWV3Qm94PSIwIDAgMTI4IDEyOCI+CiAgPGRlZnM+CiAgICA8c3R5bGU+CiAgICAgIC50ZXh0IHsgZm9udC1mYW1pbHk6IEludGVyLCBzeXN0ZW0tdWksIC1hcHBsZS1zeXN0ZW0sIFNlZ29lIFVJLCBSb2JvdG8sIFVidW50dSwgQ2FudGFyZWxsLCBOb3RvIFNhbnMsIEhlbHZldGljYSBOZXVlLCBBcmlhbCwgIkFwcGxlIENvbG9yIEVtb2ppIiwgIlNlZ29lIFVJIEVtb2ppIjsgZm9udC13ZWlnaHQ6IDcwMDsgfQogICAgPC9zdHlsZT4KICA8L2RlZnM+CiAgPHJlY3Qgd2lkdGg9IjEyOCIgaGVpZ2h0PSIxMjgiIHJ4PSIxNiIgZmlsbD0iIzBlYTVlOSIvPgogIDx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjZmZmZmZmIiBmb250LXNpemU9IjU2IiBjbGFzcz0idGV4dCI+SEc8L3RleHQ+Cjwvc3ZnPg==",
+      "theme_key": "neutral"
+    }
+  },
+  {
+    "slug": "home-office",
+    "demo_template_config": {
+      "brand_name": "Keystone Home Office",
+      "logo_url": "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMjgiIGhlaWdodD0iMTI4IiB2aWV3Qm94PSIwIDAgMTI4IDEyOCI+CiAgPGRlZnM+CiAgICA8c3R5bGU+CiAgICAgIC50ZXh0IHsgZm9udC1mYW1pbHk6IEludGVyLCBzeXN0ZW0tdWksIC1hcHBsZS1zeXN0ZW0sIFNlZ29lIFVJLCBSb2JvdG8sIFVidW50dSwgQ2FudGFyZWxsLCBOb3RvIFNhbnMsIEhlbHZldGljYSBOZXVlLCBBcmlhbCwgIkFwcGxlIENvbG9yIEVtb2ppIiwgIlNlZ29lIFVJIEVtb2ppIjsgZm9udC13ZWlnaHQ6IDcwMDsgfQogICAgPC9zdHlsZT4KICA8L2RlZnM+CiAgPHJlY3Qgd2lkdGg9IjEyOCIgaGVpZ2h0PSIxMjgiIHJ4PSIxNiIgZmlsbD0iIzFmMjkzNyIvPgogIDx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjZmZmZmZmIiBmb250LXNpemU9IjU2IiBjbGFzcz0idGV4dCI+SE88L3RleHQ+Cjwvc3ZnPg==",
+      "theme_key": "neutral"
+    }
+  },
+  {
+    "slug": "home-theater-design",
+    "demo_template_config": {
+      "brand_name": "Northstar Sample Home Theater Design",
+      "logo_url": "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMjgiIGhlaWdodD0iMTI4IiB2aWV3Qm94PSIwIDAgMTI4IDEyOCI+CiAgPGRlZnM+CiAgICA8c3R5bGU+CiAgICAgIC50ZXh0IHsgZm9udC1mYW1pbHk6IEludGVyLCBzeXN0ZW0tdWksIC1hcHBsZS1zeXN0ZW0sIFNlZ29lIFVJLCBSb2JvdG8sIFVidW50dSwgQ2FudGFyZWxsLCBOb3RvIFNhbnMsIEhlbHZldGljYSBOZXVlLCBBcmlhbCwgIkFwcGxlIENvbG9yIEVtb2ppIiwgIlNlZ29lIFVJIEVtb2ppIjsgZm9udC13ZWlnaHQ6IDcwMDsgfQogICAgPC9zdHlsZT4KICA8L2RlZnM+CiAgPHJlY3Qgd2lkdGg9IjEyOCIgaGVpZ2h0PSIxMjgiIHJ4PSIxNiIgZmlsbD0iI2VmNDQ0NCIvPgogIDx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjZmZmZmZmIiBmb250LXNpemU9IjU2IiBjbGFzcz0idGV4dCI+SFQ8L3RleHQ+Cjwvc3ZnPg==",
+      "theme_key": "neutral"
+    }
+  },
+  {
+    "slug": "hot-tubs",
+    "demo_template_config": {
+      "brand_name": "Evergreen Hot Tubs Company",
+      "logo_url": "https://api.iconify.design/mdi:pool.svg?color=%2306b6d4",
+      "theme_key": "cyan"
+    }
+  },
+  {
+    "slug": "interior-design",
+    "demo_template_config": {
+      "brand_name": "Vertex Interior Design Solutions",
+      "logo_url": "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMjgiIGhlaWdodD0iMTI4IiB2aWV3Qm94PSIwIDAgMTI4IDEyOCI+CiAgPGRlZnM+CiAgICA8c3R5bGU+CiAgICAgIC50ZXh0IHsgZm9udC1mYW1pbHk6IEludGVyLCBzeXN0ZW0tdWksIC1hcHBsZS1zeXN0ZW0sIFNlZ29lIFVJLCBSb2JvdG8sIFVidW50dSwgQ2FudGFyZWxsLCBOb3RvIFNhbnMsIEhlbHZldGljYSBOZXVlLCBBcmlhbCwgIkFwcGxlIENvbG9yIEVtb2ppIiwgIlNlZ29lIFVJIEVtb2ppIjsgZm9udC13ZWlnaHQ6IDcwMDsgfQogICAgPC9zdHlsZT4KICA8L2RlZnM+CiAgPHJlY3Qgd2lkdGg9IjEyOCIgaGVpZ2h0PSIxMjgiIHJ4PSIxNiIgZmlsbD0iI2VmNDQ0NCIvPgogIDx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjZmZmZmZmIiBmb250LXNpemU9IjU2IiBjbGFzcz0idGV4dCI+SUQ8L3RleHQ+Cjwvc3ZnPg==",
+      "theme_key": "neutral"
+    }
+  },
+  {
+    "slug": "irrigation-system-layout",
+    "demo_template_config": {
+      "brand_name": "Nimbus Sample Irrigation System Layout Inc",
+      "logo_url": "https://api.iconify.design/mdi:sprinkler.svg?color=%2316a34a",
+      "theme_key": "green"
+    }
+  },
+  {
+    "slug": "kitchen-remodeling",
+    "demo_template_config": {
+      "brand_name": "Kitchen Remodeling Group",
+      "logo_url": "https://api.iconify.design/mdi:stove.svg?color=%23ea580c",
+      "theme_key": "orange"
+    }
+  },
+  {
+    "slug": "land-lot-planning",
+    "demo_template_config": {
+      "brand_name": "Pioneer Sample Land / Lot Planning Solutions",
+      "logo_url": "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMjgiIGhlaWdodD0iMTI4IiB2aWV3Qm94PSIwIDAgMTI4IDEyOCI+CiAgPGRlZnM+CiAgICA8c3R5bGU+CiAgICAgIC50ZXh0IHsgZm9udC1mYW1pbHk6IEludGVyLCBzeXN0ZW0tdWksIC1hcHBsZS1zeXN0ZW0sIFNlZ29lIFVJLCBSb2JvdG8sIFVidW50dSwgQ2FudGFyZWxsLCBOb3RvIFNhbnMsIEhlbHZldGljYSBOZXVlLCBBcmlhbCwgIkFwcGxlIENvbG9yIEVtb2ppIiwgIlNlZ29lIFVJIEVtb2ppIjsgZm9udC13ZWlnaHQ6IDcwMDsgfQogICAgPC9zdHlsZT4KICA8L2RlZnM+CiAgPHJlY3Qgd2lkdGg9IjEyOCIgaGVpZ2h0PSIxMjgiIHJ4PSIxNiIgZmlsbD0iIzA2YjZkNCIvPgogIDx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjZmZmZmZmIiBmb250LXNpemU9IjU2IiBjbGFzcz0idGV4dCI+TEw8L3RleHQ+Cjwvc3ZnPg==",
+      "theme_key": "neutral"
+    }
+  },
+  {
+    "slug": "landscaping",
+    "demo_template_config": {
+      "brand_name": "Landscaping Pros",
+      "logo_url": "https://api.iconify.design/mdi:grass.svg?color=%23111827",
+      "theme_key": "neutral"
+    }
+  },
+  {
+    "slug": "lashes",
+    "demo_template_config": {
+      "brand_name": "Vertex Sample Lashes",
+      "logo_url": "https://api.iconify.design/mdi:eye.svg?color=%23ec4899",
+      "theme_key": "pink"
+    }
+  },
+  {
+    "slug": "lighting-smart-lighting",
+    "demo_template_config": {
+      "brand_name": "Evergreen Sample Lighting & Smart Lighting",
+      "logo_url": "https://api.iconify.design/mdi:lightbulb-on-outline.svg?color=%2322c55e",
+      "theme_key": "green"
+    }
+  },
+  {
+    "slug": "makeup",
+    "demo_template_config": {
+      "brand_name": "Makeup Group",
+      "logo_url": "https://api.iconify.design/mdi:lipstick.svg?color=%23ec4899",
+      "theme_key": "pink"
+    }
+  },
+  {
+    "slug": "mancave",
+    "demo_template_config": {
+      "brand_name": "BluePeak Sample Mancave Co",
+      "logo_url": "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMjgiIGhlaWdodD0iMTI4IiB2aWV3Qm94PSIwIDAgMTI4IDEyOCI+CiAgPGRlZnM+CiAgICA8c3R5bGU+CiAgICAgIC50ZXh0IHsgZm9udC1mYW1pbHk6IEludGVyLCBzeXN0ZW0tdWksIC1hcHBsZS1zeXN0ZW0sIFNlZ29lIFVJLCBSb2JvdG8sIFVidW50dSwgQ2FudGFyZWxsLCBOb3RvIFNhbnMsIEhlbHZldGljYSBOZXVlLCBBcmlhbCwgIkFwcGxlIENvbG9yIEVtb2ppIiwgIlNlZ29lIFVJIEVtb2ppIjsgZm9udC13ZWlnaHQ6IDcwMDsgfQogICAgPC9zdHlsZT4KICA8L2RlZnM+CiAgPHJlY3Qgd2lkdGg9IjEyOCIgaGVpZ2h0PSIxMjgiIHJ4PSIxNiIgZmlsbD0iIzE2YTM0YSIvPgogIDx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjZmZmZmZmIiBmb250LXNpemU9IjU2IiBjbGFzcz0idGV4dCI+TTwvdGV4dD4KPC9zdmc+",
+      "theme_key": "neutral"
+    }
+  },
+  {
+    "slug": "microblading",
+    "demo_template_config": {
+      "brand_name": "Northstar Sample Microblading Solutions",
+      "logo_url": "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMjgiIGhlaWdodD0iMTI4IiB2aWV3Qm94PSIwIDAgMTI4IDEyOCI+CiAgPGRlZnM+CiAgICA8c3R5bGU+CiAgICAgIC50ZXh0IHsgZm9udC1mYW1pbHk6IEludGVyLCBzeXN0ZW0tdWksIC1hcHBsZS1zeXN0ZW0sIFNlZ29lIFVJLCBSb2JvdG8sIFVidW50dSwgQ2FudGFyZWxsLCBOb3RvIFNhbnMsIEhlbHZldGljYSBOZXVlLCBBcmlhbCwgIkFwcGxlIENvbG9yIEVtb2ppIiwgIlNlZ29lIFVJIEVtb2ppIjsgZm9udC13ZWlnaHQ6IDcwMDsgfQogICAgPC9zdHlsZT4KICA8L2RlZnM+CiAgPHJlY3Qgd2lkdGg9IjEyOCIgaGVpZ2h0PSIxMjgiIHJ4PSIxNiIgZmlsbD0iI2VhNTgwYyIvPgogIDx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjZmZmZmZmIiBmb250LXNpemU9IjU2IiBjbGFzcz0idGV4dCI+TTwvdGV4dD4KPC9zdmc+",
+      "theme_key": "neutral"
+    }
+  },
+  {
+    "slug": "nail-color-tryons",
+    "demo_template_config": {
+      "brand_name": "ProCare Nail Color Tryons",
+      "logo_url": "https://api.iconify.design/mdi:hair-dryer.svg?color=%23f59e0b",
+      "theme_key": "amber"
+    }
+  },
+  {
+    "slug": "new-custom-homes",
+    "demo_template_config": {
+      "brand_name": "ProCare New Custom Homes Design",
+      "logo_url": "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMjgiIGhlaWdodD0iMTI4IiB2aWV3Qm94PSIwIDAgMTI4IDEyOCI+CiAgPGRlZnM+CiAgICA8c3R5bGU+CiAgICAgIC50ZXh0IHsgZm9udC1mYW1pbHk6IEludGVyLCBzeXN0ZW0tdWksIC1hcHBsZS1zeXN0ZW0sIFNlZ29lIFVJLCBSb2JvdG8sIFVidW50dSwgQ2FudGFyZWxsLCBOb3RvIFNhbnMsIEhlbHZldGljYSBOZXVlLCBBcmlhbCwgIkFwcGxlIENvbG9yIEVtb2ppIiwgIlNlZ29lIFVJIEVtb2ppIjsgZm9udC13ZWlnaHQ6IDcwMDsgfQogICAgPC9zdHlsZT4KICA8L2RlZnM+CiAgPHJlY3Qgd2lkdGg9IjEyOCIgaGVpZ2h0PSIxMjgiIHJ4PSIxNiIgZmlsbD0iIzE2YTM0YSIvPgogIDx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjZmZmZmZmIiBmb250LXNpemU9IjU2IiBjbGFzcz0idGV4dCI+TkM8L3RleHQ+Cjwvc3ZnPg==",
+      "theme_key": "neutral"
+    }
+  },
+  {
+    "slug": "nursery-design",
+    "demo_template_config": {
+      "brand_name": "Keystone Nursery Design",
+      "logo_url": "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMjgiIGhlaWdodD0iMTI4IiB2aWV3Qm94PSIwIDAgMTI4IDEyOCI+CiAgPGRlZnM+CiAgICA8c3R5bGU+CiAgICAgIC50ZXh0IHsgZm9udC1mYW1pbHk6IEludGVyLCBzeXN0ZW0tdWksIC1hcHBsZS1zeXN0ZW0sIFNlZ29lIFVJLCBSb2JvdG8sIFVidW50dSwgQ2FudGFyZWxsLCBOb3RvIFNhbnMsIEhlbHZldGljYSBOZXVlLCBBcmlhbCwgIkFwcGxlIENvbG9yIEVtb2ppIiwgIlNlZ29lIFVJIEVtb2ppIjsgZm9udC13ZWlnaHQ6IDcwMDsgfQogICAgPC9zdHlsZT4KICA8L2RlZnM+CiAgPHJlY3Qgd2lkdGg9IjEyOCIgaGVpZ2h0PSIxMjgiIHJ4PSIxNiIgZmlsbD0iIzA2YjZkNCIvPgogIDx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjZmZmZmZmIiBmb250LXNpemU9IjU2IiBjbGFzcz0idGV4dCI+TkQ8L3RleHQ+Cjwvc3ZnPg==",
+      "theme_key": "neutral"
+    }
+  },
+  {
+    "slug": "outdoor-furniture-layout",
+    "demo_template_config": {
+      "brand_name": "Outdoor Furniture Layout Company",
+      "logo_url": "https://api.iconify.design/mdi:garage.svg?color=%230ea5e9",
+      "theme_key": "cyan"
+    }
+  },
+  {
+    "slug": "outdoor-kitchens",
+    "demo_template_config": {
+      "brand_name": "Outdoor Kitchens Inc",
+      "logo_url": "https://api.iconify.design/mdi:garage.svg?color=%230ea5e9",
+      "theme_key": "cyan"
+    }
+  },
+  {
+    "slug": "outdoor-lighting",
+    "demo_template_config": {
+      "brand_name": "BluePeak Outdoor Lighting Solutions",
+      "logo_url": "https://api.iconify.design/mdi:garage.svg?color=%230ea5e9",
+      "theme_key": "cyan"
+    }
+  },
+  {
+    "slug": "paint-wallpaper",
+    "demo_template_config": {
+      "brand_name": "Apex Sample Paint & Wallpaper Solutions",
+      "logo_url": "https://api.iconify.design/mdi:format-paint.svg?color=%23f59e0b",
+      "theme_key": "amber"
+    }
+  },
+  {
+    "slug": "patio-deck-design",
+    "demo_template_config": {
+      "brand_name": "FirstChoice Sample Patio & Deck Design Solutions",
+      "logo_url": "https://api.iconify.design/mdi:deck.svg?color=%23b45309",
+      "theme_key": "amber"
+    }
+  },
+  {
+    "slug": "paving",
+    "demo_template_config": {
+      "brand_name": "Vertex Paving Works",
+      "logo_url": "https://api.iconify.design/mdi:road.svg?color=%23374151",
+      "theme_key": "charcoal"
+    }
+  },
+  {
+    "slug": "pool-design",
+    "demo_template_config": {
+      "brand_name": "Pool Design Pros",
+      "logo_url": "https://api.iconify.design/mdi:pool.svg?color=%2306b6d4",
+      "theme_key": "cyan"
+    }
+  },
+  {
+    "slug": "prosthetics",
+    "demo_template_config": {
+      "brand_name": "Silverline Sample Prosthetics Solutions",
+      "logo_url": "https://api.iconify.design/mdi:account.svg?color=%2306b6d4",
+      "theme_key": "neutral"
+    }
+  },
+  {
+    "slug": "recreational-sports-area",
+    "demo_template_config": {
+      "brand_name": "ProCare Sample Recreational Sports Area Pros",
+      "logo_url": "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMjgiIGhlaWdodD0iMTI4IiB2aWV3Qm94PSIwIDAgMTI4IDEyOCI+CiAgPGRlZnM+CiAgICA8c3R5bGU+CiAgICAgIC50ZXh0IHsgZm9udC1mYW1pbHk6IEludGVyLCBzeXN0ZW0tdWksIC1hcHBsZS1zeXN0ZW0sIFNlZ29lIFVJLCBSb2JvdG8sIFVidW50dSwgQ2FudGFyZWxsLCBOb3RvIFNhbnMsIEhlbHZldGljYSBOZXVlLCBBcmlhbCwgIkFwcGxlIENvbG9yIEVtb2ppIiwgIlNlZ29lIFVJIEVtb2ppIjsgZm9udC13ZWlnaHQ6IDcwMDsgfQogICAgPC9zdHlsZT4KICA8L2RlZnM+CiAgPHJlY3Qgd2lkdGg9IjEyOCIgaGVpZ2h0PSIxMjgiIHJ4PSIxNiIgZmlsbD0iI2VhNTgwYyIvPgogIDx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjZmZmZmZmIiBmb250LXNpemU9IjU2IiBjbGFzcz0idGV4dCI+UlM8L3RleHQ+Cjwvc3ZnPg==",
+      "theme_key": "neutral"
+    }
+  },
+  {
+    "slug": "rhinoplasty",
+    "demo_template_config": {
+      "brand_name": "Rhinoplasty Inc",
+      "logo_url": "https://api.iconify.design/mdi:account.svg?color=%23a855f7",
+      "theme_key": "neutral"
+    }
+  },
+  {
+    "slug": "roof-replacement-design",
+    "demo_template_config": {
+      "brand_name": "Roof Replacement Design Pros",
+      "logo_url": "https://api.iconify.design/mdi:home-roof.svg?color=%231f2937",
+      "theme_key": "slate"
+    }
+  },
+  {
+    "slug": "sauna",
+    "demo_template_config": {
+      "brand_name": "Nimbus Sauna Solutions",
+      "logo_url": "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMjgiIGhlaWdodD0iMTI4IiB2aWV3Qm94PSIwIDAgMTI4IDEyOCI+CiAgPGRlZnM+CiAgICA8c3R5bGU+CiAgICAgIC50ZXh0IHsgZm9udC1mYW1pbHk6IEludGVyLCBzeXN0ZW0tdWksIC1hcHBsZS1zeXN0ZW0sIFNlZ29lIFVJLCBSb2JvdG8sIFVidW50dSwgQ2FudGFyZWxsLCBOb3RvIFNhbnMsIEhlbHZldGljYSBOZXVlLCBBcmlhbCwgIkFwcGxlIENvbG9yIEVtb2ppIiwgIlNlZ29lIFVJIEVtb2ppIjsgZm9udC13ZWlnaHQ6IDcwMDsgfQogICAgPC9zdHlsZT4KICA8L2RlZnM+CiAgPHJlY3Qgd2lkdGg9IjEyOCIgaGVpZ2h0PSIxMjgiIHJ4PSIxNiIgZmlsbD0iIzExMTgyNyIvPgogIDx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjZmZmZmZmIiBmb250LXNpemU9IjU2IiBjbGFzcz0idGV4dCI+UzwvdGV4dD4KPC9zdmc+",
+      "theme_key": "neutral"
+    }
+  },
+  {
+    "slug": "seasonal-holiday-decor",
+    "demo_template_config": {
+      "brand_name": "Evergreen Seasonal / Holiday Decor Inc",
+      "logo_url": "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMjgiIGhlaWdodD0iMTI4IiB2aWV3Qm94PSIwIDAgMTI4IDEyOCI+CiAgPGRlZnM+CiAgICA8c3R5bGU+CiAgICAgIC50ZXh0IHsgZm9udC1mYW1pbHk6IEludGVyLCBzeXN0ZW0tdWksIC1hcHBsZS1zeXN0ZW0sIFNlZ29lIFVJLCBSb2JvdG8sIFVidW50dSwgQ2FudGFyZWxsLCBOb3RvIFNhbnMsIEhlbHZldGljYSBOZXVlLCBBcmlhbCwgIkFwcGxlIENvbG9yIEVtb2ppIiwgIlNlZ29lIFVJIEVtb2ppIjsgZm9udC13ZWlnaHQ6IDcwMDsgfQogICAgPC9zdHlsZT4KICA8L2RlZnM+CiAgPHJlY3Qgd2lkdGg9IjEyOCIgaGVpZ2h0PSIxMjgiIHJ4PSIxNiIgZmlsbD0iIzA2YjZkNCIvPgogIDx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjZmZmZmZmIiBmb250LXNpemU9IjU2IiBjbGFzcz0idGV4dCI+U0g8L3RleHQ+Cjwvc3ZnPg==",
+      "theme_key": "neutral"
+    }
+  },
+  {
+    "slug": "security",
+    "demo_template_config": {
+      "brand_name": "ClearView Sample Security Solutions",
+      "logo_url": "https://api.iconify.design/mdi:cctv.svg?color=%230ea5e9",
+      "theme_key": "cyan"
+    }
+  },
+  {
+    "slug": "shed",
+    "demo_template_config": {
+      "brand_name": "Shed Works",
+      "logo_url": "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMjgiIGhlaWdodD0iMTI4IiB2aWV3Qm94PSIwIDAgMTI4IDEyOCI+CiAgPGRlZnM+CiAgICA8c3R5bGU+CiAgICAgIC50ZXh0IHsgZm9udC1mYW1pbHk6IEludGVyLCBzeXN0ZW0tdWksIC1hcHBsZS1zeXN0ZW0sIFNlZ29lIFVJLCBSb2JvdG8sIFVidW50dSwgQ2FudGFyZWxsLCBOb3RvIFNhbnMsIEhlbHZldGljYSBOZXVlLCBBcmlhbCwgIkFwcGxlIENvbG9yIEVtb2ppIiwgIlNlZ29lIFVJIEVtb2ppIjsgZm9udC13ZWlnaHQ6IDcwMDsgfQogICAgPC9zdHlsZT4KICA8L2RlZnM+CiAgPHJlY3Qgd2lkdGg9IjEyOCIgaGVpZ2h0PSIxMjgiIHJ4PSIxNiIgZmlsbD0iIzBlYTVlOSIvPgogIDx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjZmZmZmZmIiBmb250LXNpemU9IjU2IiBjbGFzcz0idGV4dCI+UzwvdGV4dD4KPC9zdmc+",
+      "theme_key": "neutral"
+    }
+  },
+  {
+    "slug": "shipping-container-design",
+    "demo_template_config": {
+      "brand_name": "Shipping Container Design Inc",
+      "logo_url": "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMjgiIGhlaWdodD0iMTI4IiB2aWV3Qm94PSIwIDAgMTI4IDEyOCI+CiAgPGRlZnM+CiAgICA8c3R5bGU+CiAgICAgIC50ZXh0IHsgZm9udC1mYW1pbHk6IEludGVyLCBzeXN0ZW0tdWksIC1hcHBsZS1zeXN0ZW0sIFNlZ29lIFVJLCBSb2JvdG8sIFVidW50dSwgQ2FudGFyZWxsLCBOb3RvIFNhbnMsIEhlbHZldGljYSBOZXVlLCBBcmlhbCwgIkFwcGxlIENvbG9yIEVtb2ppIiwgIlNlZ29lIFVJIEVtb2ppIjsgZm9udC13ZWlnaHQ6IDcwMDsgfQogICAgPC9zdHlsZT4KICA8L2RlZnM+CiAgPHJlY3Qgd2lkdGg9IjEyOCIgaGVpZ2h0PSIxMjgiIHJ4PSIxNiIgZmlsbD0iIzFmMjkzNyIvPgogIDx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjZmZmZmZmIiBmb250LXNpemU9IjU2IiBjbGFzcz0idGV4dCI+U0M8L3RleHQ+Cjwvc3ZnPg==",
+      "theme_key": "neutral"
+    }
+  },
+  {
+    "slug": "siding-replacement",
+    "demo_template_config": {
+      "brand_name": "BluePeak Sample Siding Replacement Company",
+      "logo_url": "https://api.iconify.design/mdi:wall.svg?color=%230ea5e9",
+      "theme_key": "cyan"
+    }
+  },
+  {
+    "slug": "solar-panel-design",
+    "demo_template_config": {
+      "brand_name": "Solar Panel Design Co",
+      "logo_url": "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMjgiIGhlaWdodD0iMTI4IiB2aWV3Qm94PSIwIDAgMTI4IDEyOCI+CiAgPGRlZnM+CiAgICA8c3R5bGU+CiAgICAgIC50ZXh0IHsgZm9udC1mYW1pbHk6IEludGVyLCBzeXN0ZW0tdWksIC1hcHBsZS1zeXN0ZW0sIFNlZ29lIFVJLCBSb2JvdG8sIFVidW50dSwgQ2FudGFyZWxsLCBOb3RvIFNhbnMsIEhlbHZldGljYSBOZXVlLCBBcmlhbCwgIkFwcGxlIENvbG9yIEVtb2ppIiwgIlNlZ29lIFVJIEVtb2ppIjsgZm9udC13ZWlnaHQ6IDcwMDsgfQogICAgPC9zdHlsZT4KICA8L2RlZnM+CiAgPHJlY3Qgd2lkdGg9IjEyOCIgaGVpZ2h0PSIxMjgiIHJ4PSIxNiIgZmlsbD0iI2Y1OWUwYiIvPgogIDx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjZmZmZmZmIiBmb250LXNpemU9IjU2IiBjbGFzcz0idGV4dCI+U1A8L3RleHQ+Cjwvc3ZnPg==",
+      "theme_key": "amber"
+    }
+  },
+  {
+    "slug": "stonework",
+    "demo_template_config": {
+      "brand_name": "TrueClean Stonework Co",
+      "logo_url": "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMjgiIGhlaWdodD0iMTI4IiB2aWV3Qm94PSIwIDAgMTI4IDEyOCI+CiAgPGRlZnM+CiAgICA8c3R5bGU+CiAgICAgIC50ZXh0IHsgZm9udC1mYW1pbHk6IEludGVyLCBzeXN0ZW0tdWksIC1hcHBsZS1zeXN0ZW0sIFNlZ29lIFVJLCBSb2JvdG8sIFVidW50dSwgQ2FudGFyZWxsLCBOb3RvIFNhbnMsIEhlbHZldGljYSBOZXVlLCBBcmlhbCwgIkFwcGxlIENvbG9yIEVtb2ppIiwgIlNlZ29lIFVJIEVtb2ppIjsgZm9udC13ZWlnaHQ6IDcwMDsgfQogICAgPC9zdHlsZT4KICA8L2RlZnM+CiAgPHJlY3Qgd2lkdGg9IjEyOCIgaGVpZ2h0PSIxMjgiIHJ4PSIxNiIgZmlsbD0iI2Y1OWUwYiIvPgogIDx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjZmZmZmZmIiBmb250LXNpemU9IjU2IiBjbGFzcz0idGV4dCI+UzwvdGV4dD4KPC9zdmc+",
+      "theme_key": "neutral"
+    }
+  },
+  {
+    "slug": "structural-modular-design",
+    "demo_template_config": {
+      "brand_name": "Structural / Modular Design Pros",
+      "logo_url": "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMjgiIGhlaWdodD0iMTI4IiB2aWV3Qm94PSIwIDAgMTI4IDEyOCI+CiAgPGRlZnM+CiAgICA8c3R5bGU+CiAgICAgIC50ZXh0IHsgZm9udC1mYW1pbHk6IEludGVyLCBzeXN0ZW0tdWksIC1hcHBsZS1zeXN0ZW0sIFNlZ29lIFVJLCBSb2JvdG8sIFVidW50dSwgQ2FudGFyZWxsLCBOb3RvIFNhbnMsIEhlbHZldGljYSBOZXVlLCBBcmlhbCwgIkFwcGxlIENvbG9yIEVtb2ppIiwgIlNlZ29lIFVJIEVtb2ppIjsgZm9udC13ZWlnaHQ6IDcwMDsgfQogICAgPC9zdHlsZT4KICA8L2RlZnM+CiAgPHJlY3Qgd2lkdGg9IjEyOCIgaGVpZ2h0PSIxMjgiIHJ4PSIxNiIgZmlsbD0iIzExMTgyNyIvPgogIDx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjZmZmZmZmIiBmb250LXNpemU9IjU2IiBjbGFzcz0idGV4dCI+U008L3RleHQ+Cjwvc3ZnPg==",
+      "theme_key": "neutral"
+    }
+  },
+  {
+    "slug": "tattoo-placement-design-preview",
+    "demo_template_config": {
+      "brand_name": "Pioneer Tattoo Placement / Design Preview Co",
+      "logo_url": "https://api.iconify.design/mdi:hvac.svg?color=%23111827",
+      "theme_key": "neutral"
+    }
+  },
+  {
+    "slug": "thrift",
+    "demo_template_config": {
+      "brand_name": "Pioneer Thrift",
+      "logo_url": "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMjgiIGhlaWdodD0iMTI4IiB2aWV3Qm94PSIwIDAgMTI4IDEyOCI+CiAgPGRlZnM+CiAgICA8c3R5bGU+CiAgICAgIC50ZXh0IHsgZm9udC1mYW1pbHk6IEludGVyLCBzeXN0ZW0tdWksIC1hcHBsZS1zeXN0ZW0sIFNlZ29lIFVJLCBSb2JvdG8sIFVidW50dSwgQ2FudGFyZWxsLCBOb3RvIFNhbnMsIEhlbHZldGljYSBOZXVlLCBBcmlhbCwgIkFwcGxlIENvbG9yIEVtb2ppIiwgIlNlZ29lIFVJIEVtb2ppIjsgZm9udC13ZWlnaHQ6IDcwMDsgfQogICAgPC9zdHlsZT4KICA8L2RlZnM+CiAgPHJlY3Qgd2lkdGg9IjEyOCIgaGVpZ2h0PSIxMjgiIHJ4PSIxNiIgZmlsbD0iIzFmMjkzNyIvPgogIDx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjZmZmZmZmIiBmb250LXNpemU9IjU2IiBjbGFzcz0idGV4dCI+VDwvdGV4dD4KPC9zdmc+",
+      "theme_key": "neutral"
+    }
+  },
+  {
+    "slug": "tiny-home-layout",
+    "demo_template_config": {
+      "brand_name": "Tiny Home Layout Group",
+      "logo_url": "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMjgiIGhlaWdodD0iMTI4IiB2aWV3Qm94PSIwIDAgMTI4IDEyOCI+CiAgPGRlZnM+CiAgICA8c3R5bGU+CiAgICAgIC50ZXh0IHsgZm9udC1mYW1pbHk6IEludGVyLCBzeXN0ZW0tdWksIC1hcHBsZS1zeXN0ZW0sIFNlZ29lIFVJLCBSb2JvdG8sIFVidW50dSwgQ2FudGFyZWxsLCBOb3RvIFNhbnMsIEhlbHZldGljYSBOZXVlLCBBcmlhbCwgIkFwcGxlIENvbG9yIEVtb2ppIiwgIlNlZ29lIFVJIEVtb2ppIjsgZm9udC13ZWlnaHQ6IDcwMDsgfQogICAgPC9zdHlsZT4KICA8L2RlZnM+CiAgPHJlY3Qgd2lkdGg9IjEyOCIgaGVpZ2h0PSIxMjgiIHJ4PSIxNiIgZmlsbD0iIzE2YTM0YSIvPgogIDx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjZmZmZmZmIiBmb250LXNpemU9IjU2IiBjbGFzcz0idGV4dCI+VEg8L3RleHQ+Cjwvc3ZnPg==",
+      "theme_key": "neutral"
+    }
+  },
+  {
+    "slug": "virtual-staging",
+    "demo_template_config": {
+      "brand_name": "FirstChoice Sample Virtual Staging",
+      "logo_url": "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMjgiIGhlaWdodD0iMTI4IiB2aWV3Qm94PSIwIDAgMTI4IDEyOCI+CiAgPGRlZnM+CiAgICA8c3R5bGU+CiAgICAgIC50ZXh0IHsgZm9udC1mYW1pbHk6IEludGVyLCBzeXN0ZW0tdWksIC1hcHBsZS1zeXN0ZW0sIFNlZ29lIFVJLCBSb2JvdG8sIFVidW50dSwgQ2FudGFyZWxsLCBOb3RvIFNhbnMsIEhlbHZldGljYSBOZXVlLCBBcmlhbCwgIkFwcGxlIENvbG9yIEVtb2ppIiwgIlNlZ29lIFVJIEVtb2ppIjsgZm9udC13ZWlnaHQ6IDcwMDsgfQogICAgPC9zdHlsZT4KICA8L2RlZnM+CiAgPHJlY3Qgd2lkdGg9IjEyOCIgaGVpZ2h0PSIxMjgiIHJ4PSIxNiIgZmlsbD0iIzExMTgyNyIvPgogIDx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjZmZmZmZmIiBmb250LXNpemU9IjU2IiBjbGFzcz0idGV4dCI+VlM8L3RleHQ+Cjwvc3ZnPg==",
+      "theme_key": "neutral"
+    }
+  },
+  {
+    "slug": "walkways",
+    "demo_template_config": {
+      "brand_name": "Walkways Company",
+      "logo_url": "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMjgiIGhlaWdodD0iMTI4IiB2aWV3Qm94PSIwIDAgMTI4IDEyOCI+CiAgPGRlZnM+CiAgICA8c3R5bGU+CiAgICAgIC50ZXh0IHsgZm9udC1mYW1pbHk6IEludGVyLCBzeXN0ZW0tdWksIC1hcHBsZS1zeXN0ZW0sIFNlZ29lIFVJLCBSb2JvdG8sIFVidW50dSwgQ2FudGFyZWxsLCBOb3RvIFNhbnMsIEhlbHZldGljYSBOZXVlLCBBcmlhbCwgIkFwcGxlIENvbG9yIEVtb2ppIiwgIlNlZ29lIFVJIEVtb2ppIjsgZm9udC13ZWlnaHQ6IDcwMDsgfQogICAgPC9zdHlsZT4KICA8L2RlZnM+CiAgPHJlY3Qgd2lkdGg9IjEyOCIgaGVpZ2h0PSIxMjgiIHJ4PSIxNiIgZmlsbD0iI2E4NTVmNyIvPgogIDx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjZmZmZmZmIiBmb250LXNpemU9IjU2IiBjbGFzcz0idGV4dCI+VzwvdGV4dD4KPC9zdmc+",
+      "theme_key": "neutral"
+    }
+  },
+  {
+    "slug": "water-features",
+    "demo_template_config": {
+      "brand_name": "Water Features LLC",
+      "logo_url": "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMjgiIGhlaWdodD0iMTI4IiB2aWV3Qm94PSIwIDAgMTI4IDEyOCI+CiAgPGRlZnM+CiAgICA8c3R5bGU+CiAgICAgIC50ZXh0IHsgZm9udC1mYW1pbHk6IEludGVyLCBzeXN0ZW0tdWksIC1hcHBsZS1zeXN0ZW0sIFNlZ29lIFVJLCBSb2JvdG8sIFVidW50dSwgQ2FudGFyZWxsLCBOb3RvIFNhbnMsIEhlbHZldGljYSBOZXVlLCBBcmlhbCwgIkFwcGxlIENvbG9yIEVtb2ppIiwgIlNlZ29lIFVJIEVtb2ppIjsgZm9udC13ZWlnaHQ6IDcwMDsgfQogICAgPC9zdHlsZT4KICA8L2RlZnM+CiAgPHJlY3Qgd2lkdGg9IjEyOCIgaGVpZ2h0PSIxMjgiIHJ4PSIxNiIgZmlsbD0iI2VmNDQ0NCIvPgogIDx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjZmZmZmZmIiBmb250LXNpemU9IjU2IiBjbGFzcz0idGV4dCI+V0Y8L3RleHQ+Cjwvc3ZnPg==",
+      "theme_key": "neutral"
+    }
+  },
+  {
+    "slug": "wig-hairpiece",
+    "demo_template_config": {
+      "brand_name": "Acme Wig & Hairpiece Co",
+      "logo_url": "https://api.iconify.design/mdi:hvac.svg?color=%23f59e0b",
+      "theme_key": "amber"
+    }
+  },
+  {
+    "slug": "windows",
+    "demo_template_config": {
+      "brand_name": "ClearView Sample Windows Co",
+      "logo_url": "https://api.iconify.design/mdi:window-closed.svg?color=%230ea5e9",
+      "theme_key": "cyan"
+    }
+  },
+  {
+    "slug": "wine-cellar",
+    "demo_template_config": {
+      "brand_name": "Wine Cellar Inc",
+      "logo_url": "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMjgiIGhlaWdodD0iMTI4IiB2aWV3Qm94PSIwIDAgMTI4IDEyOCI+CiAgPGRlZnM+CiAgICA8c3R5bGU+CiAgICAgIC50ZXh0IHsgZm9udC1mYW1pbHk6IEludGVyLCBzeXN0ZW0tdWksIC1hcHBsZS1zeXN0ZW0sIFNlZ29lIFVJLCBSb2JvdG8sIFVidW50dSwgQ2FudGFyZWxsLCBOb3RvIFNhbnMsIEhlbHZldGljYSBOZXVlLCBBcmlhbCwgIkFwcGxlIENvbG9yIEVtb2ppIiwgIlNlZ29lIFVJIEVtb2ppIjsgZm9udC13ZWlnaHQ6IDcwMDsgfQogICAgPC9zdHlsZT4KICA8L2RlZnM+CiAgPHJlY3Qgd2lkdGg9IjEyOCIgaGVpZ2h0PSIxMjgiIHJ4PSIxNiIgZmlsbD0iI2Y1OWUwYiIvPgogIDx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjZmZmZmZmIiBmb250LXNpemU9IjU2IiBjbGFzcz0idGV4dCI+V0M8L3RleHQ+Cjwvc3ZnPg==",
+      "theme_key": "neutral"
+    }
+  }
+]

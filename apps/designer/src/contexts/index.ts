@@ -1,0 +1,2 @@
+export { InstancesProvider as InstancesProviderDesigner, useInstances as useInstancesDesigner } from './InstancesContext.Designer';
+export { InstancesProvider as InstancesProviderWidget, useInstances as useInstancesWidget } from './InstancesContext.Widget'; 

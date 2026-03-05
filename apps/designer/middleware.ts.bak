@@ -1,0 +1,39 @@
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
+
+const PUBLIC_PATHS = [
+  "/",
+  "/auth", 
+  "/login",
+  "/homepage",
+  "/designer-instances", // Allow direct access to prevent redirect loops
+  "/api",
+  "/_next",
+  "/static",
+  "/favicon.ico"
+];
+
+export function middleware(req: NextRequest) {
+  const url = req.nextUrl.clone();
+  const path = url.pathname;
+
+  // Skip middleware for public paths
+  if (PUBLIC_PATHS.some(publicPath => path.startsWith(publicPath))) {
+    return NextResponse.next();
+  }
+
+  // Simple token check - but don't check on /designer-instances
+  const token = req.cookies.get("sb-access-token")?.value;
+  if (!token && !path.startsWith('/designer-instances')) {
+    console.log('🔍 MIDDLEWARE: No token found, redirecting to auth');
+    url.pathname = "/auth";
+    return NextResponse.redirect(url);
+  }
+
+  return NextResponse.next();
+}
+
+// Only run middleware on protected routes, excluding designer-instances
+export const config = {
+  matcher: ['/design/:path*', '/instances/:path*', '/get-credits/:path*']
+} 

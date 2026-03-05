@@ -4,19 +4,19 @@
   "targets": ["development", "preview", "production"],
   "apps": {
     "adv-widget": {
-      "directory": "adv-widget",
+      "directory": "apps/widget",
       "projectName": "adv-widget"
     },
     "adv-designer": {
-      "directory": "adv-designer",
+      "directory": "apps/designer",
       "projectName": "adv-designer"
     },
     "adv-shopify": {
-      "directory": "adv-shopify",
+      "directory": "apps/shopify",
       "projectName": "adv-shopify"
     },
     "adv-ai-form-service": {
-      "directory": "adv-ai-form-service",
+      "directory": "apps/ai-form-service",
       "projectName": "adv-ai-form-service"
     }
   },

@@ -1,0 +1,31 @@
+{
+  "extends": [
+    "next/core-web-vitals",
+    "plugin:@typescript-eslint/recommended"
+  ],
+  "parser": "@typescript-eslint/parser",
+  "plugins": ["@typescript-eslint", "perfectionist"],
+  "rules": {
+    "@typescript-eslint/no-explicit-any": "off",
+    "react/no-unescaped-entities": "off",
+    "@typescript-eslint/no-unused-vars": ["warn", { "argsIgnorePattern": "^_" }],
+    "react-hooks/exhaustive-deps": "warn",
+    "perfectionist/sort-objects": ["error", { "type": "natural", "order": "asc", "ignoreCase": true }],
+    "perfectionist/sort-interfaces": ["error", { "type": "natural", "order": "asc", "ignoreCase": true }],
+    "perfectionist/sort-enums": ["error", { "type": "natural", "order": "asc", "ignoreCase": true }]
+  },
+  "overrides": [
+    {
+      "files": [
+        "src/types/design.ts",
+        "src/types/design.d.ts",
+        "src/components/features/DesignTab.tsx"
+      ],
+      "rules": {
+        "perfectionist/sort-objects": ["error", { "type": "natural", "order": "asc", "ignoreCase": true }],
+        "perfectionist/sort-interfaces": ["error", { "type": "natural", "order": "asc", "ignoreCase": true }],
+        "perfectionist/sort-enums": ["error", { "type": "natural", "order": "asc", "ignoreCase": true }]
+      }
+    }
+  ]
+} 

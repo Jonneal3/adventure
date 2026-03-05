@@ -1,0 +1,22 @@
+User-agent: *
+Allow: /
+
+# Sitemap
+Sitemap: https://adventure.app/sitemap.xml
+
+# Disallow admin and private areas
+Disallow: /api/
+Disallow: /admin/
+Disallow: /debug-auth/
+Disallow: /test-auth/
+Disallow: /simple-auth/
+Disallow: /test-navbar/
+
+# Allow important pages
+Allow: /
+Allow: /pricing/
+Allow: /auth/
+Allow: /onboarding/
+
+# Crawl delay for respectful crawling
+Crawl-delay: 1 

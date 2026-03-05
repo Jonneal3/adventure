@@ -1,0 +1,210 @@
+# sif-ai-form-service
+
+Python microservice for the SIF AI form flow. Runs the DSPy planner and returns form steps as JSON.
+
+## Endpoints
+
+- `GET /health`
+- `POST /v1/api/form`
+- `GET /v1/api/form/capabilities` (JSON; contract schema + version)
+- `POST /v1/api/image` (image prompt + image generation)
+
+## API contract workflow (OpenAPI)
+
+This repo commits its OpenAPI spec as a machine-enforced contract for frontend/backed integration.
+
+- Update: `make export-openapi-contract`
+- Verify (CI): `make verify-openapi-contract`
+
+## Shared UI contract
+
+In the monorepo, the canonical "UIStep contract" lives under `../packages/ai-form-ui-contract/`:
+- `../packages/ai-form-ui-contract/schema/schema_version.txt`
+- `../packages/ai-form-ui-contract/schema/ui_step.schema.json`
+- `../packages/ai-form-ui-contract/schema/ui_step.types.ts`
+
+You can override the lookup with `AI_FORM_UI_CONTRACT_DIR` (absolute path, or path relative to the service repo root).
+
+The service returns `schemaVersion` + `uiStepSchema` via `GET /v1/api/form/capabilities`.
+
+## Local dev
+
+**Quick start:** Copy `.env.example` to `.env` and fill in your values. The app auto-loads `.env` and `.env.local` (no `source .env` needed).
+
+**Required env vars:**
+
+**DSPy (for LLM calls):**
+- `DSPY_PROVIDER=groq` (or `openai`)
+- `GROQ_API_KEY=...` (or `OPENAI_API_KEY=...`)
+- `DSPY_MODEL_LOCK=llama-3.3-70b-versatile` (optional)
+
+**Optional per-module overrides:**
+- Planner:
+  - `DSPY_PLANNER_PROVIDER`, `DSPY_PLANNER_MODEL_LOCK`, `DSPY_PLANNER_MODEL`
+  - `DSPY_PLANNER_TEMPERATURE`, `DSPY_PLANNER_TIMEOUT_SEC`, `DSPY_PLANNER_MAX_TOKENS`
+
+**Optional:**
+- `DSPY_NEXT_STEPS_DEMO_PACK=/absolute/or/repo/relative/path.jsonl` (optional override)
+  - Schema version is read from the shared UI contract directory (`AI_FORM_UI_CONTRACT_DIR` or monorepo default).
+- Image generation:
+  - `DSPY_IMAGE_PROMPT_MAX_TOKENS=900` (prompt-builder token cap)
+  - Replicate (required):
+    - `REPLICATE_API_TOKEN=...`
+    - `REPLICATE_MODEL_ID=black-forest-labs/flux-1.1-pro` (or your chosen model/version)
+    - `REPLICATE_TIMEOUT_SEC=60` (optional)
+- Option-image steps (multiple-choice images):
+  - `AI_FORM_OPTION_IMAGES=true` to enable converting whitelisted steps to `image_choice_grid`
+  - `REPLICATE_OPTION_IMAGES_MODEL_ID=black-forest-labs/flux-schnell`
+  - Concurrency/pacing/caching (optional):
+    - `AI_FORM_OPTION_IMAGES_MAX_CONCURRENCY=4`
+    - `AI_FORM_OPTION_IMAGES_QPS=0` (0 disables pacing)
+    - `AI_FORM_OPTION_IMAGES_CACHE_TTL_SEC=900`
+  - Regenerate endpoint skeleton (disabled by default):
+    - `AI_FORM_OPTION_IMAGES_REGENERATE=false` (when enabled: `POST /v1/api/option-images/regenerate`)
+- Pipeline toggles:
+  - `AI_FORM_RENDER_CACHE=true` + `AI_FORM_RENDER_CACHE_TTL_SEC=600` (cache validated `miniSteps[]` in-memory)
+  - `AI_FORM_LOG_LATENCY=true` (emit a structured `step3_latency` log line per request)
+  - `AI_FORM_DEBUG=true` (emit a human-readable `[FormPipeline] ... plannerLatencyMs=... rendererLatencyMs=...` line per request)
+
+**Latency chart (planner vs renderer):**
+
+Pipe logs into `scripts/chart_formpipeline_latency.py` to get a quick, step-count-bucketed ASCII chart:
+
+```bash
+tail -n 500 service.log | python3 scripts/chart_formpipeline_latency.py -
+```
+
+Install + run:
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+# Either entrypoint works:
+uvicorn api.main:app --reload --port 8008
+# uvicorn api.main:app --reload --port 8008 (legacy entry point)
+```
+
+Test health:
+
+```bash
+curl -s http://localhost:8008/health | jq
+```
+
+Test form generation (JSON):
+
+```bash
+curl -X POST http://localhost:8008/api/form \
+  -H 'content-type: application/json' \
+  -d '{"mode":"next_steps","batchId":"ContextCore","platformGoal":"test","businessContext":"test","industry":"General","service":"","requiredUploads":[],"personalizationSummary":"","stepDataSoFar":{},"alreadyAskedKeys":[],"batchState":{},"allowedMiniTypes":["multiple_choice"],"maxSteps":3}'
+```
+
+Test form generation using the widget request shape (JSON):
+
+```bash
+curl -X POST http://localhost:8008/v1/api/form \
+  -H 'content-type: application/json' \
+  -d '{"session":{"sessionId":"sess_test","instanceId":"inst_test"},"currentBatch":{"batchId":"batch-1","batchNumber":1,"maxSteps":5},"state":{"answers":{"step-service-primary":"abc"},"askedStepIds":["step-service-primary"]},"request":{"noCache":true,"schemaVersion":"dev"}}'
+```
+
+Test image generation (JSON):
+
+```bash
+curl -X POST http://localhost:8008/v1/api/image \
+  -H 'content-type: application/json' \
+  -d '{"instanceId":"uuid-here","useCase":"scene","numOutputs":2,"outputFormat":"url","serviceSummary":"Interior Design — Kitchen Remodel. Bright, warm, natural materials.","stepDataSoFar":{"step-space-type":"kitchen","step-budget":"5000"},"negativePrompt":"blurry, low quality, text, watermark"}'
+```
+
+Test scene-placement (background + product images):
+
+```bash
+curl -X POST http://localhost:8008/v1/api/image \
+  -H 'content-type: application/json' \
+  -d '{"instanceId":"uuid-here","useCase":"scene-placement","numOutputs":2,"outputFormat":"url","stepDataSoFar":{"step-service-primary":"landscaping","location_city":"Austin","location_state":"TX","style":["modern","clean"],"notes":"Low maintenance, drought-tolerant plants"},"sceneImage":"https://your-cdn.example.com/uploads/scene.jpg","productImage":"https://your-cdn.example.com/uploads/product.jpg","referenceImages":["https://your-cdn.example.com/uploads/scene.jpg","https://your-cdn.example.com/uploads/product.jpg"],"negativePrompt":"blurry, low quality, text, watermark"}'
+```
+
+Note: client-supplied `prompt` / `promptTemplate` are not supported; the service generates prompts server-side from context. `negativePrompt` is accepted as a parameter.
+
+To inspect the exact payloads, prompt text, and downstream Replicate request/response, enable `IMAGE_LOG_DETAILED_PAYLOADS=true` before starting the service; the new logs print the inbound JSON, the deterministic `ImagePromptSpec`, and the provider I/O in pretty-printed chunks.
+
+## Offline planner optimization (DSPy)
+
+This repo includes an **offline** DSPy optimizer run for the question planner. It is not used in production traffic.
+
+Run:
+
+```bash
+PYTHONPATH=.:src python3 -m optimizers.optimize_question_planner
+```
+
+Use the exported demo pack at runtime:
+
+```bash
+export DSPY_PLANNER_DEMO_PACK=src/programs/question_planner/data/optimized_outputs/question_planner_demo_pack.jsonl
+```
+
+## Image request optimization (DSPy + Replicate)
+
+This service also includes an offline optimization loop for image request generation.
+It optimizes prompt/negative/params generation for first-try consistency across seeds.
+
+### Train and persist the compiled image-request program
+
+Run:
+
+```bash
+PYTHONPATH=.:src python3 -m api.train_image_request_program --trainset /absolute/path/to/train_specs.json --model black-forest-labs/flux-1.1-pro --seeds 101,303,707 --lambda 0.8 --max-iters 12
+```
+
+Artifact output:
+
+- `artifacts/image-optimization/compiled_image_request_program.json`
+
+### API endpoints
+
+- `POST /v1/api/image-optimization/train` (and `/api/image-optimization/train`)
+- `GET /v1/api/image-optimization/artifact` (and `/api/image-optimization/artifact`)
+
+### Runtime integration toggle
+
+Set `IMAGE_OPT_USE_ARTIFACT=true` to let runtime image generation apply the compiled image-request policy before provider calls.
+
+### Key knobs
+
+- `REPLICATE_MODEL_ID` (default model for optimization/rendering)
+- `REPLICATE_OPTION_IMAGES_MODEL_ID` (option-image model)
+- `IMAGE_OPT_LAMBDA` (variance penalty weight in objective)
+- `IMAGE_OPT_USE_ARTIFACT` (enable runtime compiled policy usage)
+
+## Deploy to Vercel
+
+This repo is set up as a Vercel **Python Serverless Function** with a catch-all route to `api/index.py`
+(see `vercel.json`).
+
+### Deployment Protection (401 Authentication Required)
+
+If `GET /health` returns **401 Authentication Required**, your deployment is behind **Vercel Deployment Protection**
+(sometimes shown as “Vercel Authentication”).
+
+You have two options:
+
+- **Make it public (recommended)**: Vercel Dashboard → Project → Settings → Deployment Protection → set **Production** to **Disabled/Public**.
+- **Keep protection ON (automation bypass)**: enable **Protection Bypass for Automation** in the same settings page and use the
+  generated bypass secret in your server-to-server requests:
+  - Send header **`x-vercel-protection-bypass: <BYPASS_SECRET>`**
+  - Vercel also exposes this secret to the deployment as **`VERCEL_AUTOMATION_BYPASS_SECRET`**
+
+In Vercel Project Settings, set required env vars (same as local dev):
+- `DSPY_PROVIDER`
+- `DSPY_MODEL_LOCK` (optional)
+- `GROQ_API_KEY` (or `OPENAI_API_KEY` if using `DSPY_PROVIDER=openai`)
+
+Deploy:
+- **Git**: import the repo in Vercel and deploy from the dashboard
+- **CLI**: from the repo root, run `vercel` (and `vercel --prod` when ready)
+
+After deploy, verify:
+
+```bash
+curl -s https://YOUR_VERCEL_DOMAIN/health | jq
+```
