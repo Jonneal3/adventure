@@ -6,7 +6,7 @@
     "adv-designer",
     "adv-widget",
     "adv-shopify",
-    "packages/*"
+    "shared/api/*"
   ],
   "scripts": {
     "dev:designer": "npm -w adv-designer run dev",
