@@ -2700,6 +2700,7 @@ export function StepEngine({
 
   const {
     isAdventureSurface,
+    isDesktopViewport,
     isMobileViewport,
     previewColumnRef,
     previewMaxPx,
@@ -2708,6 +2709,7 @@ export function StepEngine({
     questionContentRef,
     questionScale,
     questionViewportRef,
+    useDesktopPreviewLayout,
     useMobilePreviewLayout,
     usePreviewDominantLayout,
   } = usePreviewLayout({
@@ -2718,8 +2720,9 @@ export function StepEngine({
 
   const previewRailActive = previewEnabled;
   const density = previewRailActive ? "compact" : "normal";
-  const previewSectionBasis = "80%";
-  const questionSectionBasis = "20%";
+  const desktopQuestionMinHeight = "clamp(300px, 36dvh, 520px)";
+  const previewSectionBasis = isMobileViewport ? "80%" : "47%";
+  const questionSectionBasis = isMobileViewport ? "20%" : "53%";
   useEffect(() => {
     if (!previewEnabled) setPreviewVisible(false);
   }, [previewEnabled]);
@@ -2795,7 +2798,8 @@ export function StepEngine({
     setPreviewQuestionRevealReady(true);
   }, [currentStep?.id, previewEnabled, previewHasImage]);
   const previewLayoutActive = Boolean(
-    usePreviewDominantLayout && (previewHasImage || previewVisible || !previewQuestionRevealReady)
+    (usePreviewDominantLayout || useDesktopPreviewLayout) &&
+      (previewHasImage || previewVisible || !previewQuestionRevealReady)
   );
   // Keep questions hidden only while preview is generating. Once image exists, show questions below.
   const shouldHideQuestionPaneForLeadGate = false;
@@ -2803,7 +2807,7 @@ export function StepEngine({
     !isPreviewGenerationStage &&
     previewQuestionRevealReady &&
     !shouldHideQuestionPaneForLeadGate &&
-    (!usePreviewDominantLayout || previewHasImage || isBacktrackingInForm);
+    (!useMobilePreviewLayout || previewHasImage || isBacktrackingInForm);
   const hideQuestionPane = Boolean(leadGateLocksQuestionArea || !showQuestionPaneUnderPreview);
   useEffect(() => {
     const committedRaw = (state?.stepData as any)?.["step-refinement-upload-scene-image"];
@@ -2821,7 +2825,7 @@ export function StepEngine({
   useEffect(() => {
     setFacts((prev) => ({
       ...prev,
-      viewportMode: isMobileViewport ? "mobile" : "desktop",
+      viewportMode: isMobileViewport ? "mobile" : isDesktopViewport ? "desktop" : "desktop",
       showBranding: Boolean(showBrandingHeader),
       showProgress: Boolean(showProgressBar),
       showTimeline: Boolean(showStepDescriptions && state?.steps && state.steps.length > 0),
@@ -2835,6 +2839,7 @@ export function StepEngine({
     }));
   }, [
     flowCompleted,
+    isDesktopViewport,
     isMobileViewport,
     leadCapturedForUI,
     leadGateLocksQuestionArea,
@@ -3014,12 +3019,18 @@ export function StepEngine({
 
 	      {/* Main body inherits the post-header height budget. */}
 	      <main className="relative flex flex-1 min-h-0 items-stretch justify-center overflow-hidden px-2 pb-2 pt-2 sm:px-3 sm:pb-3 sm:pt-3">
-		        <div className="mx-auto h-full min-h-0 w-full max-w-6xl overflow-hidden">
+		        <div className="mx-auto h-full min-h-0 w-full max-w-[92rem] overflow-hidden">
           <motion.div
               ref={previewColumnRef}
 				              className={cn(
 				                "flex h-full min-h-0 max-h-full flex-col overflow-hidden",
-				                previewLayoutActive ? "gap-0" : usePreviewDominantLayout ? "gap-2" : previewRailOpen ? "gap-2" : "gap-0"
+				                previewLayoutActive
+                              ? (isMobileViewport ? "gap-0" : "gap-3")
+                              : usePreviewDominantLayout
+                                ? "gap-2"
+                                : previewRailOpen
+                                  ? "gap-2"
+                                  : "gap-0"
 				              )}
               transition={{ duration: 0.18, ease: "easeOut" }}
 				            >
@@ -3030,7 +3041,14 @@ export function StepEngine({
                         "flex min-h-0 flex-col overflow-hidden",
                         previewLayoutActive ? "shrink-0" : "shrink-0"
                       )}
-                      style={previewLayoutActive ? { flexBasis: previewSectionBasis } : undefined}
+                      style={
+                        previewLayoutActive
+                          ? {
+                              flexBasis: previewSectionBasis,
+                              minHeight: isMobileViewport ? undefined : 0,
+                            }
+                          : undefined
+                      }
                     >
                       <PreviewSection
                         adventureInputMode={adventureInputMode}
@@ -3051,6 +3069,7 @@ export function StepEngine({
                         setPreviewVisible={setPreviewVisible}
                         showQuestionPaneUnderPreview={showQuestionPaneUnderPreview}
                         stateStepData={state?.stepData}
+                        useDesktopPreviewLayout={useDesktopPreviewLayout}
                         useMobilePreviewLayout={useMobilePreviewLayout}
                         usePreviewDominantLayout={previewLayoutActive}
                       />
@@ -3062,7 +3081,14 @@ export function StepEngine({
                         ? "mt-auto min-h-0 shrink-0 pb-0.5 sm:pb-1"
                         : "flex-1 min-h-0"
                     )}
-                    style={previewLayoutActive ? { flexBasis: questionSectionBasis } : undefined}
+                    style={
+                      previewLayoutActive
+                        ? {
+                            flexBasis: questionSectionBasis,
+                            minHeight: isMobileViewport ? undefined : desktopQuestionMinHeight,
+                          }
+                        : undefined
+                    }
                   >
                     <FormQuestionSection
                       config={config}

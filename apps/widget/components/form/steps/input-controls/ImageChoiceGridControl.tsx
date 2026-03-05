@@ -363,19 +363,25 @@ export function ImageChoiceGrid({
     ? (safeRequestedColumns ? Math.min(3, Math.max(1, safeRequestedColumns)) : (optionCount <= 2 ? 2 : 3))
     : (safeRequestedColumns ? Math.min(2, Math.max(1, safeRequestedColumns)) : Math.min(2, optionCount));
   const adaptiveDesktopColumns = safeRequestedColumns
-    ? (thumbnailMode ? Math.min(6, safeRequestedColumns + 1) : safeRequestedColumns)
+    ? (
+        thumbnailMode
+          ? Math.min(4, Math.max(1, safeRequestedColumns))
+          : optionCount <= 4
+            ? optionCount
+            : safeRequestedColumns
+      )
     : thumbnailMode
       ? optionCount <= 2
         ? 2
         : optionCount <= 4
-          ? 4
-          : optionCount <= 6
-          ? 6
-            : 7
+          ? optionCount
+          : optionCount <= 8
+            ? 4
+            : 4
       : optionCount <= 2
         ? optionCount
         : optionCount <= 4
-          ? 2
+          ? optionCount
           : optionCount <= 8
             ? 3
             : 4;
@@ -391,7 +397,7 @@ export function ImageChoiceGrid({
       <div
         className={cn(
           "grid w-full min-w-0 content-start",
-          thumbnailMode ? "min-h-full flex-1 gap-2.5 py-0.5 place-content-center" : isCompact ? "gap-3" : "gap-4",
+          thumbnailMode ? "gap-1.5 py-0 content-start" : isCompact ? "gap-3" : "gap-4",
           className
         )}
         style={{
@@ -422,7 +428,11 @@ export function ImageChoiceGrid({
               <div
                 className={cn(
                   "w-full overflow-hidden bg-muted/30 min-h-0",
-                  thumbnailMode ? "aspect-square min-w-0" : "aspect-[4/3] flex-1"
+                  thumbnailMode
+                    ? (isNarrowViewport ? "aspect-square min-w-0" : "aspect-[2/1] min-w-0")
+                    : isNarrowViewport
+                      ? "aspect-[4/3] flex-1"
+                      : "aspect-[16/10] flex-1"
                 )}
               >
                 {opt.imageUrl ? (
@@ -442,8 +452,8 @@ export function ImageChoiceGrid({
                   {normalizePriceTier(opt.priceTier)}
                 </div>
               )}
-              <div className={cn(thumbnailMode ? "shrink-0 p-1.5 sm:p-2" : isCompact ? "p-2.5" : "p-3", "text-left")}>
-              <div className={cn(thumbnailMode ? "text-[10px] sm:text-[11px]" : isCompact ? "text-[13px] sm:text-sm" : null, "font-bold leading-tight line-clamp-1")}>
+              <div className={cn(thumbnailMode ? "shrink-0 p-1" : isCompact ? "p-2.5" : "p-3", "text-left")}>
+              <div className={cn(thumbnailMode ? "text-[9px] sm:text-[10px]" : isCompact ? "text-[13px] sm:text-sm" : null, "font-bold leading-tight line-clamp-1")}>
                   {opt.label}
                 </div>
               {!thumbnailMode && opt.description && (

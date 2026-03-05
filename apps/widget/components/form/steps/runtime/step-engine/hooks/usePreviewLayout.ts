@@ -24,6 +24,7 @@ export function usePreviewLayout({
   const questionViewportRef = useRef<HTMLDivElement>(null);
   const questionContentRef = useRef<HTMLDivElement>(null);
   const [isMobileViewport, setIsMobileViewport] = useState(false);
+  const isDesktopViewport = !isMobileViewport;
 
   useLayoutEffect(() => {
     if (typeof window === "undefined" || typeof window.matchMedia !== "function") return;
@@ -42,7 +43,8 @@ export function usePreviewLayout({
   }, []);
 
   const isAdventureSurface = showBrandingHeader;
-  const usePreviewDominantLayout = previewEnabled && (isMobileViewport || isAdventureSurface);
+  const usePreviewDominantLayout = previewEnabled && isMobileViewport;
+  const useDesktopPreviewLayout = previewEnabled && isDesktopViewport;
   const useMobilePreviewLayout = previewEnabled && isMobileViewport;
 
   const computePreviewMaxPx = useCallback(() => {
@@ -53,7 +55,7 @@ export function usePreviewLayout({
       return;
     }
 
-    if (usePreviewDominantLayout) {
+    if (usePreviewDominantLayout || useDesktopPreviewLayout) {
       const columnEl = previewColumnRef.current;
       const previewViewportEl = previewViewportRef.current;
       if (!columnEl) return;
@@ -116,7 +118,7 @@ export function usePreviewLayout({
       return Math.abs(prev - roundedPreview) < 12 ? prev : roundedPreview;
     });
     setQuestionScale(1);
-  }, [previewEnabled, usePreviewDominantLayout]);
+  }, [previewEnabled, useDesktopPreviewLayout, usePreviewDominantLayout]);
 
   useLayoutEffect(() => {
     computePreviewMaxPx();
@@ -127,7 +129,7 @@ export function usePreviewLayout({
     if (typeof ResizeObserver === "undefined") return;
 
     const targets: Element[] = [];
-    if (usePreviewDominantLayout) {
+    if (usePreviewDominantLayout || useDesktopPreviewLayout) {
       const columnEl = previewColumnRef.current;
       if (!columnEl) return;
       targets.push(columnEl);
@@ -152,11 +154,12 @@ export function usePreviewLayout({
       if (raf) cancelAnimationFrame(raf);
       ro.disconnect();
     };
-  }, [computePreviewMaxPx, previewEnabled, usePreviewDominantLayout]);
+  }, [computePreviewMaxPx, previewEnabled, useDesktopPreviewLayout, usePreviewDominantLayout]);
 
   return {
     hasPreview,
     isAdventureSurface,
+    isDesktopViewport,
     isMobileViewport,
     previewColumnRef,
     previewMaxPx,
@@ -166,6 +169,7 @@ export function usePreviewLayout({
     questionScale,
     questionViewportRef,
     useMobilePreviewLayout,
+    useDesktopPreviewLayout,
     usePreviewDominantLayout,
   };
 }

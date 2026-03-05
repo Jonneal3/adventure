@@ -23,6 +23,7 @@ interface PreviewSectionProps {
   setPreviewVisible: (visible: boolean) => void;
   showQuestionPaneUnderPreview: boolean;
   stateStepData?: Record<string, any>;
+  useDesktopPreviewLayout: boolean;
   useMobilePreviewLayout: boolean;
   usePreviewDominantLayout: boolean;
 }
@@ -45,6 +46,7 @@ export function PreviewSection({
   setPreviewVisible,
   showQuestionPaneUnderPreview,
   stateStepData,
+  useDesktopPreviewLayout,
   useMobilePreviewLayout,
   usePreviewDominantLayout,
 }: PreviewSectionProps) {
@@ -62,8 +64,14 @@ export function PreviewSection({
       <div
         className={cn(
           "w-full mx-auto h-full",
-          useMobilePreviewLayout ? "px-2 max-w-none" : isAdventureSurface ? "max-w-6xl px-4" : "max-w-4xl px-4",
-          usePreviewDominantLayout ? "py-2" : null
+          useMobilePreviewLayout
+            ? "px-2 max-w-none"
+            : useDesktopPreviewLayout
+              ? "max-w-5xl px-4"
+              : isAdventureSurface
+                ? "max-w-6xl px-4"
+                : "max-w-4xl px-4",
+          usePreviewDominantLayout ? "py-2" : useDesktopPreviewLayout ? "py-1 sm:py-2" : null
         )}
       >
         <div className="h-full min-h-0">
@@ -97,10 +105,10 @@ export function PreviewSection({
             variant="hero"
             previewMaxPx={previewMaxPx ?? undefined}
             previewMaxVh={
-              usePreviewDominantLayout
+              useMobilePreviewLayout
                 ? 80
-                : useMobilePreviewLayout
-                  ? 72
+                : useDesktopPreviewLayout
+                  ? 48
                   : 78
             }
             previewChromePx={8}

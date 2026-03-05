@@ -112,7 +112,11 @@ export function ImageChoiceGridStep({
     : coerceImageChoiceVariant((step as any)?.data?.imageChoiceVariant ?? (step as any)?.data?.variant ?? (step as any)?.variant);
   const effectiveVariant: ImageChoiceVariant = guidedThumbnailMode
     ? "selectors"
-    : (backendVariant ?? (isNarrowViewport ? "swipe" : "selectors"));
+    : compactInPreview
+      ? "selectors"
+      : isNarrowViewport
+        ? (backendVariant ?? "swipe")
+        : "selectors";
 
   const columns = isUIStep ? (step as any)?.columns : (step as any)?.data?.columns;
   const normalizedColumns = Number.isFinite(Number(columns)) ? Math.max(1, Math.min(6, Math.floor(Number(columns)))) : undefined;
@@ -132,7 +136,7 @@ export function ImageChoiceGridStep({
       actionsVariant={actionsVariant}
       compactInPreview={compactInPreview}
     >
-      <div className="flex h-full min-h-0 w-full min-w-0 flex-col justify-center overflow-hidden">
+      <div className="flex h-full min-h-0 w-full min-w-0 flex-col overflow-hidden">
         <ImageChoiceGrid
           value={value}
           onChange={setValue}
