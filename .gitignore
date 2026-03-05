@@ -2,3 +2,18 @@
 env/.env.shared.local
 env/.env.shared.production
 env/generated/
+
+# Never commit environment variable secrets
+.env
+.env.*
+**/.env
+**/.env.*
+
+# Allow committed templates/examples
+!.env.example
+!.env.sample
+!.env.template
+!**/.env.example
+!**/.env.sample
+!**/.env.template
+.vercel
