@@ -82,6 +82,34 @@ function normalizeOptionalString(value: unknown): string | null {
   return s.length ? s : null;
 }
 
+/** Validates real email format: local@domain.tld */
+function isValidEmail(value: string): boolean {
+  const s = value.trim();
+  if (!s || s.length < 5) return false;
+  const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return re.test(s);
+}
+
+/** Formats phone digits as (XXX) XXX-XXXX */
+function formatPhoneMask(digits: string): string {
+  const d = digits.replace(/\D/g, "").slice(0, 10);
+  if (d.length <= 3) return d ? `(${d}` : "";
+  if (d.length <= 6) return `(${d.slice(0, 3)}) ${d.slice(3)}`;
+  return `(${d.slice(0, 3)}) ${d.slice(3, 6)}-${d.slice(6)}`;
+}
+
+function parsePhoneDigits(value: string): string {
+  return value.replace(/\D/g, "");
+}
+
+/** Formats phone input as (XXX) XXX-XXXX. Returns { display, digits } for mask + submission. */
+function formatPhoneInput(value: string): { display: string; digits: string } {
+  const digits = value.replace(/\D/g, "").slice(0, 10);
+  if (digits.length <= 3) return { display: digits ? `(${digits}` : "", digits };
+  if (digits.length <= 6) return { display: `(${digits.slice(0, 3)}) ${digits.slice(3)}`, digits };
+  return { display: `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`, digits };
+}
+
 function emitFormStateUpdated(sessionId: string, patch?: Record<string, any>) {
   if (!sessionId || typeof window === "undefined") return;
   try {
@@ -203,7 +231,7 @@ export function LeadGenPopover({
   const silentInFlightRef = useRef(false);
   const beaconSentRef = useRef(false);
 
-  const canSubmit = Boolean(normalizeOptionalString(email)?.includes("@"));
+  const canSubmit = Boolean(normalizeOptionalString(email) && isValidEmail(email));
   const isOverlay = surface === "overlay";
   const accent = (theme.primaryColor || "#3b82f6").trim();
   const secondary = (theme.secondaryColor || accent).trim();
@@ -222,7 +250,7 @@ export function LeadGenPopover({
     const prefill = loadPrefill(sessionId);
     prefillRef.current = prefill;
     setEmail(prefill.email);
-    setPhone(prefill.phone);
+    setPhone(prefill.phone ? formatPhoneInput(prefill.phone).display : "");
     emailRef.current = prefill.email;
     partialSubmittedRef.current = false;
     fullSubmittedRef.current = false;
@@ -321,6 +349,10 @@ export function LeadGenPopover({
     setError(null);
     const addr = normalizeOptionalString(email);
     if (!addr) return;
+    if (!isValidEmail(addr)) {
+      setError("Please enter a valid email address.");
+      return;
+    }
     emailRef.current = addr;
 
     const name = prefillRef.current?.name ? prefillRef.current.name : null;
@@ -439,7 +471,7 @@ export function LeadGenPopover({
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="you@company.com"
-                    className="h-8 rounded-xl pl-8 pr-[108px] text-[12px] bg-white/5 border-white/10 text-white placeholder:text-white/50 backdrop-blur focus-visible:ring-2 focus-visible:ring-offset-0"
+                    className="h-8 rounded-xl pl-8 pr-[108px] text-[12px] bg-white/10 border-white/10 text-white placeholder:text-white/50 focus-visible:ring-2 focus-visible:ring-offset-0"
                     inputMode="email"
                     style={{
                       borderColor: inputBorder,
@@ -472,7 +504,7 @@ export function LeadGenPopover({
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="you@company.com"
-                      className="h-8 pl-8 text-[12px] bg-white/70 backdrop-blur focus-visible:ring-2 focus-visible:ring-offset-0"
+                      className="h-8 pl-8 text-[12px] bg-white/70 focus-visible:ring-2 focus-visible:ring-offset-0"
                       inputMode="email"
                       style={{
                         borderColor: inputBorder,
@@ -523,47 +555,56 @@ export function LeadGenPopover({
               <Input
                 autoFocus
                 value={phone}
-                onChange={(e) => setPhone(e.target.value)}
+                onChange={(e) => {
+                  const { display } = formatPhoneInput(e.target.value);
+                  setPhone(display);
+                }}
                 placeholder="(555) 555-5555"
                 className={cn(
-                  "h-8 pl-8 text-[12px] backdrop-blur focus-visible:ring-2 focus-visible:ring-offset-0",
-                    isOverlay ? "rounded-xl bg-white/5 border-white/10 text-white placeholder:text-white/50" : "bg-white/70"
-                  )}
+                  "h-8 pl-8 text-[12px] focus-visible:ring-2 focus-visible:ring-offset-0",
+                  isOverlay
+                    ? "rounded-xl pr-[108px] bg-white/10 border-white/10 text-white placeholder:text-white/50"
+                    : "pr-[88px] bg-white/70"
+                )}
                 inputMode="tel"
                 aria-label={phoneLabel}
                 style={{
                   borderColor: inputBorder,
-	                  fontFamily: theme.fontFamily,
-	                  color: textColor,
-	                  ["--tw-ring-color" as any]: ring,
-	                }}
-	                onKeyDown={(e) => {
-	                  if (e.key === "Enter") void handlePhoneSubmit();
-	                  if (e.key === "Escape") close();
+                  fontFamily: theme.fontFamily,
+                  color: textColor,
+                  ["--tw-ring-color" as any]: ring,
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") void handlePhoneSubmit();
+                  if (e.key === "Escape") close();
                 }}
               />
-            </div>
-
-	            <div className="flex items-center gap-2">
-	              {!requirePhone ? (
-	                <Button type="button" variant="ghost" size="sm" className="h-8 px-2 text-[12px]" onClick={handleSkipPhone}>
-	                  Skip
-	                </Button>
-	              ) : null}
               <Button
                 type="button"
                 size="sm"
                 disabled={!canSubmitPhone || isSubmitting}
                 onClick={() => void handlePhoneSubmit()}
                 className={cn(
-                  "ml-auto h-8 px-3 text-[12px]",
-                  isOverlay ? "rounded-full bg-white/10 text-white hover:bg-white/15 border border-white/10" : ""
+                  "absolute right-1 top-1/2 -translate-y-1/2 h-7 text-[12px] whitespace-nowrap",
+                  isOverlay
+                    ? "rounded-full px-2.5 bg-white/10 text-white hover:bg-white/15 border border-white/10 shadow-sm"
+                    : "rounded-lg px-3"
                 )}
                 style={isOverlay ? { fontFamily: theme.fontFamily } : { backgroundColor: accent, fontFamily: theme.fontFamily }}
               >
                 {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Continue"}
               </Button>
             </div>
+            {!requirePhone ? (
+              <button
+                type="button"
+                onClick={handleSkipPhone}
+                className="text-[11px] opacity-75 hover:opacity-100 transition-opacity"
+                style={{ color: textColor, fontFamily: theme.fontFamily }}
+              >
+                Skip
+              </button>
+            ) : null}
           </>
         )}
 
@@ -653,7 +694,7 @@ export function LeadGenPopover({
 	        collisionPadding={12}
 	        sticky="always"
 	        className={cn(
-            "relative max-w-[92vw] overflow-hidden rounded-2xl border backdrop-blur shadow-xl",
+            "relative max-w-[92vw] overflow-hidden rounded-2xl border shadow-xl",
             isOverlay ? "w-80 p-2.5 text-white" : "w-72 p-3"
           )}
 	        style={{

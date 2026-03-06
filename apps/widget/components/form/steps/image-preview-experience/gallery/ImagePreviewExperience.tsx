@@ -43,6 +43,30 @@ function withAlpha(color: string, alpha: number): string {
   return `color-mix(in srgb, ${c} ${pct}%, transparent)`;
 }
 
+function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
+  const h = String(hex || "").replace("#", "").trim();
+  const full = h.length === 3 ? h.split("").map((c) => c + c).join("") : h;
+  if (full.length !== 6) return null;
+  const r = parseInt(full.slice(0, 2), 16);
+  const g = parseInt(full.slice(2, 4), 16);
+  const b = parseInt(full.slice(4, 6), 16);
+  if (![r, g, b].every((n) => Number.isFinite(n))) return null;
+  return { r, g, b };
+}
+
+/** Darken a hex color by mixing with black. mixBlack 0.5 = 50% black. */
+function darkenHex(hex: string, mixBlack: number): string {
+  const h = String(hex || "").replace("#", "").trim();
+  const full = h.length === 3 ? h.split("").map((c) => c + c).join("") : h;
+  if (full.length !== 6) return hex;
+  const r = parseInt(full.slice(0, 2), 16);
+  const g = parseInt(full.slice(2, 4), 16);
+  const b = parseInt(full.slice(4, 6), 16);
+  if (![r, g, b].every((n) => Number.isFinite(n))) return hex;
+  const f = Math.max(0, Math.min(1, 1 - mixBlack));
+  return `rgb(${Math.round(r * f)}, ${Math.round(g * f)}, ${Math.round(b * f)})`;
+}
+
 const IMAGE_GENERATION_ESTIMATED_SECONDS = 15;
 
 type PreviewCacheV2 = {
@@ -372,6 +396,8 @@ export function ImagePreviewExperience(props: {
   previewChromePx?: number;
   /** When true, hides the "Upload your own image" overlay button on the preview image. */
   suppressUploadOverlay?: boolean;
+  /** When true, hides the budget slider overlay (e.g. when preview is in dominant/large mode). */
+  hideBudgetInOverlay?: boolean;
 }) {
   const { theme } = useFormTheme();
   const {
@@ -393,6 +419,7 @@ export function ImagePreviewExperience(props: {
     previewMaxVw,
     previewChromePx,
     suppressUploadOverlay = false,
+    hideBudgetInOverlay = false,
   } = props;
 
   const initialCache = useMemo(() => loadCache(instanceId, sessionId), [instanceId, sessionId]);
@@ -1300,10 +1327,17 @@ export function ImagePreviewExperience(props: {
     const max = Math.max(min + 500, Math.max(sourceMin, sourceMax));
     const span = Math.max(0, max - min);
     // Prefer fewer, more meaningful slider positions for visible image changes.
+    // More intervals for finer budget selection
     const step =
-      span <= 15000 ? 5000 : span <= 30000 ? 5000 : span <= 60000 ? 2500 : Math.max(1000, Math.round(span / 12));
+      span <= 10000 ? 1000 : span <= 20000 ? 1500 : span <= 40000 ? 2000 : span <= 60000 ? 2500 : Math.max(1000, Math.round(span / 24));
     return { min, max, step };
   }, [accuratePricing, config, sessionId]);
+
+  // Default budget to the lowest value (clean, predictable starting point)
+  useEffect(() => {
+    if (liveBudget !== null) return;
+    setLiveBudget(budgetSliderBounds.min);
+  }, [budgetSliderBounds.min, liveBudget]);
 
   useEffect(() => {
     if (!enabled) return;
@@ -1416,7 +1450,7 @@ export function ImagePreviewExperience(props: {
     const layers: PreviewStackLayer[] = [];
     const seen = new Set<string>([hero]);
     const addLayer = (src: string | null | undefined, key: string, kind: PreviewStackLayer["kind"]) => {
-      if (!isValidUrlLikeImage(src) || seen.has(src) || layers.length >= 3) return;
+      if (!isValidUrlLikeImage(src) || seen.has(src) || layers.length >= 4) return;
       seen.add(src);
       layers.push({ key, src, kind });
     };
@@ -1425,8 +1459,11 @@ export function ImagePreviewExperience(props: {
       addLayer(activeNavigationTransition.fromImage, `transition-${activeNavigationTransition.key}`, "transition");
     }
 
+    // Faded stack on left: previous runs (history) + next runs (upcoming)
     const previousRuns = runs.slice(0, activeIndex).reverse();
+    const nextRuns = runs.slice(activeIndex + 1);
     previousRuns.forEach((run) => addLayer(run.images?.[0], `history-${run.id}`, "history"));
+    nextRuns.forEach((run) => addLayer(run.images?.[0], `next-${run.id}`, "history"));
 
     return layers;
   }, [activeIndex, activeNavigationTransition, hero, runs]);
@@ -1493,23 +1530,26 @@ export function ImagePreviewExperience(props: {
   // Let the preview size respond to parent layout changes (e.g. toggling between prompt/questions)
   // and rely on layout animation to keep it feeling smooth.
   const effectivePreviewSize = previewSize;
-  // Quiet overlay styling keeps controls legible but visually secondary to the preview image.
-  const overlayBg = withAlpha("#020617", 0.3);
-  const overlayHoverBg = withAlpha("#020617", 0.45);
+  // On-brand overlay: use one solid brand-tint for all overlay controls so colors match.
+  const primary = theme.primaryColor || "#3b82f6";
+  const pillBg = withAlpha(darkenHex(primary, 0.4), 1);
+  const overlayBg = pillBg;
+  const overlayHoverBg = withAlpha(darkenHex(primary, 0.34), 1);
+  const overlayBorder = hexToRgba(primary, 0.35) || "rgba(255,255,255,0.2)";
   const overlayVars = {
     ["--sif-overlay-bg" as any]: overlayBg,
     ["--sif-overlay-hover-bg" as any]: overlayHoverBg,
+    ["--sif-overlay-border" as any]: overlayBorder,
   } as React.CSSProperties;
   const overlayButtonClass =
-    "h-8 sm:h-7 inline-flex items-center gap-1.5 rounded-xl border border-white/20 px-3 text-[11px] leading-none text-white/90 shadow-sm backdrop-blur-md bg-[var(--sif-overlay-bg)] hover:bg-[var(--sif-overlay-hover-bg)] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50 disabled:opacity-60 disabled:cursor-not-allowed";
+    "h-8 sm:h-7 inline-flex items-center gap-1.5 rounded-xl px-3 text-[11px] leading-none text-white/95 shadow-sm backdrop-blur-md bg-[var(--sif-overlay-bg)] hover:bg-[var(--sif-overlay-hover-bg)] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50 disabled:opacity-60 disabled:cursor-not-allowed";
   const overlayIconButtonClass =
     "h-8 w-8 sm:h-7 sm:w-7 inline-flex items-center justify-center rounded-full text-white/85 bg-white/0 hover:bg-white/15 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50 disabled:opacity-60 disabled:cursor-not-allowed transition-colors";
 
-  // Pricing pill should be more readable than other overlays since it sits on top of arbitrary imagery.
-  const pricingPillOverlayBg = withAlpha("#020617", 0.38);
-  const pricingPillOverlayHoverBg = withAlpha("#020617", 0.52);
+  // Pricing pill: keep same bg as other overlay controls.
+  const pricingPillOverlayHoverBg = overlayHoverBg;
   const pricingPillVars = {
-    ["--sif-overlay-bg" as any]: pricingPillOverlayBg,
+    ["--sif-overlay-bg" as any]: pillBg,
     ["--sif-overlay-hover-bg" as any]: pricingPillOverlayHoverBg,
     ["--sif-pill-fg" as any]: "#ffffff",
   } as React.CSSProperties;
@@ -1622,7 +1662,7 @@ export function ImagePreviewExperience(props: {
     )}`;
   }, [accuratePricing, pricingCurrency, pricingLocale]);
 
-  const pillLabel = formattedAccuratePricingRange ? "Your price range" : "Estimated price range";
+  const pillLabel = leadGateEnabled ? (leadCaptured ? "pricing" : "SHOW PRICING") : "pricing";
   const pillPrice = formattedAccuratePricingRange
     ? formattedAccuratePricingRange
     : accuratePricingStatus === "error"
@@ -1645,11 +1685,13 @@ export function ImagePreviewExperience(props: {
   }, [accuratePricingStatus, fetchAccuratePricing, formattedAccuratePricingRange, leadCaptured, leadGateEnabled]);
 
   if (!enabled) return null;
-  return (
-    <LayoutGroup id={lightboxLayoutId}>
-      <>
-      {/* min-h-0 + overflow-hidden ensure the card never bleeds outside the flex layout */}
-      <div className="w-full min-h-0 overflow-hidden">
+
+  function renderPreview() {
+    return (
+      <LayoutGroup id={lightboxLayoutId}>
+        <>
+          {/* min-h-0 + overflow-hidden ensure the card never bleeds outside the flex layout; overflow-visible when stack shown */}
+          <div className={cn("w-full min-h-0", stackedPreviewLayers.length > 0 ? "overflow-visible" : "overflow-hidden")}>
         <Card
 	          className={
 	            transparentChrome
@@ -1657,13 +1699,15 @@ export function ImagePreviewExperience(props: {
               : "bg-card/70 backdrop-blur supports-[backdrop-filter]:bg-card/60 border-border overflow-hidden"
           }
 	        >
-	          <CardContent className={cn(previewMaxPx ? "p-0" : transparentChrome ? "p-0" : "p-3", "overflow-hidden")}>
+	          <CardContent className={cn(previewMaxPx ? "p-0" : transparentChrome ? "p-0" : "p-3", stackedPreviewLayers.length > 0 ? "overflow-visible" : "overflow-hidden")}>
 	            {previewMaxPx && chromePx > 0 ? <div style={{ height: chromePx }} /> : null}
+            <div className={cn("flex justify-center", stackedPreviewLayers.length > 0 && "pl-14")}>
             <motion.div
+              layout
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              transition={{ duration: 0.18, ease: "easeOut" }}
-			              className="relative mx-auto overflow-hidden"
+              transition={{ type: "spring", stiffness: 400, damping: 35 }}
+			              className="relative mx-auto overflow-visible"
 			              style={{
 			                width: effectivePreviewSize,
 			                maxWidth: "100%",
@@ -1706,7 +1750,7 @@ export function ImagePreviewExperience(props: {
 				                          ? { x, y: y + 2, rotate, scale, opacity: 0 }
 				                          : { x: x - 4, y, rotate, scale, opacity: 0 }
 				                      }
-				                      transition={{ duration: isTransitionLayer ? 0.44 : 0.3, ease: [0.22, 1, 0.36, 1] }}
+				                      transition={{ duration: isTransitionLayer ? 0.26 : 0.18, ease: [0.22, 1, 0.36, 1] }}
 				                    >
 				                      {/* eslint-disable-next-line @next/next/no-img-element */}
 				                      <img
@@ -1752,7 +1796,7 @@ export function ImagePreviewExperience(props: {
               {hero && isPlaceholderHero ? (
                 <div className="absolute left-2 top-2 z-10">
                   <div
-                    className="rounded-xl border border-white/20 px-3 py-2 text-[11px] font-medium text-white/95 shadow-sm backdrop-blur-md bg-[var(--sif-overlay-bg)]"
+                    className="rounded-xl px-3 py-2 text-[11px] font-medium text-white/95 shadow-sm backdrop-blur-md bg-[var(--sif-overlay-bg)]"
                     style={{ fontFamily: theme.fontFamily, ...overlayVars }}
                   >
                     Demo preview (not generated)
@@ -1933,10 +1977,11 @@ export function ImagePreviewExperience(props: {
 	                        }
 	                  }
 	                  exit={{ opacity: 0 }}
-	                  transition={{
-	                    duration: activeNavigationTransition ? 0.42 : 0.18,
-	                    ease: [0.22, 1, 0.36, 1],
-	                  }}
+	                  transition={
+	                    activeNavigationTransition
+	                      ? { type: "spring", stiffness: 400, damping: 35 }
+	                      : { duration: 0.12, ease: "easeOut" }
+	                  }
 	                  onClick={openLightbox}
 	                  onKeyDown={(e) => {
 	                    if (e.key === "Enter" || e.key === " ") {
@@ -1955,10 +2000,11 @@ export function ImagePreviewExperience(props: {
 	                        ? { filter: ["blur(10px)", "blur(0px)"] }
 	                        : { filter: "blur(0px)" }
 	                    }
-	                    transition={{
-	                      duration: activeNavigationTransition ? 0.42 : 0.18,
-	                      ease: [0.22, 1, 0.36, 1],
-	                    }}
+	                    transition={
+	                      activeNavigationTransition
+	                        ? { type: "spring", stiffness: 400, damping: 35 }
+	                        : { duration: 0.12, ease: "easeOut" }
+	                    }
 	                  />
 	                </motion.div>
 	              ) : (
@@ -1976,8 +2022,14 @@ export function ImagePreviewExperience(props: {
 	            </AnimatePresence>
 
             {/* Top-left: form-step upload thumbnail OR "upload your own image" button.
-                Hidden when the dedicated upload CTA step is showing below the image. */}
-            <div className={cn("absolute left-3 z-20 flex items-center gap-2", uploadControlPositionClass, suppressUploadOverlay && !formStepUploadThumbnail ? "hidden" : null)}>
+                Hidden when: (a) dedicated upload CTA step is showing below, or (b) image is generating and no thumbnail yet. */}
+            <div
+              className={cn(
+                "absolute left-3 z-20 flex items-center gap-2",
+                uploadControlPositionClass,
+                !formStepUploadThumbnail && (suppressUploadOverlay || showLoader || busy) ? "hidden" : null
+              )}
+            >
 
               {formStepUploadThumbnail ? (
                 <>
@@ -2115,7 +2167,7 @@ export function ImagePreviewExperience(props: {
               <div
                 className={cn(
                   "absolute inset-0 flex items-center justify-center",
-                  showRefreshMask ? "z-20 bg-black/18 backdrop-blur-[3px]" : null
+                  showRefreshMask ? "z-20 bg-black/15" : null
                 )}
               >
                 <FormLoader
@@ -2157,61 +2209,83 @@ export function ImagePreviewExperience(props: {
 	              ) : null}
 	              </div>{/* end inner overflow-hidden container */}
 
-              {/* Bottom controls row — keeps pricing reveal + budget slider aligned side-by-side */}
-              {(hero && canUseLiveBudgetSlider) || (shouldShowPricingPill && formattedPricingRange) ? (
+              {/* Bottom controls row — keeps pricing reveal + budget slider aligned side-by-side. Hidden when lightbox open. Budget hidden when preview is dominant/large. */}
+              {!lightboxOpen && ((hero && canUseLiveBudgetSlider && !hideBudgetInOverlay) || (shouldShowPricingPill && formattedPricingRange)) ? (
                 <div className="absolute bottom-3 left-3 right-3 z-30 pointer-events-auto sm:left-4 sm:right-4 sm:bottom-4">
-                  <div className="flex items-center gap-2 sm:gap-3">
-                    {hero && canUseLiveBudgetSlider ? (
-                      <div className="min-w-0 flex-1 rounded-xl border border-white/15 bg-black/30 backdrop-blur-md px-3 py-1.5 shadow-sm">
-                        <div className="flex items-center justify-between text-[10px] text-white/85">
-                          <span>Live budget</span>
-                          <span className="font-semibold">
-                            {formatCurrency(liveBudget ?? Math.round((budgetSliderBounds.min + budgetSliderBounds.max) / 2), {
-                              locale: pricingLocale,
-                              currency: (accuratePricing?.currency || pricingCurrency || "USD").toUpperCase(),
-                            })}
-                          </span>
+                  <div className="flex items-stretch gap-2 sm:gap-3">
+                    {hero && canUseLiveBudgetSlider && !hideBudgetInOverlay ? (
+                      <div
+                        className="min-w-0 flex-1 h-[82px] flex flex-col justify-center rounded-2xl border border-white/10 px-5 py-4"
+                        style={{
+                          backgroundColor: pillBg,
+                          backdropFilter: 'none',
+                          WebkitBackdropFilter: 'none',
+                        }}
+                      >
+                        <div className="flex items-center justify-between text-[12px] font-medium text-white/95">
+                          <span>Budget</span>
                         </div>
                         <input
                           type="range"
                           min={budgetSliderBounds.min}
                           max={budgetSliderBounds.max}
                           step={budgetSliderBounds.step}
-                          value={liveBudget ?? Math.round((budgetSliderBounds.min + budgetSliderBounds.max) / 2)}
+                          value={liveBudget ?? budgetSliderBounds.min}
                           onChange={(e) => {
                             const n = Number(e.target.value);
                             if (!Number.isFinite(n)) return;
                             setLiveBudget(n);
                             setLiveBudgetDirty(true);
                           }}
-                          className="mt-1 w-full accent-white"
+                          className="mt-1 w-full h-1 rounded-full [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:shadow [&::-webkit-slider-thumb]:cursor-pointer"
+                          style={{
+                            accentColor: primary,
+                          }}
                           aria-label="Adjust budget and regenerate preview"
                         />
+                        <div className="mt-1 flex items-center justify-between text-[11px] font-medium text-white/70">
+                          <span>$</span>
+                          <span>$$$$</span>
+                        </div>
                       </div>
                     ) : null}
                     {shouldShowPricingPill && formattedPricingRange ? (
-                      <PricingExperience
-                        variant="pill"
-                        className="ml-auto w-fit max-w-[48%] shrink-0 border-0"
-                        label={pillLabel}
-                        termsHref="/terms"
-                        price={pillPrice}
-                        loading={pillLoading}
-                        lockedPrice={formattedSeedPricing || "$•••"}
-                        revealed={leadGateEnabled ? leadCaptured : true}
-                        allowToggle
-                        autoReveal
-                        instanceId={leadGateEnabled ? instanceId : undefined}
-                        sessionId={leadGateEnabled ? sessionId : undefined}
-                        gateContext="design_and_estimate"
-                        submissionData={{ surface: "preview_pricing" }}
-                        requirePhone
-                        onRevealed={() => {
-                          setLeadCaptured(true);
-                          void fetchAccuratePricing();
+                      <div
+                        className="ml-auto shrink-0 w-fit h-[82px] flex flex-col rounded-2xl border border-white/10 overflow-hidden shadow-lg shadow-black/25"
+                        style={{
+                          backgroundColor: pillBg,
+                          backdropFilter: 'none',
+                          WebkitBackdropFilter: 'none',
                         }}
-                        style={{ fontFamily: theme.fontFamily, ...overlayVars, ...pricingPillVars }}
-                      />
+                      >
+                        <div className="flex-1 min-h-0 flex flex-col justify-center px-5 py-[18px]">
+                          <PricingExperience
+                            variant="pill"
+                            className="w-full flex-1 min-h-0 border-0 !bg-transparent !p-0"
+                            containerClassName="w-full h-full flex-1 min-h-0"
+                            transparentBackground
+                            label={pillLabel}
+                          termsHref="/terms"
+                          price={pillPrice}
+                          loading={pillLoading}
+                          lockedPrice={formattedSeedPricing || "$•••"}
+                          revealed={leadGateEnabled ? leadCaptured : true}
+                          allowToggle
+                          autoReveal
+                          instanceId={leadGateEnabled ? instanceId : undefined}
+                          sessionId={leadGateEnabled ? sessionId : undefined}
+                          gateContext="design_and_estimate"
+                          submissionData={{ surface: "preview_pricing" }}
+                          requirePhone
+                          accentColor={pillBg}
+                          onRevealed={() => {
+                            setLeadCaptured(true);
+                            void fetchAccuratePricing();
+                          }}
+                          style={{ fontFamily: theme.fontFamily, backgroundColor: pillBg, ...pricingPillVars }}
+                        />
+                        </div>
+                      </div>
                     ) : null}
                   </div>
                 </div>
@@ -2222,7 +2296,7 @@ export function ImagePreviewExperience(props: {
 	                <button
 	                  type="button"
 	                  onClick={goPrev}
-                  className="absolute left-0 top-1/2 -translate-y-1/2 z-30 flex h-16 w-8 sm:h-20 sm:w-9 items-center justify-center rounded-r-xl border-y border-r border-white/20 bg-black/15 text-3xl sm:text-4xl font-thin leading-none text-white/65 backdrop-blur-sm transition-colors hover:bg-black/35 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+                  className="absolute left-0 top-1/2 -translate-y-1/2 z-30 flex h-16 w-8 sm:h-20 sm:w-9 items-center justify-center rounded-r-lg border-y border-r border-white/20 bg-black/40 text-3xl sm:text-4xl font-thin leading-none text-white/90 transition-colors hover:bg-black/55 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
 	                  aria-label="Previous preview"
 	                >
 	                  ‹
@@ -2232,7 +2306,7 @@ export function ImagePreviewExperience(props: {
 	                <button
 	                  type="button"
 	                  onClick={goNext}
-                  className="absolute right-0 top-1/2 -translate-y-1/2 z-30 flex h-16 w-8 sm:h-20 sm:w-9 items-center justify-center rounded-l-xl border-y border-l border-white/20 bg-black/15 text-3xl sm:text-4xl font-thin leading-none text-white/65 backdrop-blur-sm transition-colors hover:bg-black/35 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+                  className="absolute right-0 top-1/2 -translate-y-1/2 z-30 flex h-16 w-8 sm:h-20 sm:w-9 items-center justify-center rounded-l-lg border-y border-l border-white/20 bg-black/40 text-3xl sm:text-4xl font-thin leading-none text-white/90 transition-colors hover:bg-black/55 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
 	                  aria-label="Next preview"
 	                >
 	                  ›
@@ -2307,10 +2381,9 @@ export function ImagePreviewExperience(props: {
                             pendingActionRef.current = "upload";
                             handleUploadClick();
                           }}
-                          className="inline-flex items-center justify-center gap-2 rounded-xl border-2 px-5 py-3 text-sm font-semibold transition-colors hover:bg-primary/10"
+                          className="inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold transition-colors hover:bg-primary/10"
                           style={{
                             fontFamily: theme.fontFamily,
-                            borderColor: theme.primaryColor || "#3b82f6",
                             color: theme.primaryColor || "#3b82f6",
                           }}
                         >
@@ -2322,10 +2395,9 @@ export function ImagePreviewExperience(props: {
                         type="button"
                         disabled={isUploadingOwnImages}
                         onClick={handleUploadClick}
-                        className="inline-flex items-center justify-center gap-2 rounded-xl border-2 px-5 py-3 text-sm font-semibold transition-colors hover:bg-primary/10"
+                        className="inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold transition-colors hover:bg-primary/10"
                         style={{
                           fontFamily: theme.fontFamily,
-                          borderColor: theme.primaryColor || "#3b82f6",
                           color: theme.primaryColor || "#3b82f6",
                         }}
                       >
@@ -2335,7 +2407,7 @@ export function ImagePreviewExperience(props: {
                     <button
                       type="button"
                       onClick={handleSkipContinue}
-                      className="inline-flex items-center justify-center rounded-xl border border-border px-4 py-2.5 text-sm font-medium text-muted-foreground hover:bg-muted/50 transition-colors"
+                      className="inline-flex items-center justify-center rounded-xl px-4 py-2.5 text-sm font-medium text-muted-foreground hover:bg-muted/50 transition-colors"
                       style={{ fontFamily: theme.fontFamily }}
                     >
                       Skip and keep playing around
@@ -2345,6 +2417,8 @@ export function ImagePreviewExperience(props: {
                   </motion.div>
                 ) : null}
               </AnimatePresence>
+
+            </div>
 	          </CardContent>
 	        </Card>
 	      </div>
@@ -2369,8 +2443,9 @@ export function ImagePreviewExperience(props: {
 
             <motion.div
               layoutId={lightboxLayoutId}
+              layout
               className="relative w-full max-w-5xl aspect-square overflow-hidden rounded-xl bg-black shadow-2xl ring-1 ring-white/10"
-              transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+              transition={{ type: "spring", stiffness: 300, damping: 30 }}
               onLayoutAnimationComplete={() => setLightboxContain(true)}
               onClick={(e) => e.stopPropagation()}
             >
@@ -2384,7 +2459,11 @@ export function ImagePreviewExperience(props: {
                     type="button"
                     variant="secondary"
                     size="sm"
-                    className="h-8 rounded-full bg-white/90 px-3 text-[11px] font-medium text-black hover:bg-white"
+                    className="h-8 rounded-full px-3 text-[11px] font-medium text-white hover:opacity-90"
+                    style={{
+                      backgroundColor: darkenHex(primary, 0.5),
+                      borderColor: hexToRgba(primary, 0.4) || "rgba(255,255,255,0.2)",
+                    }}
                     onClick={() => setLightboxContain((prev) => !prev)}
                     aria-label={lightboxContain ? "Switch to fill mode" : "Switch to fit mode"}
                   >
@@ -2394,7 +2473,11 @@ export function ImagePreviewExperience(props: {
                     type="button"
                     variant="secondary"
                     size="icon"
-                    className="h-9 w-9 rounded-full bg-white/90 hover:bg-white"
+                    className="h-9 w-9 rounded-full text-white hover:opacity-90"
+                    style={{
+                      backgroundColor: darkenHex(primary, 0.5),
+                      borderColor: hexToRgba(primary, 0.4) || "rgba(255,255,255,0.2)",
+                    }}
                     onClick={closeLightbox}
                     aria-label="Close expanded preview"
                   >
@@ -2429,7 +2512,9 @@ export function ImagePreviewExperience(props: {
         ) : null}
       </AnimatePresence>
 
-    </>
-    </LayoutGroup>
+        </>
+      </LayoutGroup>
   );
+  }
+  return renderPreview();
 }

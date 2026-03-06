@@ -3,6 +3,7 @@
 import React from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { hexToRgba } from "@/types/design";
 import { Button } from "@/components/ui/button";
 import { FormLoader } from "@/components/form/FormLoader";
 import { ComponentRenderer } from "../../ComponentRenderer";
@@ -49,7 +50,7 @@ interface FormQuestionSectionProps {
   showQuestionPaneUnderPreview: boolean;
   state: any;
   stepForRenderer: any;
-  theme: { borderRadius?: number; fontFamily?: string; textColor?: string; primaryColor?: string };
+  theme: { borderRadius?: number; fontFamily?: string; textColor?: string; primaryColor?: string; secondaryColor?: string };
   usePreviewDominantLayout: boolean;
   guidedThumbnailMode: boolean;
 }
@@ -104,6 +105,20 @@ export function FormQuestionSection({
   const useCompactNav = useBottomDockLayout;
   const promptText = promptDraft.trim();
   const canGoBack = (state?.currentStepIndex || 0) > 0;
+  const primary = theme.primaryColor || "#3b82f6";
+  const textMuted = theme.textColor ? hexToRgba(theme.textColor, 0.65) : undefined;
+  const darkenHex = (hex: string, mixBlack: number): string => {
+    const h = String(hex || "").replace("#", "").trim();
+    const full = h.length === 3 ? h.split("").map((c) => c + c).join("") : h;
+    if (full.length !== 6) return hex;
+    const r = parseInt(full.slice(0, 2), 16);
+    const g = parseInt(full.slice(2, 4), 16);
+    const b = parseInt(full.slice(4, 6), 16);
+    if (![r, g, b].every((n) => Number.isFinite(n))) return hex;
+    const f = Math.max(0, Math.min(1, 1 - mixBlack));
+    return `rgb(${Math.round(r * f)}, ${Math.round(g * f)}, ${Math.round(b * f)})`;
+  };
+  const pillBg = darkenHex(primary, 0.5);
   const inputModeToggle = showPromptControls ? (
       <div className="inline-flex items-center gap-0.5 rounded-full border border-[color:var(--form-surface-border-color)] bg-[var(--form-surface-color)] p-0.5">
         <button
@@ -111,8 +126,13 @@ export function FormQuestionSection({
           onClick={() => setAdventureInputMode("questions")}
           className={cn(
             "inline-flex h-6 items-center rounded-full px-2.5 text-xs font-medium transition-colors",
-            adventureInputMode === "questions" ? "bg-primary/10 text-foreground" : "text-muted-foreground"
+            adventureInputMode === "questions" ? "bg-primary/10 text-foreground" : ""
           )}
+          style={
+            adventureInputMode !== "questions"
+              ? { color: textMuted || "var(--form-text-color)" }
+              : undefined
+          }
         >
           Guided
         </button>
@@ -121,8 +141,13 @@ export function FormQuestionSection({
           onClick={() => setAdventureInputMode("prompt")}
           className={cn(
             "inline-flex h-6 items-center rounded-full px-2.5 text-xs font-medium transition-colors",
-            adventureInputMode === "prompt" ? "bg-primary/10 text-foreground" : "text-muted-foreground"
+            adventureInputMode === "prompt" ? "bg-primary/10 text-foreground" : ""
           )}
+          style={
+            adventureInputMode !== "prompt"
+              ? { color: textMuted || "var(--form-text-color)" }
+              : undefined
+          }
         >
           Prompt
         </button>
@@ -164,14 +189,14 @@ export function FormQuestionSection({
                 useBottomDockLayout
                   ? "mx-auto flex h-full min-h-0 w-full flex-col overflow-hidden"
                   : "mx-auto flex h-full min-h-0 w-full flex-col overflow-hidden",
-                usePreviewPaneLayout ? "max-w-[76rem]" : "max-w-6xl"
+                usePreviewPaneLayout ? "max-w-5xl" : "max-w-6xl"
               )}
             >
               <div
                 className={cn(
                   "flex min-h-0 flex-1 flex-col overflow-hidden",
                   useBottomDockLayout ? "justify-end" : useCompactNav ? "justify-center" : null,
-                  usePreviewPaneLayout ? "px-1 sm:px-2" : null
+                  usePreviewPaneLayout ? "px-4" : null
                 )}
                 style={
                   !usePreviewPaneLayout && questionScale < 0.999
@@ -192,10 +217,13 @@ export function FormQuestionSection({
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: 8 }}
                         transition={{ duration: 0.2, ease: "easeOut" }}
-                        className="w-full min-h-0 flex flex-col items-center justify-center gap-4 px-4 py-4"
+                        className="w-full min-h-0 flex flex-col items-center justify-center gap-2 px-4 py-2"
                       >
-                        <p className="text-[15px] font-medium text-center" style={{ fontFamily: theme.fontFamily, color: theme.textColor }}>
-                          Upload a reference image for better results.
+                        <p
+                          className="text-center text-base font-semibold"
+                          style={{ color: primary, fontFamily: theme.fontFamily }}
+                        >
+                          Got a photo handy? Upload one for better results.
                         </p>
                         <input
                           ref={refinementUploadInputRef}
@@ -234,66 +262,46 @@ export function FormQuestionSection({
                             }
                           }}
                         />
-                        <div className="flex w-full max-w-2xl items-stretch justify-center gap-3">
-                          <div className="min-w-0 flex-[1.6]">
-                            <button
-                              type="button"
-                              disabled={refinementUploading}
-                              onClick={() => refinementUploadInputRef.current?.click()}
-                              aria-busy={refinementUploading}
-                              className={cn(
-                                "group flex h-full min-h-[56px] w-full items-center justify-between gap-4 rounded-2xl border border-dashed px-5 py-3 text-left shadow-sm transition-colors duration-200",
-                                refinementUploading
-                                  ? "cursor-wait opacity-80"
-                                  : "hover:border-foreground/30"
-                              )}
-                              style={{
-                                borderColor: "rgba(0,0,0,0.22)",
-                                backgroundColor: "rgba(255,255,255,0.98)",
-                                fontFamily: theme.fontFamily,
-                                borderRadius: `${theme.borderRadius ?? 16}px`,
-                              }}
-                            >
-                              <div className="flex min-w-0 items-center gap-3">
-                                <div className="flex min-w-0 items-center gap-2.5">
-                                  <ImagePlus className="h-4.5 w-4.5 shrink-0 text-muted-foreground" />
-                                  <p
-                                    className="truncate text-[15px] font-semibold leading-tight"
-                                    style={{ color: theme.textColor }}
-                                  >
-                                    {refinementUploading ? "Uploading image..." : "Upload reference image"}
-                                  </p>
-                                </div>
-                                <span className="hidden shrink-0 text-sm text-muted-foreground sm:inline">
-                                  JPG, PNG, or HEIC
-                                </span>
-                              </div>
-                              <span
-                                className="shrink-0 rounded-full px-3.5 py-1.5 text-sm font-semibold"
-                                style={{
-                                  backgroundColor: theme.textColor || "rgba(17,24,39,0.92)",
-                                  color: "#ffffff",
-                                }}
-                              >
-                                {refinementUploading ? "Uploading..." : "Choose file"}
-                              </span>
-                            </button>
-                          </div>
-                          <Button
+                        <div className="flex w-full max-w-2xl flex-row flex-wrap items-center justify-center gap-3">
+                          <button
                             type="button"
-                            variant="outline"
                             disabled={refinementUploading}
-                            onClick={() => handleStepComplete("__skip__")}
-                            className="h-auto min-h-[56px] shrink-0 bg-white px-5 text-[15px] font-semibold shadow-sm"
+                            onClick={() => refinementUploadInputRef.current?.click()}
+                            aria-busy={refinementUploading}
+                            className={cn(
+                              "group inline-flex min-h-[48px] flex-1 min-w-0 items-center justify-between gap-3 rounded-full border border-dashed px-4 py-2.5 pr-2 shadow-sm transition-colors sm:min-w-[320px]",
+                              refinementUploading && "cursor-wait opacity-80"
+                            )}
                             style={{
+                              backgroundColor: hexToRgba(primary, 0.06) || "#f8fafc",
+                              borderColor: primary,
                               fontFamily: theme.fontFamily,
-                              borderColor: "rgba(0,0,0,0.22)",
-                              color: theme.textColor,
-                              borderRadius: `${theme.borderRadius ?? 12}px`,
                             }}
                           >
-                            Skip
-                          </Button>
+                            <div className="flex min-w-0 items-center gap-2.5">
+                              <ImagePlus className="h-5 w-5 shrink-0" style={{ color: primary }} aria-hidden />
+                              <span className="text-sm font-semibold" style={{ color: primary }}>Choose file</span>
+                            </div>
+                            <span
+                              className="inline-flex shrink-0 items-center justify-center rounded-full border px-4 py-2 text-sm font-semibold shadow-sm transition-colors hover:bg-primary/5"
+                              style={{
+                                color: primary,
+                                backgroundColor: "#ffffff",
+                                borderColor: hexToRgba(primary, 0.35),
+                              }}
+                            >
+                              {refinementUploading ? "Uploading..." : "Choose file"}
+                            </span>
+                          </button>
+                          <button
+                            type="button"
+                            disabled={refinementUploading}
+                            onClick={() => handleStepComplete("__skip__")}
+                            className="shrink-0 text-sm font-medium transition-colors hover:opacity-80"
+                            style={{ fontFamily: theme.fontFamily, color: textMuted || theme.textColor }}
+                          >
+                            Skip for now
+                          </button>
                         </div>
                       </motion.div>
                     ) : showStepTransitionSkeleton ? (
@@ -308,16 +316,16 @@ export function FormQuestionSection({
                         <div className="mx-auto flex w-full max-w-4xl flex-col gap-3">
                           <div
                             className="h-4 w-32 animate-pulse rounded-full"
-                            style={{ backgroundColor: "rgba(148, 163, 184, 0.18)" }}
+                            style={{ backgroundColor: hexToRgba(primary, 0.18) }}
                           />
                           <div
                             className="h-12 w-full animate-pulse rounded-2xl"
-                            style={{ backgroundColor: "rgba(148, 163, 184, 0.16)" }}
+                            style={{ backgroundColor: hexToRgba(primary, 0.14) }}
                           />
                           <div className="flex justify-end gap-2">
                             <div
                               className="h-9 w-24 animate-pulse rounded-full"
-                              style={{ backgroundColor: "rgba(148, 163, 184, 0.16)" }}
+                              style={{ backgroundColor: hexToRgba(primary, 0.14) }}
                             />
                           </div>
                         </div>
@@ -475,7 +483,7 @@ export function FormQuestionSection({
                             leadCaptured={leadCapturedForUI}
                             feedbackPrompt={showEasePrompt ? <EaseFeedbackPrompt visible={true} onSelect={handleEaseFeedback} /> : undefined}
                             headerInlineControl={inputModeToggle}
-                            actionsVariant={useCompactNav ? "icon_only" : "default"}
+                            actionsVariant={useCompactNav || usePreviewPaneLayout ? "icon_only" : "default"}
                             guidedThumbnailMode={guidedThumbnailMode}
                             compactInPreview={usePreviewPaneLayout}
                           />

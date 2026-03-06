@@ -99,13 +99,14 @@ export function PreviewSection({
             answeredQuestionCount={
               completedQuestionCount + previewRefreshNonce + (adventureInputMode === "prompt" ? promptSubmitCount : 0)
             }
-            autoRegenerateEveryNAnsweredQuestions={1}
+            autoRegenerateEveryNAnsweredQuestions={2}
             onPreviewVisibleChange={setPreviewVisible}
             onHasImageChange={setPreviewHasImage}
             variant="hero"
             previewMaxPx={previewMaxPx ?? undefined}
             previewChromePx={8}
             suppressUploadOverlay={isRefinementUploadStep}
+            hideBudgetInOverlay={false}
           />
         </div>
       </div>

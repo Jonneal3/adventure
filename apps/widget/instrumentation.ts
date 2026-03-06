@@ -26,7 +26,10 @@ export async function register() {
         };
       }
     }
-    // Only initialize on server-side
-    await import('./lib/telemetry/opentelemetry');
+    // Only initialize on server-side when OTEL is configured.
+    // Skip when unset to avoid webpack vendor-chunk issues in dev.
+    if (process.env.OTEL_EXPORTER_OTLP_ENDPOINT) {
+      await import('./lib/telemetry/opentelemetry');
+    }
   }
 }

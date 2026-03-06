@@ -1,6 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   distDir: '.next',
+  // Prevent OpenTelemetry from being bundled into vendor-chunks (avoids "Cannot find module './vendor-chunks/@opentelemetry.js'")
+  // Next.js 14 uses experimental.serverComponentsExternalPackages; serverExternalPackages is Next 15+
   transpilePackages: ["@adventure/ai-form-ui-contract"],
   eslint: {
     ignoreDuringBuilds: true,
@@ -49,6 +51,20 @@ const nextConfig = {
   // Force dynamic rendering for all pages
   experimental: {
     // Disable static optimization for API routes
+    // Externalize OpenTelemetry so Node requires it natively (avoids vendor-chunk issues)
+    serverComponentsExternalPackages: [
+      '@opentelemetry/api',
+      '@opentelemetry/core',
+      '@opentelemetry/sdk-node',
+      '@opentelemetry/resources',
+      '@opentelemetry/semantic-conventions',
+      '@opentelemetry/instrumentation',
+      '@opentelemetry/instrumentation-http',
+      '@opentelemetry/instrumentation-fetch',
+      '@opentelemetry/exporter-trace-otlp-http',
+      '@opentelemetry/exporter-metrics-otlp-http',
+      '@opentelemetry/sdk-metrics',
+    ],
   },
   // Ensure API routes are never cached
   async headers() {

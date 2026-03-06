@@ -41,7 +41,7 @@ export function LeadCapture({
               value={name} 
               onChange={(e) => setName(e.target.value)} 
               placeholder="John Doe"
-              className={cn(isCompact ? "h-10 text-sm" : "h-12", "border-2")}
+              className={cn(isCompact ? "h-10 text-sm" : "h-12", "border")}
             />
           </div>
         )}
@@ -53,7 +53,7 @@ export function LeadCapture({
             value={email} 
             onChange={(e) => setEmail(e.target.value)} 
             placeholder="john@example.com"
-            className={cn(isCompact ? "h-10 text-sm" : "h-12", "border-2")}
+            className={cn(isCompact ? "h-10 text-sm" : "h-12", "border")}
           />
         </div>
 
@@ -65,7 +65,7 @@ export function LeadCapture({
               value={phone} 
               onChange={(e) => setPhone(e.target.value)} 
               placeholder="(555) 000-0000"
-              className={cn(isCompact ? "h-10 text-sm" : "h-12", "border-2")}
+              className={cn(isCompact ? "h-10 text-sm" : "h-12", "border")}
             />
           </div>
         )}

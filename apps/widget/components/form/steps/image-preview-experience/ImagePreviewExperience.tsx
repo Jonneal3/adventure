@@ -31,6 +31,8 @@ export interface ImagePreviewExperienceProps {
   previewMaxVw?: number;
   previewChromePx?: number;
   suppressUploadOverlay?: boolean;
+  /** When true, hides the budget slider overlay (e.g. when preview is in dominant/large mode). */
+  hideBudgetInOverlay?: boolean;
 }
 
 export function ImagePreviewExperience({

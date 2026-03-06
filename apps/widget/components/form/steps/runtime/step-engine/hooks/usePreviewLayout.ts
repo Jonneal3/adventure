@@ -56,13 +56,19 @@ export function usePreviewLayout({
     if (usePreviewDominantLayout || useDesktopPreviewLayout) {
       const columnEl = previewColumnRef.current;
       const previewViewportEl = previewViewportRef.current;
-      if (!columnEl) return;
-      const columnHeight = columnEl.clientHeight;
+      const columnHeight = columnEl?.clientHeight ?? 0;
       const previewViewportHeight = previewViewportEl?.clientHeight ?? 0;
-      const measuredPreviewHeight =
+      let measuredPreviewHeight =
         previewViewportHeight > 0
           ? previewViewportHeight
-          : Math.max(0, Math.floor(columnHeight * DOMINANT_PREVIEW_SHARE));
+          : columnHeight > 0
+            ? Math.max(0, Math.floor(columnHeight * DOMINANT_PREVIEW_SHARE))
+            : 0;
+      // Avoid two-phase resize stutter: when no measurement yet, use viewport-based initial estimate
+      // so the first paint is close to final and we don't get expand->pause->expand.
+      if (measuredPreviewHeight <= 0 && typeof window !== "undefined" && window.innerHeight > 0) {
+        measuredPreviewHeight = Math.max(0, Math.floor(window.innerHeight * DOMINANT_PREVIEW_SHARE));
+      }
       if (measuredPreviewHeight <= 0) return;
 
       const safetyPx = 12;
@@ -117,6 +123,18 @@ export function usePreviewLayout({
   useLayoutEffect(() => {
     computePreviewMaxPx();
   }, [computePreviewMaxPx, currentStepId]);
+
+  // When preview first enables in dominant layout, set initial estimate immediately to avoid
+  // null -> measured two-phase resize (expand, pause, expand) during "Generating..." state.
+  useEffect(() => {
+    if (!previewEnabled || !(usePreviewDominantLayout || useDesktopPreviewLayout)) return;
+    setPreviewMaxPx((prev) => {
+      if (prev !== null) return prev;
+      if (typeof window === "undefined" || window.innerHeight <= 0) return prev;
+      const est = Math.max(0, Math.floor(window.innerHeight * DOMINANT_PREVIEW_SHARE) - 12);
+      return est;
+    });
+  }, [previewEnabled, usePreviewDominantLayout, useDesktopPreviewLayout]);
 
   useEffect(() => {
     if (!previewEnabled) return;

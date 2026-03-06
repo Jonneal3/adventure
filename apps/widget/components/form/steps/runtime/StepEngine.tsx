@@ -35,6 +35,7 @@ import {
   PRICING_ESTIMATE_KEY,
 } from "./step-engine/constants";
 import { deriveBudgetSliderRange } from "./step-engine/utils/budget";
+import { hexToRgba } from "@/types/design";
 import { clamp01, fnv1a32, joinSummaries, mergeUniqueStrings, normalizeOptionalString } from "./step-engine/utils/core";
 import {
   extractCompositeBlockCalls,
@@ -155,8 +156,6 @@ export function StepEngine({
   const inFlightBatchIndexesRef = useRef<Set<number>>(new Set());
   const completedBatchIndexesRef = useRef<Set<number>>(new Set());
   const [loadingMessage, setLoadingMessage] = useState(0);
-  const [initialLoadingMessage, setInitialLoadingMessage] = useState(0);
-  const [initialLoadingSeconds, setInitialLoadingSeconds] = useState(0);
   const [maxVisitedIndex, setMaxVisitedIndex] = useState(0);
   const [formState, setFormState] = useState<FormState | null>(null);
   // Backend-owned call cap for this session. Not persisted; not hard-coded.
@@ -430,7 +429,7 @@ export function StepEngine({
         const deterministicUploadStep = {
           id: "step-refinement-upload-scene-image",
           type: "file_upload",
-          question: "Upload your own image first (or skip)",
+          question: "", // Rendered in FormQuestionPaneSection to avoid duplicate headers
           humanism: "Start from your real space for better refinements.",
           required: false,
           allow_skip: true,
@@ -643,6 +642,24 @@ export function StepEngine({
     sessionId,
     shouldProgressivelyGenerateOptionImages,
     state?.currentStepIndex,
+    state?.steps,
+  ]);
+
+  // Prefetch option images for all refinement steps as soon as first preview image is ready.
+  // This ensures refinement choice images are loaded by the time the user reaches those steps.
+  useEffect(() => {
+    if (!previewHasImage || !sessionId || !instanceId || !state?.steps || state.steps.length === 0) return;
+    for (const step of state.steps) {
+      if (shouldProgressivelyGenerateOptionImages(step)) {
+        void requestOptionImagesForStep(step);
+      }
+    }
+  }, [
+    instanceId,
+    previewHasImage,
+    requestOptionImagesForStep,
+    sessionId,
+    shouldProgressivelyGenerateOptionImages,
     state?.steps,
   ]);
   // Auto-skip deterministic upload steps that have already been answered (image already uploaded).
@@ -1427,11 +1444,6 @@ export function StepEngine({
   }, [formState?.batchIndex, instanceId, sessionId, state?.currentStepIndex, state?.steps]);
 
   // Rotating loading messages for better UX
-  const initialLoadingMessages = [
-    "Loading your service setup...",
-    "Fetching project pricing context...",
-    "Building your first tailored questions...",
-  ];
   const loadingMessages = [
     'Pulling a clearer price range...',
     'Tightening the estimate...',
@@ -1455,27 +1467,6 @@ export function StepEngine({
   }, [isBatchLoading, loadingMessages.length]);
 
   const isInitialLoading = Boolean(engineLoading || !flowPlan);
-
-  useEffect(() => {
-    if (!isInitialLoading) {
-      setInitialLoadingMessage(0);
-      setInitialLoadingSeconds(0);
-      return;
-    }
-
-    const messageInterval = setInterval(() => {
-      setInitialLoadingMessage((prev) => (prev + 1) % initialLoadingMessages.length);
-    }, 2200);
-
-    const secondsInterval = setInterval(() => {
-      setInitialLoadingSeconds((prev) => prev + 1);
-    }, 1000);
-
-    return () => {
-      clearInterval(messageInterval);
-      clearInterval(secondsInterval);
-    };
-  }, [isInitialLoading, initialLoadingMessages.length]);
 
   const fetchAndAppendBatch = useCallback(
     async (stepDataSoFar: Record<string, any>, showLoading: boolean = false, wasOnLastStep: boolean = false) => {
@@ -2797,15 +2788,14 @@ export function StepEngine({
       setPreviewQuestionRevealReady(true);
       return;
     }
-    if (!currentId || currentId === capturedId) {
-      // Keep the lower question pane hidden while we're still sitting on the
-      // same pre-preview step. This prevents stale content (for example the
-      // old budget question) from flashing back in before the next step arrives.
+    // When moving forward: hide on the captured step to prevent stale content flash.
+    // When backtracking: always show—user explicitly navigated back to see the question.
+    if (!currentId || (currentId === capturedId && !isBacktrackingInForm)) {
       setPreviewQuestionRevealReady(false);
       return;
     }
     setPreviewQuestionRevealReady(true);
-  }, [currentStep?.id, previewEnabled, previewHasImage]);
+  }, [currentStep?.id, previewEnabled, previewHasImage, isBacktrackingInForm]);
   const previewLayoutActive = Boolean(
     (usePreviewDominantLayout || useDesktopPreviewLayout) &&
       (previewHasImage || previewVisible || !previewQuestionRevealReady)
@@ -2874,11 +2864,6 @@ export function StepEngine({
       <div className="flex items-center justify-center min-h-screen px-6">
         <FormLoader
           message="Preparing your quote…"
-          subMessage={
-            initialLoadingSeconds >= 8
-              ? `${initialLoadingMessages[initialLoadingMessage]} This can take about 10s on first load.`
-              : initialLoadingMessages[initialLoadingMessage]
-          }
           className="min-h-0 py-8"
         />
       </div>
@@ -2995,21 +2980,20 @@ export function StepEngine({
                     }}
                     title={label}
                     className={cn(
-                      "inline-flex max-w-[260px] items-center gap-2 rounded-full border px-3 py-1.5 text-xs transition-colors",
+                      "inline-flex max-w-[260px] items-center gap-2 rounded-full px-3 py-1.5 text-xs shadow-sm transition-colors",
                       isCurrent ? "font-semibold" : "font-medium",
                       canNavigate ? "cursor-pointer hover:bg-primary/10" : "cursor-default opacity-70"
                     )}
                     style={{
-                      borderColor: isCurrent ? theme.primaryColor || "#3b82f6" : "rgba(148, 163, 184, 0.45)",
-                      backgroundColor: isCurrent ? `${theme.primaryColor || "#3b82f6"}1A` : "transparent",
-                      color: theme.textColor,
+                      backgroundColor: isCurrent ? (theme.primaryColor || "#3b82f6") : "transparent",
+                      color: isCurrent ? "#fff" : theme.textColor,
                       fontFamily: theme.fontFamily,
                     }}
                   >
                     <span
                       className="inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[10px] font-bold"
                       style={{
-                        backgroundColor: isCurrent ? theme.primaryColor || "#3b82f6" : "rgba(148, 163, 184, 0.35)",
+                        backgroundColor: isCurrent ? "rgba(255,255,255,0.25)" : (hexToRgba(theme.primaryColor || "#3b82f6", 0.18) ?? "rgba(59,130,246,0.18)"),
                         color: isCurrent ? "#fff" : theme.textColor,
                       }}
                     >
@@ -3139,6 +3123,7 @@ export function StepEngine({
                         borderRadius: theme.borderRadius,
                         fontFamily: theme.fontFamily,
                         primaryColor: theme.primaryColor,
+                        secondaryColor: theme.secondaryColor,
                         textColor: theme.textColor,
                       }}
                       usePreviewDominantLayout={previewLayoutActive}

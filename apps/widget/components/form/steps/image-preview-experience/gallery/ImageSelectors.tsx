@@ -147,7 +147,7 @@ export function ImageSelectors({
                     key={option.value}
                     onClick={() => handleChange(selector.id, option.value)}
                     className={cn(
-                      "w-10 h-10 sm:w-12 sm:h-12 rounded-full border-2 transition-all",
+                      "w-10 h-10 sm:w-12 sm:h-12 rounded-full border transition-all",
                       isSelected
                         ? "border-blue-500 ring-2 ring-blue-200 scale-110"
                         : "border-gray-300 hover:border-gray-400"

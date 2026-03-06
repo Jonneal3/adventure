@@ -5,7 +5,7 @@ import { useFormTheme } from '../../../demo/FormThemeProvider';
 import { detectCurrencyFromLocale, formatCurrency } from '@/lib/ai-form/utils/currency';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Button } from '@/components/ui/button';
-import { Eye, Info, Lock } from 'lucide-react';
+import { Info, Lock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { LeadGenPopover } from '@/components/form/steps/image-preview-experience/lead-gen/LeadGenPopover';
 
@@ -55,6 +55,9 @@ type PricingExperiencePillProps = {
   requirePhone?: boolean;
   className?: string;
   style?: React.CSSProperties;
+  accentColor?: string;
+  transparentBackground?: boolean;
+  containerClassName?: string;
   onRevealed?: () => void;
 };
 
@@ -82,6 +85,11 @@ function withAlpha(color: string | undefined, alpha: number): string {
   return `color-mix(in srgb, ${c} ${pct}%, transparent)`;
 }
 
+function maskedLockedParts(_value: string | undefined | null): { prefix: string; masked: string } {
+  // Intentional, consistent mask: "$1" + "XXXXX" (only X's are blurred in UI)
+  return { prefix: '$1', masked: 'XXXXX' };
+}
+
 export interface PricingPillProps extends Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, 'children'> {
   label?: string;
   termsHref?: string;
@@ -93,8 +101,12 @@ export interface PricingPillProps extends Omit<React.ButtonHTMLAttributes<HTMLBu
   autoReveal?: boolean;
   accentColor?: string;
   className?: string;
+  /** When true, outer container is transparent and fills parent (for matching sibling pill styling) */
+  transparentBackground?: boolean;
+  containerClassName?: string;
 }
 
+// Designer-style pill: horizontal layout, label left / price right, solid bg, clean typography.
 const PricingPill = React.forwardRef<HTMLButtonElement, PricingPillProps>(function PricingPill(
   {
     label,
@@ -107,8 +119,11 @@ const PricingPill = React.forwardRef<HTMLButtonElement, PricingPillProps>(functi
     autoReveal = true,
     accentColor,
     className,
+    style: propsStyle,
     onClick,
     disabled,
+    transparentBackground,
+    containerClassName,
     ...props
   },
   ref
@@ -130,135 +145,87 @@ const PricingPill = React.forwardRef<HTMLButtonElement, PricingPillProps>(functi
 
   const effectiveDisabled = Boolean(disabled || (loading && revealed));
   const accent = typeof accentColor === 'string' && accentColor.trim().length > 0 ? accentColor.trim() : null;
-  const placeholderPrice = typeof lockedPrice === 'string' && lockedPrice.trim().length > 0 ? lockedPrice : '$•••';
+  const placeholderPrice = typeof lockedPrice === 'string' && lockedPrice.trim().length > 0 ? lockedPrice : maskedLockedParts(null).prefix;
   const displayPrice = revealed ? (allowToggle ? (shown ? price : placeholderPrice) : price) : placeholderPrice;
   const showLoading = Boolean(loading && revealed);
-  const showLabel = Boolean(label && revealed && !showLoading && (!allowToggle || shown));
   const canShowPricingAction = Boolean(allowToggle && (!revealed || !shown));
-
-  const inheritedOverlayBg = (props.style as any)?.["--sif-overlay-bg"];
-  const inheritedOverlayHoverBg = (props.style as any)?.["--sif-overlay-hover-bg"];
-
-  const base = accent || '#111827';
-  const fallbackBg = withAlpha(base, 0.78);
-  const fallbackHoverBg = withAlpha(base, 0.86);
-
-  const overlayBg =
-    typeof inheritedOverlayBg === "string" && inheritedOverlayBg.trim().length > 0 ? inheritedOverlayBg.trim() : fallbackBg;
-  const overlayHoverBg =
-    typeof inheritedOverlayHoverBg === "string" && inheritedOverlayHoverBg.trim().length > 0
-      ? inheritedOverlayHoverBg.trim()
-      : fallbackHoverBg;
+  const lockedMask = maskedLockedParts(lockedPrice ?? null);
 
   void termsHref;
 
-  const shouldBlurPrice = canShowPricingAction && !showLoading;
-  const topLabel = canShowPricingAction ? "Show Pricing" : showLabel ? label : "Pricing";
-  const isRevealedView = Boolean(revealed && (!allowToggle || shown));
-
-  const maskedPlaceholder = useMemo(() => {
-    const rawBase = placeholderPrice.trim().length ? placeholderPrice : "$123,456";
-    const firstChunk = rawBase.split(/–|-/)[0]?.trim() || rawBase;
-    const base =
-      firstChunk.includes("•") || firstChunk.trim().length < 6
-        ? "$123,456"
-        : firstChunk;
-
-    let h = 2166136261;
-    const seedStr = `${label ?? ""}|${lockedPrice ?? ""}`;
-    for (let i = 0; i < seedStr.length; i++) {
-      h ^= seedStr.charCodeAt(i);
-      h = Math.imul(h, 16777619);
-    }
-    const seed = (h >>> 0) || 1;
-
-    let a = seed;
-    const randDigit = () => {
-      a |= 0;
-      a = (a + 0x6D2B79F5) | 0;
-      let t = Math.imul(a ^ (a >>> 15), 1 | a);
-      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-      const r = ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-      return Math.floor(r * 10);
-    };
-
-    return base.replace(/[0-9]/g, () => String(randDigit()));
-  }, [label, lockedPrice, placeholderPrice]);
+  const topLabel = (label && String(label).trim()) ? String(label).trim() : (canShowPricingAction ? 'Estimate' : 'Pricing');
+  const base = accent || '#0f172a';
+  const tagBg = withAlpha(accent || base, 1);
+  // When transparentBackground, use accent for outer bg so we match parent pill color exactly (no transparency quirks)
+  const outerBg = transparentBackground ? (accent || tagBg) : tagBg;
 
   return (
-    <button
-      ref={ref}
-      type="button"
-      disabled={effectiveDisabled}
-      onClick={(e) => {
-        onClick?.(e);
-        if (e.defaultPrevented) return;
-        if (!revealed) return;
-        if (!allowToggle) return;
-        if (revealed && shown) return;
-        setShown(true);
-      }}
+    <div
       className={cn(
-        'group inline-flex items-center justify-center text-center',
-        'max-w-[220px]',
-        isRevealedView
-          ? 'w-fit rounded-2xl border border-white/10 px-3 py-1.5 shadow-sm backdrop-blur-md'
-          : 'w-fit rounded-3xl border border-white/15 px-5 py-2 shadow-md backdrop-blur-md',
-        'bg-[var(--sif-overlay-bg)] hover:bg-[var(--sif-overlay-hover-bg)]',
-        'text-white',
-        'focus-visible:outline-none',
-        'focus-visible:ring-2 focus-visible:ring-white/20 focus-visible:ring-offset-0',
-        'transition-colors duration-200',
-        'disabled:opacity-70 disabled:cursor-not-allowed',
-        className
+        "overflow-hidden",
+        transparentBackground ? "w-full h-full border-0" : "w-fit rounded-2xl border border-white/10",
+        containerClassName
       )}
       style={{
-        ...(props.style || {}),
-        ["--sif-overlay-bg" as any]: overlayBg,
-        ["--sif-overlay-hover-bg" as any]: overlayHoverBg,
-        color: '#ffffff',
-        opacity: 1,
+        backgroundColor: outerBg,
+        backdropFilter: 'none',
+        WebkitBackdropFilter: 'none',
       }}
-      {...props}
     >
-      <span className={cn("flex flex-col items-center min-w-0", isRevealedView ? "gap-1" : "gap-2")}>
-        <span
-          className={cn(
-            "inline-flex items-center",
-            isRevealedView ? "gap-1" : "gap-1.5",
-            isRevealedView
-              ? "text-[10px] font-light uppercase tracking-[0.05em] leading-none text-white/95"
-              : "text-[13px] sm:text-[14px] font-extralight uppercase tracking-[0.05em] leading-none text-white/95"
-          )}
-        >
-          {canShowPricingAction ? (
-            <span className="opacity-90 shrink-0" aria-hidden>
-              {!revealed ? (
-                <Lock className={isRevealedView ? "h-3.5 w-3.5" : "h-4 w-4"} />
-              ) : (
-                <Eye className={isRevealedView ? "h-3.5 w-3.5" : "h-4 w-4"} />
-              )}
-            </span>
-          ) : null}
-          <span className="truncate">{topLabel}</span>
-        </span>
-
-        <span
-          className={cn(
-            "w-full max-w-[200px] text-center",
-            isRevealedView
-              ? "text-[14px] sm:text-[15px] font-semibold tabular-nums leading-[1.05] text-white"
-              : "text-[28px] sm:text-[32px] font-bold tabular-nums leading-[1.05] text-white",
-            shouldBlurPrice ? "text-white/90 blur-[12px] select-none tracking-[0.02em]" : "text-white"
-          )}
-          aria-hidden={shouldBlurPrice}
-        >
-          {showLoading ? "Calculating…" : canShowPricingAction ? maskedPlaceholder : displayPrice}
-        </span>
-      </span>
-    </button>
+      <button
+        ref={ref}
+        type="button"
+        disabled={effectiveDisabled}
+        onClick={(e) => {
+          onClick?.(e);
+          if (e.defaultPrevented) return;
+          if (!revealed) return;
+          if (!allowToggle) return;
+          if (revealed && shown) return;
+          setShown(true);
+        }}
+        className={cn(
+          'w-full text-left px-6 rounded-2xl text-white border-0 bg-transparent transition-all duration-200',
+          revealed ? 'py-3.5' : 'py-2.5',
+          'hover:bg-white/[0.07] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent',
+          'disabled:opacity-60 disabled:cursor-not-allowed',
+          'min-w-[140px]',
+          className
+        )}
+        style={{ ...(propsStyle || {}), color: '#fff' }}
+        {...props}
+      >
+        {!revealed ? (
+          <div className="w-full flex flex-col items-center justify-center gap-1 leading-tight text-center">
+            <div className="flex items-center justify-center gap-1.5">
+              <Lock className="h-4 w-4 text-white shrink-0" aria-hidden />
+              <div className="text-[14px] font-medium tracking-wide text-white uppercase">{topLabel}</div>
+            </div>
+            <div className="text-[16px] font-semibold tabular-nums text-white/95 select-none tracking-wider leading-[1.4] pt-0.5 pb-0.5">
+              <span className="text-white/95">{lockedMask.prefix}</span>
+              <span className="inline-block ml-0.5 align-middle">
+                <span className="inline-block px-1 -mx-1 blur-[5px] opacity-95">{lockedMask.masked}</span>
+              </span>
+            </div>
+          </div>
+        ) : (
+          <div className="flex items-center justify-between gap-4">
+            <div className="text-[13px] font-medium tracking-wide text-white/95 uppercase">{topLabel}</div>
+            {showLoading ? (
+              <div className="text-[12px] font-semibold tabular-nums text-white/90">Calculating…</div>
+            ) : canShowPricingAction ? (
+              <div className="flex items-center gap-2">
+                <div className="text-[14px] font-semibold tabular-nums select-none">{displayPrice}</div>
+              </div>
+            ) : (
+              <div className="text-[13px] font-semibold tabular-nums text-white/95">{displayPrice}</div>
+            )}
+          </div>
+        )}
+      </button>
+    </div>
   );
-	});
+});
 
 function PricingExperiencePill(props: PricingExperiencePillProps) {
   const { theme } = useFormTheme();
@@ -277,6 +244,9 @@ function PricingExperiencePill(props: PricingExperiencePillProps) {
     loading = false,
     className,
     style,
+    accentColor: accentColorProp,
+    transparentBackground,
+    containerClassName,
     onRevealed,
     requirePhone = true,
   } = props;
@@ -296,7 +266,9 @@ function PricingExperiencePill(props: PricingExperiencePillProps) {
       loading={loading}
       allowToggle={allowToggle}
       autoReveal={autoReveal}
-      accentColor={theme.primaryColor}
+      accentColor={accentColorProp ?? theme.primaryColor}
+      transparentBackground={transparentBackground}
+      containerClassName={containerClassName}
     />
   );
 
@@ -323,8 +295,8 @@ function PricingExperiencePill(props: PricingExperiencePillProps) {
       submissionData={{ surface: 'preview_pricing', ...(submissionData || {}) }}
       onSubmitted={() => onRevealed?.()}
       side="top"
-      align="end"
-      sideOffset={8}
+      align="center"
+      sideOffset={14}
     >
       {pill}
     </LeadGenPopover>

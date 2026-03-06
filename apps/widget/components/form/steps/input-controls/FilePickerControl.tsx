@@ -10,6 +10,16 @@ import { Button } from '@/components/ui/button';
 import { useLayoutDensity } from "../ui-layout/layout-density";
 import { isImageRefLike } from "@/lib/ai-form/utils/reference-images";
 
+function hexToRgba(hex: string, alpha: number): string {
+  const h = String(hex || "").replace("#", "").trim();
+  const full = h.length === 3 ? h.split("").map((c) => c + c).join("") : h;
+  if (full.length !== 6) return `rgba(0,0,0,${alpha})`;
+  const r = parseInt(full.slice(0, 2), 16);
+  const g = parseInt(full.slice(2, 4), 16);
+  const b = parseInt(full.slice(4, 6), 16);
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+
 interface FilePickerProps {
   value?: string | string[];
   onChange: (data: string | string[]) => void;
@@ -123,6 +133,79 @@ async function compressImageToDataUrl(
   return await readAsDataUrl(file);
 }
 
+interface CompactThumbStripProps {
+  items: Array<{ id: string; src: string; name: string; status: "uploading" | "ready" | "error"; error?: string }>;
+  baseRadius: number;
+  primaryTint: string;
+  mutedText: string;
+  primaryColor: string;
+  removeItem: (index: number) => void;
+}
+
+function CompactThumbStrip({ items, baseRadius, primaryTint, mutedText, primaryColor, removeItem }: CompactThumbStripProps) {
+  const containerStyle: React.CSSProperties = { msOverflowStyle: "none" };
+  return (
+    <div className="min-w-0">
+      <div
+        className="flex h-16 w-full max-w-full items-center gap-2 overflow-x-auto overflow-y-hidden min-w-0"
+        style={containerStyle}
+      >
+        {items.map((item, index) => (
+          <motion.div
+            key={item.id}
+            layout
+            className={cn(
+              "group relative h-16 w-16 shrink-0 overflow-hidden border bg-background/60 shadow-sm",
+              item.status === "error" ? "border-red-500/30" : "border-[color:var(--form-surface-border-color)]"
+            )}
+            style={{ borderRadius: `${baseRadius}px` }}
+          >
+            {item.src.startsWith("data:image") || item.src.startsWith("http") || item.src.startsWith("blob:") ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={item.src} alt={item.name} className="absolute inset-0 h-full w-full object-cover" />
+            ) : (
+              <div className="absolute inset-0 flex items-center justify-center" style={{ backgroundColor: primaryTint }}>
+                <UploadIcon className="h-5 w-5" style={{ color: mutedText }} />
+              </div>
+            )}
+            <div className="absolute left-1.5 top-1.5">
+              {item.status === "ready" ? (
+                <div
+                  className="flex h-5 w-5 items-center justify-center rounded-full shadow-sm ring-2 ring-white/90"
+                  style={{ backgroundColor: primaryColor }}
+                >
+                  <Check className="h-3 w-3 text-white stroke-[3]" />
+                </div>
+              ) : item.status === "uploading" ? (
+                <div className="h-2.5 w-2.5 animate-pulse rounded-full bg-white/80 shadow-sm ring-2 ring-black/20" />
+              ) : (
+                <div className="h-2.5 w-2.5 rounded-full bg-red-500 shadow-sm ring-2 ring-white/80" />
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                removeItem(index);
+              }}
+              className="absolute right-1.5 top-1.5 inline-flex h-6 w-6 items-center justify-center rounded-full bg-black/55 text-white/90 shadow-sm opacity-100 transition hover:bg-black/65 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+              aria-label="Remove uploaded image"
+              title="Remove"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+            {item.status === "error" && item.error ? (
+              <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-red-700/70 via-red-700/20 to-transparent p-1.5">
+                <div className="text-[10px] font-semibold text-white/95 truncate">{item.error}</div>
+              </div>
+            ) : null}
+          </motion.div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function FilePicker({
   value,
   onChange,
@@ -138,6 +221,15 @@ export function FilePicker({
   const { theme } = useFormTheme();
   const density = useLayoutDensity();
   const isCompact = density === "compact";
+
+  // Theme-derived colors for on-brand styling
+  const primaryRgba = (a: number) => hexToRgba(theme.primaryColor, a);
+  const textMuted = theme.textColor ? hexToRgba(theme.textColor, 0.65) : undefined;
+  const primary = theme.primaryColor || "#3b82f6";
+  const primaryTint = hexToRgba(primary, 0.08);
+  const primaryTintHover = hexToRgba(primary, 0.15);
+  const primaryTintActive = hexToRgba(primary, 0.2);
+  const mutedText = hexToRgba(theme.textColor || "#374151", 0.65);
   const [isMobileViewport, setIsMobileViewport] = useState(false);
   const [items, setItems] = useState<Array<{ id: string; src: string; name: string; status: "uploading" | "ready" | "error"; error?: string }>>([]);
   const cameraInputRef = useRef<HTMLInputElement | null>(null);
@@ -280,69 +372,6 @@ export function FilePicker({
   const compactInline = isCompact && hasUploads && maxFiles > 1;
   const isChoiceCompact = layoutVariant === "choice_compact";
   const shouldShowCamera = Boolean(cameraEnabled && isMobileViewport && !isChoiceCompact);
-  const compactThumbStrip = (
-    <div className="min-w-0">
-      {/* Fixed-height strip so compact layouts never overflow vertically */}
-      <div className="flex h-16 w-full max-w-full items-center gap-2 overflow-x-auto overflow-y-hidden min-w-0 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-        {items.map((item, index) => (
-          <motion.div
-            key={item.id}
-            layout
-            className={cn(
-              "group relative h-16 w-16 shrink-0 overflow-hidden border bg-background/60 shadow-sm",
-              item.status === "error" ? "border-red-500/30" : "border-[color:var(--form-surface-border-color)]"
-            )}
-            style={{ borderRadius: `${baseRadius}px` }}
-          >
-            {item.src.startsWith("data:image") || item.src.startsWith("http") || item.src.startsWith("blob:") ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={item.src} alt={item.name} className="absolute inset-0 h-full w-full object-cover" />
-            ) : (
-              <div className="absolute inset-0 flex items-center justify-center bg-muted">
-                <UploadIcon className="h-5 w-5 text-muted-foreground" />
-              </div>
-            )}
-
-            {/* Status indicator */}
-            <div className="absolute left-1.5 top-1.5">
-              {item.status === "ready" ? (
-                <div
-                  className="flex h-5 w-5 items-center justify-center rounded-full shadow-sm ring-2 ring-white/90"
-                  style={{ backgroundColor: theme.primaryColor }}
-                >
-                  <Check className="h-3 w-3 text-white stroke-[3]" />
-                </div>
-              ) : item.status === "uploading" ? (
-                <div className="h-2.5 w-2.5 animate-pulse rounded-full bg-white/80 shadow-sm ring-2 ring-black/20" />
-              ) : (
-                <div className="h-2.5 w-2.5 rounded-full bg-red-500 shadow-sm ring-2 ring-white/80" />
-              )}
-            </div>
-
-            {/* Remove */}
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                removeItem(index);
-              }}
-              className="absolute right-1.5 top-1.5 inline-flex h-6 w-6 items-center justify-center rounded-full bg-black/55 text-white/90 shadow-sm opacity-100 transition hover:bg-black/65 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
-              aria-label="Remove uploaded image"
-              title="Remove"
-            >
-              <X className="h-3.5 w-3.5" />
-            </button>
-
-            {item.status === "error" && item.error ? (
-              <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-red-700/70 via-red-700/20 to-transparent p-1.5">
-                <div className="text-[10px] font-semibold text-white/95 truncate">{item.error}</div>
-              </div>
-            ) : null}
-          </motion.div>
-        ))}
-      </div>
-    </div>
-  );
 
   // Non-compact, image(s) uploaded → show big preview + compact upload strip below
   const fullHasUploads = hasUploads && !compactInline;
@@ -354,22 +383,22 @@ export function FilePicker({
         data-upload-role={uploadRole || undefined}
         className={cn(
           "group relative h-14 min-w-0 flex-1 border-2 border-dashed text-center cursor-pointer transition-colors duration-200 ease-out flex items-center px-3 overflow-hidden",
-          isDragActive
-            ? "border-primary bg-primary/5"
-            : "border-muted-foreground/20 hover:border-primary/50 hover:bg-muted/10 bg-background/60"
+                isDragActive
+                  ? "border-[color:var(--fp-primary)] bg-[color:var(--fp-primary-tint-active)]"
+                  : "border-[color:var(--fp-border-idle)] hover:border-[color:var(--fp-primary)] hover:bg-[color:var(--fp-primary-tint)] bg-background/60"
         )}
         style={{ borderRadius: `${baseRadius * 1.5}px` }}
       >
         <input {...getInputProps({ className: "hidden" })} />
         <div className="flex items-center gap-2.5 w-full min-w-0">
-          <div className={cn("p-1.5 rounded-full bg-muted/50 group-hover:bg-primary/10 transition-colors duration-200", isDragActive && "bg-primary/20")}>
-            <UploadIcon className={cn("w-4 h-4 transition-colors duration-200", isDragActive ? "text-primary" : "text-muted-foreground group-hover:text-primary/70")} />
+          <div className={cn("p-1.5 rounded-full transition-colors duration-200", isDragActive ? "bg-[color:var(--fp-primary-tint-active)]" : "bg-[color:var(--fp-primary-tint)] group-hover:bg-[color:var(--fp-primary-tint-hover)]")}>
+            <UploadIcon className={cn("w-4 h-4 transition-colors duration-200", isDragActive ? "text-[color:var(--fp-primary)]" : "text-[color:var(--fp-muted-text)] group-hover:text-[color:var(--fp-primary)]")} />
           </div>
           <div className="min-w-0 text-left">
             <p className="text-sm font-semibold tracking-tight leading-tight truncate" style={{ color: theme.textColor }}>
               {isDragActive ? "Drop here" : dropzoneHeadline}
             </p>
-            <p className="text-[10px] text-muted-foreground font-medium truncate">
+            <p className="text-[10px] font-medium truncate" style={{ color: mutedText }}>
               {isDragActive ? "Release to upload" : dropzoneSubhead}
             </p>
           </div>
@@ -378,10 +407,9 @@ export function FilePicker({
       {shouldShowCamera ? (
         <Button
           type="button"
-          variant="secondary"
           size="icon"
           className="h-14 w-14 shrink-0"
-          style={{ borderRadius: `${baseRadius * 1.5}px` }}
+          style={{ borderRadius: `${baseRadius * 1.5}px`, backgroundColor: primaryTint, color: primary, borderColor: hexToRgba(primary, 0.3) }}
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
@@ -396,8 +424,20 @@ export function FilePicker({
     </div>
   );
 
+  const dropzoneVars = {
+    ["--fp-primary" as string]: primary,
+    ["--fp-primary-tint" as string]: primaryTint,
+    ["--fp-primary-tint-hover" as string]: primaryTintHover,
+    ["--fp-primary-tint-active" as string]: primaryTintActive,
+    ["--fp-muted-text" as string]: mutedText,
+    ["--fp-border-idle" as string]: hexToRgba(theme.textColor || "#374151", 0.22),
+  } as React.CSSProperties;
+
   return (
-    <div className={cn(isCompact ? (compactInline ? "space-y-2" : "space-y-4") : "space-y-4", isChoiceCompact ? "h-full" : null, className)}>
+    <div
+      className={cn(isCompact ? (compactInline ? "space-y-2" : "space-y-4") : "space-y-4", isChoiceCompact ? "h-full" : null, className)}
+      style={dropzoneVars}
+    >
       {/* Hidden camera input (shared across layouts) */}
       <input
         ref={cameraInputRef}
@@ -430,21 +470,25 @@ export function FilePicker({
                 "group relative h-16 min-w-0 flex-1 border-2 border-dashed text-center cursor-pointer transition-colors duration-200 ease-out flex items-center",
                 "px-3 overflow-hidden",
                 isDragActive
-                  ? "border-primary bg-primary/5"
-                  : "border-muted-foreground/20 hover:border-primary/50 hover:bg-muted/10 bg-background/60"
+                  ? "border-[color:var(--fp-primary)] bg-[color:var(--fp-primary-tint-active)]"
+                  : "border-[color:var(--fp-border-idle)] hover:border-[color:var(--fp-primary)] hover:bg-[color:var(--fp-primary-tint)]"
               )}
               style={{ borderRadius: `${baseRadius * 1.5}px` }}
             >
               <input {...getInputProps({ className: "hidden" })} />
               <div className="flex items-center justify-center w-full min-w-0 gap-2">
-                <div className={cn("p-2 rounded-full bg-muted/50 group-hover:bg-primary/10 transition-colors duration-200", isDragActive && "bg-primary/20")}>
-                  <UploadIcon className={cn("w-5 h-5 transition-colors duration-200", isDragActive ? "text-primary" : "text-muted-foreground group-hover:text-primary/70")} />
+                <div
+                  className={cn("p-2 rounded-full transition-colors duration-200", isDragActive ? "bg-[color:var(--fp-primary-tint-active)]" : "bg-[color:var(--fp-primary-tint)] group-hover:bg-[color:var(--fp-primary-tint-hover)]")}
+                >
+                  <UploadIcon
+                    className={cn("w-5 h-5 transition-colors duration-200", isDragActive ? "text-[color:var(--fp-primary)]" : "text-[color:var(--fp-muted-text)] group-hover:text-[color:var(--fp-primary)]")}
+                  />
                 </div>
                 <div className="min-w-0 text-left space-y-0">
-                  <p className="text-sm font-semibold tracking-tight leading-tight truncate" style={{ color: theme.textColor }}>
+                  <p className="text-sm font-semibold tracking-tight leading-tight truncate" style={{ color: theme.textColor, fontFamily: theme.fontFamily }}>
                     {isDragActive ? "Drop here" : dropzoneHeadline}
                   </p>
-                  <p className="text-[10px] text-muted-foreground font-medium truncate">
+                  <p className="text-[10px] font-medium truncate" style={{ color: mutedText }}>
                     {isDragActive ? "Release to upload" : dropzoneSubhead}
                   </p>
                 </div>
@@ -454,9 +498,9 @@ export function FilePicker({
             {shouldShowCamera ? (
               <Button
                 type="button"
-                variant="secondary"
                 size="icon"
                 className="h-16 w-16 rounded-full shrink-0"
+                style={{ backgroundColor: primaryTint, color: primary, borderColor: hexToRgba(primary, 0.3) }}
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
@@ -470,7 +514,16 @@ export function FilePicker({
             ) : null}
           </motion.div>
 
-          <div className="flex-1 min-w-0">{compactThumbStrip}</div>
+          <div className="flex-1 min-w-0">
+            <CompactThumbStrip
+              items={items}
+              baseRadius={baseRadius}
+              primaryTint={primaryTint}
+              mutedText={mutedText}
+              primaryColor={theme.primaryColor}
+              removeItem={removeItem}
+            />
+          </div>
         </div>
 
       ) : fullHasUploads ? (
@@ -490,20 +543,21 @@ export function FilePicker({
                 <div
                   key={item.id}
                   className={cn(
-                    "relative overflow-hidden bg-muted/10",
+                    "relative overflow-hidden",
                     items.length === 1 ? "rounded-2xl border p-2" : null
                   )}
-                  style={{ borderRadius: `${baseRadius * 1.5}px` }}
+                  style={{ borderRadius: `${baseRadius * 1.5}px`, backgroundColor: primaryTint }}
                 >
                   {items.length === 1 ? (
                     <div className="absolute right-4 top-4 z-20">
-                      <div className="flex items-center gap-2 rounded-xl border border-black/10 bg-white/90 p-1.5 shadow-md backdrop-blur-md">
+                      <div className="flex items-center gap-2 rounded-xl border p-1.5 shadow-md backdrop-blur-md" style={{ borderColor: hexToRgba(primary, 0.2), backgroundColor: hexToRgba(theme.backgroundColor || "#ffffff", 0.92) }}>
                         {(maxFiles === 1 || items.length < maxFiles) ? (
                           <div {...getRootProps()}>
                             <input {...getInputProps({ className: "hidden" })} />
                             <button
                               type="button"
-                              className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-transparent px-2.5 text-[11px] font-semibold text-foreground/80 transition-colors hover:border-foreground/15 hover:bg-background"
+                              className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-transparent px-2.5 text-[11px] font-semibold transition-colors"
+                              style={{ color: theme.textColor, fontFamily: theme.fontFamily }}
                             >
                               <RefreshCw className="h-3 w-3" />
                               Change
@@ -537,8 +591,8 @@ export function FilePicker({
                       )}
                     />
                   ) : (
-                    <div className={cn("w-full bg-muted flex items-center justify-center", items.length === 1 ? "h-64" : "aspect-square")}>
-                      <UploadIcon className="w-10 h-10 text-muted-foreground" />
+                    <div className={cn("w-full flex items-center justify-center", items.length === 1 ? "h-64" : "aspect-square")} style={{ backgroundColor: primaryTint }}>
+                      <UploadIcon className="w-10 h-10" style={{ color: mutedText }} />
                     </div>
                   )}
 
@@ -565,7 +619,8 @@ export function FilePicker({
                   <input {...getInputProps({ className: "hidden" })} />
                   <button
                     type="button"
-                    className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                    className="text-xs transition-colors hover:text-[color:var(--fp-primary)]"
+                    style={{ color: mutedText }}
                   >
                     Add more photos
                   </button>
@@ -590,17 +645,15 @@ export function FilePicker({
               "group relative text-center cursor-pointer transition-all duration-200 ease-out",
               isChoiceCompact ? "h-full min-h-[220px] p-4 sm:p-5 flex items-center" : isCompact ? "p-5 sm:p-6" : "p-9 sm:p-10",
               isDragActive
-                ? (isChoiceCompact ? "border-2 border-dashed border-primary bg-primary/5" : "border bg-primary/5")
-                : (isChoiceCompact
-                    ? "border-2 border-dashed border-muted-foreground/25 hover:border-primary/45 bg-background"
-                    : "border hover:bg-muted/10 bg-background/60")
+                ? "border-2 border-dashed border-[color:var(--fp-primary)] bg-[color:var(--fp-primary-tint-active)]"
+                : "border-2 border-dashed border-[color:var(--fp-border-idle)] hover:border-[color:var(--fp-primary)] hover:bg-[color:var(--fp-primary-tint)] bg-background/60"
             )}
             style={{ borderRadius: `${baseRadius * 2}px` }}
           >
             <input {...getInputProps({ className: "hidden" })} />
             <div className={cn("flex items-center justify-center", isChoiceCompact ? "gap-2.5" : "gap-4")}>
-              <div className={cn(isChoiceCompact ? "" : "p-3.5 rounded-full bg-muted/40", isDragActive && !isChoiceCompact ? "bg-primary/20" : null)}>
-                <UploadIcon className={cn(isChoiceCompact ? "w-5 h-5" : "w-8 h-8", "transition-colors duration-200", isDragActive ? "text-primary" : "text-muted-foreground")} />
+              <div className={cn(isChoiceCompact ? "" : "p-3.5 rounded-full transition-colors duration-200", isDragActive ? "bg-[color:var(--fp-primary-tint-active)]" : "bg-[color:var(--fp-primary-tint)] group-hover:bg-[color:var(--fp-primary-tint-hover)]")}>
+                <UploadIcon className={cn(isChoiceCompact ? "w-5 h-5" : "w-8 h-8", "transition-colors duration-200", isDragActive ? "text-[color:var(--fp-primary)]" : "text-[color:var(--fp-muted-text)] group-hover:text-[color:var(--fp-primary)]")} />
               </div>
               <div className={cn("min-w-0 space-y-1", isChoiceCompact ? "text-center" : "text-left")}>
                 <p
@@ -608,11 +661,11 @@ export function FilePicker({
                     isChoiceCompact ? "text-sm sm:text-base" : "text-base sm:text-lg",
                     "font-semibold tracking-tight leading-tight"
                   )}
-                  style={{ color: theme.textColor }}
+                  style={{ color: theme.textColor, fontFamily: theme.fontFamily }}
                 >
                   {isDragActive ? "Drop files here" : dropzoneHeadline}
                 </p>
-                <p className={cn(isChoiceCompact ? "text-xs" : "text-sm", "text-muted-foreground font-medium truncate")}>
+                <p className={cn(isChoiceCompact ? "text-xs" : "text-sm", "font-medium truncate")} style={{ color: mutedText }}>
                   {isDragActive ? "Release to upload" : isChoiceCompact ? "JPG/PNG" : dropzoneSubhead}
                 </p>
               </div>
@@ -623,9 +676,9 @@ export function FilePicker({
             <div className="flex items-center justify-center mt-3">
               <Button
                 type="button"
-                variant="secondary"
                 size="icon"
                 className="h-11 w-11 rounded-full"
+                style={{ backgroundColor: primaryTint, color: primary, borderColor: hexToRgba(primary, 0.3) }}
                 onClick={() => cameraInputRef.current?.click()}
                 aria-label="Use camera"
                 title="Use camera"

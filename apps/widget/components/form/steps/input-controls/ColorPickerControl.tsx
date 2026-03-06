@@ -43,7 +43,7 @@ export function ColorPicker({
               whileTap={{ scale: 0.95 }}
               onClick={() => onChange(color)}
               className={cn(
-                "aspect-square rounded-md border-2 transition-all relative",
+                "aspect-square rounded-md border transition-all relative",
                 isSelected ? "border-primary ring-2 ring-primary ring-offset-2" : "border-muted-foreground/20"
               )}
               style={{ backgroundColor: color, borderRadius: `${theme.borderRadius}px` }}

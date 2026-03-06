@@ -439,12 +439,12 @@ export function ImageChoiceGrid({
                   <img
                     src={opt.imageUrl}
                     alt={opt.label}
-                    loading="lazy"
+                    loading={thumbnailMode ? "eager" : "lazy"}
                     decoding="async"
                     className={cn("h-full w-full object-cover transition-transform", thumbnailMode ? "group-hover:scale-[1.02]" : "group-hover:scale-105")}
                   />
                 ) : (
-                  <div className="h-full w-full" />
+                  <div className="h-full w-full animate-pulse bg-muted/40" />
                 )}
               </div>
               {normalizePriceTier(opt.priceTier) && (

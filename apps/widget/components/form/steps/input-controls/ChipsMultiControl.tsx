@@ -41,7 +41,7 @@ export function ChipsMulti({ value = [], onChange, options, className }: ChipsMu
             transition={{ delay: index * 0.03 }}
             onClick={() => toggle(key)}
             className={cn(
-              "rounded-full border-2 transition-all font-medium leading-tight",
+              "rounded-full border transition-all font-medium leading-tight",
               isCompact
                 ? "px-3 py-1.5 text-[11px] min-h-8 sm:px-3.5 sm:py-1.5 sm:text-[12px] sm:min-h-9 md:text-[13px]"
                 : "px-4 py-2 text-[13px] min-h-10 sm:px-5 sm:py-3 sm:text-sm sm:min-h-11",

@@ -74,11 +74,12 @@ export function StepLayout({
       ? "flex items-start justify-between gap-2"
       : undefined;
   const contentViewportClassName = cn(
-    "flex-1 min-h-0",
+    "flex-1 min-h-0 w-full",
     actionsVariant !== "icon_only"
-      ? "overflow-y-auto overflow-x-hidden pr-0.5 sm:pr-1"
+      ? "overflow-y-auto overflow-x-hidden"
       : "overflow-hidden",
-    useCompactPane ? "rounded-lg" : null
+    useCompactPane ? "rounded-lg [scrollbar-gutter:stable]" : "pr-0.5 sm:pr-1",
+    useCompactPane ? "flex flex-col items-center" : null
   );
 
   return (
@@ -123,7 +124,12 @@ export function StepLayout({
           >
             <div className={cn("shrink-0", compactHeaderLayoutClass)}>
               {headerInlineControl ? <div className="shrink-0">{headerInlineControl}</div> : null}
-              <div className={cn("min-w-0 flex-1", useCompactPane ? "w-full text-center" : null)}>
+              <div
+                className={cn(
+                  "min-w-0 flex-1",
+                  useCompactPane ? "w-full max-w-5xl mx-auto text-center" : null
+                )}
+              >
                 <h2
                   className={cn(
                     useCompactPane ? "text-[13px] sm:text-sm leading-tight" : isCompact ? "text-xl" : "text-2xl",
@@ -149,7 +155,12 @@ export function StepLayout({
             </div>
             {feedbackPrompt ? <div className={cn("shrink-0", useCompactPane ? "mt-1" : "mt-3")}>{feedbackPrompt}</div> : null}
             <div className={contentViewportClassName}>
-              <div className={cn("flex min-h-full min-w-0 flex-col overflow-hidden", useCompactPane ? "justify-end" : "justify-start")}>
+              <div
+                className={cn(
+                  "flex min-h-full min-w-0 flex-col overflow-hidden",
+                  useCompactPane ? "w-full max-w-5xl mx-auto justify-end" : "justify-start"
+                )}
+              >
                 {children}
               </div>
             </div>
@@ -171,9 +182,9 @@ export function StepLayout({
         </div>
       ) : (
           <div className={cn("flex h-full min-h-0 flex-col", useCompactPane ? "gap-2 justify-end" : isCompact ? "gap-4" : "gap-6")}>
-          <div className={cn("shrink-0", compactHeaderLayoutClass)}>
-            {headerInlineControl ? <div className="shrink-0">{headerInlineControl}</div> : null}
-            <div className={cn("min-w-0 flex-1", useCompactPane ? "w-full text-center" : null)}>
+            <div className={cn("shrink-0", compactHeaderLayoutClass, useCompactPane ? "w-full max-w-5xl mx-auto" : null)}>
+              {headerInlineControl ? <div className="shrink-0">{headerInlineControl}</div> : null}
+              <div className={cn("min-w-0 flex-1", useCompactPane ? "w-full text-center" : null)}>
               <h2
                 className={cn(
                   useCompactPane ? "text-sm sm:text-base leading-tight" : isCompact ? "text-xl" : "text-2xl",
@@ -200,7 +211,12 @@ export function StepLayout({
           {feedbackPrompt ? <div className="shrink-0">{feedbackPrompt}</div> : null}
 
           <div className={contentViewportClassName}>
-            <div className={cn("flex min-h-full min-w-0 flex-col overflow-hidden", useCompactPane ? "justify-end" : "justify-start")}>
+            <div
+              className={cn(
+                "flex min-h-full min-w-0 flex-col overflow-hidden",
+                useCompactPane ? "w-full max-w-5xl mx-auto justify-end" : "justify-start"
+              )}
+            >
               {children}
             </div>
           </div>

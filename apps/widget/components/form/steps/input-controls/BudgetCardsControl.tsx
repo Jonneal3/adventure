@@ -32,7 +32,7 @@ export function BudgetCards({ value, onChange, options, className }: BudgetCards
             transition={{ delay: index * 0.05 }}
             onClick={() => onChange(opt)}
             className={cn(
-              "w-full text-left rounded-xl border-2 transition-all flex items-center justify-between",
+              "w-full text-left rounded-xl border transition-all flex items-center justify-between",
               isCompact ? "p-4" : "p-6",
               picked ? "border-primary bg-primary/5" : "border-muted/30 hover:bg-muted/5 bg-white"
             )}
