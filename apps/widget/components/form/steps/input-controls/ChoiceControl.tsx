@@ -217,8 +217,8 @@ export function Choice({
     const focusRing = withAlpha(primary, 0.35);
 
     return (
-      <div className={cn(isCompact ? "space-y-1.5" : "space-y-2.5")}>
-        <div className={cn("flex flex-wrap", isCompact ? "gap-1.5" : "gap-1.5 sm:gap-2")}>
+      <div className={cn(isCompact ? "mx-auto w-full max-w-3xl space-y-1.5 text-center" : "space-y-2.5")}>
+        <div className={cn("flex flex-wrap justify-center", isCompact ? "gap-1.5" : "gap-1.5 sm:gap-2")}>
           {options.map((option: string | UIOption, index: number) => {
             const picked = isSelected(option);
             const label = labelOf(option);
@@ -274,7 +274,7 @@ export function Choice({
 
         {allowOther && isSelected({ value: "other" }) && (
           <div
-            className="rounded-xl border p-3"
+            className="mx-auto w-full max-w-xl rounded-xl border p-3 text-left"
             style={{
               backgroundColor: "var(--form-surface-color, rgba(255,255,255,0.80))",
               borderColor: "var(--form-surface-border-color, rgba(0,0,0,0.10))",

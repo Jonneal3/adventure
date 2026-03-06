@@ -21,6 +21,8 @@ interface StepLayoutProps {
   feedbackPrompt?: React.ReactNode;
   headerInlineControl?: React.ReactNode;
   compactInPreview?: boolean;
+  /** When true and preview is not showing, use a wider max-width for more real estate (e.g. image grids) */
+  preferWideLayout?: boolean;
 }
 
 function getQuestion(step: any): string {
@@ -53,22 +55,28 @@ export function StepLayout({
   feedbackPrompt,
   headerInlineControl,
   compactInPreview = false,
+  preferWideLayout = false,
 }: StepLayoutProps) {
   const { theme } = useFormTheme();
   const density = useLayoutDensity();
   const isCompact = density === "compact";
   const useCompactPane = compactInPreview;
-  const useCompactPreviewPane = compactInPreview && actionsVariant === "icon_only";
   const question = getQuestion(step);
   const subtext = getSubtext(step);
   const resolvedContinueLabel = continueLabel || step?.blueprint?.presentation?.continue_label || "Continue";
   const disableContinue = Boolean(isLoading || !canContinue);
   const actionButtonClass = "h-9 min-w-[88px] px-3 text-xs font-semibold shrink-0";
   const iconButtonClass = "h-8 w-10 p-0 rounded-full";
+  const compactActionButtonClass = "h-8 min-w-[80px] px-2.5 text-[11px]";
+  const compactHeaderLayoutClass = useCompactPane
+    ? "flex flex-col items-center gap-1.5 text-center"
+    : headerInlineControl
+      ? "flex items-start justify-between gap-2"
+      : undefined;
   const contentViewportClassName = cn(
     "flex-1 min-h-0",
-    useCompactPane && actionsVariant !== "icon_only"
-      ? "overflow-y-auto overflow-x-hidden pr-1 sm:pr-2"
+    actionsVariant !== "icon_only"
+      ? "overflow-y-auto overflow-x-hidden pr-0.5 sm:pr-1"
       : "overflow-hidden",
     useCompactPane ? "rounded-lg" : null
   );
@@ -77,19 +85,24 @@ export function StepLayout({
     <div
       className={cn(
         "w-full mx-auto h-full min-h-0 overflow-hidden",
-        useCompactPane ? "max-w-none" : "max-w-5xl",
-        useCompactPane ? "px-2 py-2 sm:px-3 sm:py-3" : isCompact ? "px-4 py-4" : "px-4 py-6",
+        useCompactPane ? "max-w-[70rem]" : preferWideLayout ? "max-w-6xl" : "max-w-3xl",
+        useCompactPane ? "px-1.5 py-1.5 sm:px-2.5 sm:py-2" : isCompact ? "px-4 py-4" : "px-4 py-6",
         className
       )}
     >
       {actionsVariant === "icon_only" ? (
-        <div className={cn("grid h-full min-h-0 items-stretch", useCompactPane ? "grid-cols-[auto,minmax(0,1fr),auto] gap-2" : "grid-cols-[auto,minmax(0,1fr),auto] gap-3")}>
+        <div
+          className={cn(
+            "grid h-full min-h-0",
+            useCompactPane ? "grid-cols-[auto,minmax(0,1fr),auto] items-end gap-2" : "grid-cols-[auto,minmax(0,1fr),auto] items-stretch gap-3"
+          )}
+        >
           {canGoBack && onBack ? (
             <Button
               type="button"
               onClick={onBack}
               variant="outline"
-              className={cn(iconButtonClass, "shrink-0")}
+              className={cn(iconButtonClass, "shrink-0 self-end")}
               style={{
                 borderColor: "var(--form-surface-border-color, rgba(0,0,0,0.14))",
                 color: theme.textColor,
@@ -105,15 +118,17 @@ export function StepLayout({
           <div
             className={cn(
               "min-w-0 min-h-0 flex flex-col overflow-hidden",
-              useCompactPane ? "gap-2" : isCompact ? "gap-4" : "gap-6"
+              useCompactPane ? "justify-end gap-1.5" : isCompact ? "gap-4" : "gap-6"
             )}
           >
-            <div className={cn("shrink-0", headerInlineControl ? "flex items-start justify-between gap-2" : undefined)}>
-              <div className="min-w-0 flex-1">
+            <div className={cn("shrink-0", compactHeaderLayoutClass)}>
+              {headerInlineControl ? <div className="shrink-0">{headerInlineControl}</div> : null}
+              <div className={cn("min-w-0 flex-1", useCompactPane ? "w-full text-center" : null)}>
                 <h2
                   className={cn(
-                    useCompactPane ? "text-sm sm:text-base leading-tight" : isCompact ? "text-xl" : "text-2xl",
-                    "font-semibold min-w-0 break-words"
+                    useCompactPane ? "text-[13px] sm:text-sm leading-tight" : isCompact ? "text-xl" : "text-2xl",
+                    "font-semibold min-w-0 break-words",
+                    useCompactPane ? "text-center" : null
                   )}
                   style={{ color: theme.textColor, fontFamily: theme.fontFamily }}
                 >
@@ -123,7 +138,7 @@ export function StepLayout({
                   <p
                     className={cn(
                       "mt-1 opacity-80",
-                      useCompactPane ? "text-[11px] leading-tight line-clamp-2" : "text-sm"
+                      useCompactPane ? "text-[10px] leading-tight line-clamp-2 text-center" : "text-sm"
                     )}
                     style={{ color: theme.textColor, fontFamily: theme.fontFamily }}
                   >
@@ -131,11 +146,10 @@ export function StepLayout({
                   </p>
                 ) : null}
               </div>
-              {headerInlineControl ? <div className="shrink-0">{headerInlineControl}</div> : null}
             </div>
             {feedbackPrompt ? <div className={cn("shrink-0", useCompactPane ? "mt-1" : "mt-3")}>{feedbackPrompt}</div> : null}
             <div className={contentViewportClassName}>
-              <div className={cn("flex min-h-full min-w-0 flex-col overflow-hidden", useCompactPane ? "justify-center" : "justify-start")}>
+              <div className={cn("flex min-h-full min-w-0 flex-col overflow-hidden", useCompactPane ? "justify-end" : "justify-start")}>
                 {children}
               </div>
             </div>
@@ -144,7 +158,7 @@ export function StepLayout({
             type="button"
             onClick={onComplete}
             disabled={disableContinue}
-            className={cn(iconButtonClass, "shrink-0")}
+            className={cn(iconButtonClass, "shrink-0 self-end")}
             style={{
               backgroundColor: theme.buttonStyle?.backgroundColor || theme.primaryColor,
               color: theme.buttonStyle?.textColor || "#ffffff",
@@ -156,13 +170,15 @@ export function StepLayout({
           </Button>
         </div>
       ) : (
-        <div className={cn("flex h-full min-h-0 flex-col", useCompactPane ? "gap-3" : isCompact ? "gap-4" : "gap-6")}>
-          <div className={cn("shrink-0", headerInlineControl ? "flex items-start justify-between gap-2" : undefined)}>
-            <div className="min-w-0 flex-1">
+          <div className={cn("flex h-full min-h-0 flex-col", useCompactPane ? "gap-2 justify-end" : isCompact ? "gap-4" : "gap-6")}>
+          <div className={cn("shrink-0", compactHeaderLayoutClass)}>
+            {headerInlineControl ? <div className="shrink-0">{headerInlineControl}</div> : null}
+            <div className={cn("min-w-0 flex-1", useCompactPane ? "w-full text-center" : null)}>
               <h2
                 className={cn(
-                  useCompactPane ? "text-base sm:text-lg" : isCompact ? "text-xl" : "text-2xl",
-                  "font-semibold min-w-0 break-words"
+                  useCompactPane ? "text-sm sm:text-base leading-tight" : isCompact ? "text-xl" : "text-2xl",
+                  "font-semibold min-w-0 break-words",
+                  useCompactPane ? "text-center" : null
                 )}
                 style={{ color: theme.textColor, fontFamily: theme.fontFamily }}
               >
@@ -170,19 +186,21 @@ export function StepLayout({
               </h2>
               {subtext ? (
                 <p
-                  className={cn("mt-1 opacity-80", useCompactPane ? "text-xs sm:text-sm" : "text-sm")}
+                  className={cn(
+                    "mt-1 opacity-80",
+                    useCompactPane ? "text-[11px] sm:text-xs leading-tight text-center" : "text-sm"
+                  )}
                   style={{ color: theme.textColor, fontFamily: theme.fontFamily }}
                 >
                   {subtext}
                 </p>
               ) : null}
             </div>
-            {headerInlineControl ? <div className="shrink-0">{headerInlineControl}</div> : null}
           </div>
           {feedbackPrompt ? <div className="shrink-0">{feedbackPrompt}</div> : null}
 
           <div className={contentViewportClassName}>
-            <div className={cn("flex min-h-full min-w-0 flex-col overflow-hidden", useCompactPane ? "justify-start" : "justify-start")}>
+            <div className={cn("flex min-h-full min-w-0 flex-col overflow-hidden", useCompactPane ? "justify-end" : "justify-start")}>
               {children}
             </div>
           </div>
@@ -190,6 +208,7 @@ export function StepLayout({
           <div
             className={cn(
               "flex min-w-0 justify-center gap-2.5 shrink-0",
+              useCompactPane ? "mt-auto pt-1" : null,
               actionsVariant === "sticky_mobile"
                 ? "sticky bottom-2 z-10 rounded-xl border p-2 bg-[var(--form-surface-color)] border-[color:var(--form-surface-border-color)]"
                 : null
@@ -200,7 +219,7 @@ export function StepLayout({
                 type="button"
                 onClick={onBack}
                 variant="outline"
-                className={actionButtonClass}
+                className={cn(actionButtonClass, useCompactPane ? compactActionButtonClass : null)}
                 style={{
                   borderColor: theme.primaryColor,
                   color: theme.primaryColor,
@@ -215,7 +234,7 @@ export function StepLayout({
               type="button"
               onClick={onComplete}
               disabled={disableContinue}
-              className={actionButtonClass}
+                className={cn(actionButtonClass, useCompactPane ? compactActionButtonClass : null)}
               style={{
                 backgroundColor: theme.buttonStyle?.backgroundColor || theme.primaryColor,
                 color: theme.buttonStyle?.textColor || "#ffffff",

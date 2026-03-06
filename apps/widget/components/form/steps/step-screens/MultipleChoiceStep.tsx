@@ -77,7 +77,13 @@ export function MultipleChoiceStep({
       actionsVariant={actionsVariant}
       compactInPreview={compactInPreview}
     >
-      <div className={compactInPreview ? "flex h-full min-h-0 flex-col justify-center overflow-y-auto overflow-x-hidden pr-1" : undefined}>
+      <div
+        className={
+          compactInPreview
+            ? "flex h-full min-h-0 w-full flex-col justify-end overflow-y-auto overflow-x-hidden pr-1 [&>div]:mx-0 [&>div]:max-w-none [&>div]:w-full [&>div]:text-left [&>div>div]:mx-0 [&>div>div:first-child]:w-full [&>div>div:first-child]:justify-start"
+            : "w-full [&>div]:w-full [&>div]:text-left [&>div>div]:mx-0 [&>div>div:first-child]:w-full [&>div>div:first-child]:justify-start"
+        }
+      >
         <Choice
           step={step as any}
           stepData={value}

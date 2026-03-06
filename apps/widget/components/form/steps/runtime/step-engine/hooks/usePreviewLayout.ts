@@ -15,7 +15,6 @@ export function usePreviewLayout({
 }: UsePreviewLayoutParams) {
   const [previewMaxPx, setPreviewMaxPx] = useState<number | null>(null);
   const [questionScale, setQuestionScale] = useState(1);
-  const lockedPreviewMaxPxRef = useRef<number | null>(null);
   const hasPreview = previewEnabled;
   const previewRailOpen = previewEnabled;
 
@@ -51,7 +50,6 @@ export function usePreviewLayout({
     if (!previewEnabled) {
       setPreviewMaxPx(null);
       setQuestionScale(1);
-      lockedPreviewMaxPxRef.current = null;
       return;
     }
 
@@ -62,15 +60,16 @@ export function usePreviewLayout({
       const columnHeight = columnEl.clientHeight;
       const previewViewportHeight = previewViewportEl?.clientHeight ?? 0;
       const measuredPreviewHeight =
-        previewViewportHeight > 0 ? previewViewportHeight : Math.max(0, Math.floor(columnHeight * DOMINANT_PREVIEW_SHARE));
+        previewViewportHeight > 0
+          ? previewViewportHeight
+          : Math.max(0, Math.floor(columnHeight * DOMINANT_PREVIEW_SHARE));
       if (measuredPreviewHeight <= 0) return;
 
       const safetyPx = 12;
       const nextPreviewMaxPx = Math.max(0, Math.floor(measuredPreviewHeight - safetyPx));
-      lockedPreviewMaxPxRef.current = null;
       setPreviewMaxPx((prev) => {
         if (prev === null) return nextPreviewMaxPx;
-        return Math.abs(prev - nextPreviewMaxPx) < 8 ? prev : nextPreviewMaxPx;
+        return Math.abs(prev - nextPreviewMaxPx) < 2 ? prev : nextPreviewMaxPx;
       });
       setQuestionScale(1);
       return;
@@ -84,7 +83,9 @@ export function usePreviewLayout({
     if (columnHeight <= 0) return;
     if (!contentEl) {
       const fallbackPreview = Math.max(0, Math.floor(columnHeight * 0.65) - 24);
-      setPreviewMaxPx((prev) => (prev === null ? fallbackPreview : Math.abs(prev - fallbackPreview) < 12 ? prev : fallbackPreview));
+      setPreviewMaxPx((prev) =>
+        prev === null ? fallbackPreview : Math.abs(prev - fallbackPreview) < 2 ? prev : fallbackPreview
+      );
       return;
     }
 
@@ -94,28 +95,21 @@ export function usePreviewLayout({
     const totalAvailable = Math.max(0, Math.floor(columnHeight - gapPx - safetyPx));
 
     if (contentHeight <= 0) {
-      lockedPreviewMaxPxRef.current = null;
       const fallbackPreview = Math.min(totalAvailable, 520);
       setPreviewMaxPx((prev) => {
         if (prev === null) return fallbackPreview;
-        return Math.abs(prev - fallbackPreview) < 12 ? prev : fallbackPreview;
+        return Math.abs(prev - fallbackPreview) < 2 ? prev : fallbackPreview;
       });
       setQuestionScale(1);
       return;
     }
 
-    const locked = lockedPreviewMaxPxRef.current;
-    const nextPreviewMaxRaw = typeof locked === "number" ? locked : Math.max(0, Math.floor(totalAvailable - contentHeight));
-    const nextPreviewMax = Math.min(totalAvailable, Math.max(0, nextPreviewMaxRaw));
+    const nextPreviewMax = Math.min(totalAvailable, Math.max(0, Math.floor(totalAvailable - contentHeight)));
     const roundedPreview = Math.round(nextPreviewMax);
-
-    if (lockedPreviewMaxPxRef.current === null && roundedPreview > 0) {
-      lockedPreviewMaxPxRef.current = roundedPreview;
-    }
 
     setPreviewMaxPx((prev) => {
       if (prev === null) return roundedPreview;
-      return Math.abs(prev - roundedPreview) < 12 ? prev : roundedPreview;
+      return Math.abs(prev - roundedPreview) < 2 ? prev : roundedPreview;
     });
     setQuestionScale(1);
   }, [previewEnabled, useDesktopPreviewLayout, usePreviewDominantLayout]);
@@ -129,16 +123,18 @@ export function usePreviewLayout({
     if (typeof ResizeObserver === "undefined") return;
 
     const targets: Element[] = [];
-    if (usePreviewDominantLayout || useDesktopPreviewLayout) {
-      const columnEl = previewColumnRef.current;
-      if (!columnEl) return;
-      targets.push(columnEl);
-    } else {
-      const columnEl = previewColumnRef.current;
-      const contentEl = questionContentRef.current;
-      if (!columnEl || !contentEl) return;
-      targets.push(columnEl, contentEl);
-    }
+    const columnEl = previewColumnRef.current;
+    const previewViewportEl = previewViewportRef.current;
+    const contentEl = questionContentRef.current;
+
+    if (columnEl) targets.push(columnEl);
+    // Always observe the preview viewport — its flex-1 height changes whenever
+    // the question pane grows or shrinks, and we need to recompute immediately.
+    if (previewViewportEl) targets.push(previewViewportEl);
+    // Always observe the question content so pane height changes are caught.
+    if (contentEl) targets.push(contentEl);
+
+    if (targets.length === 0) return;
 
     let raf = 0;
     const schedule = () => {

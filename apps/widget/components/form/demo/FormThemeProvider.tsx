@@ -196,7 +196,8 @@ export function FormThemeProvider({ config, children }: FormThemeProviderProps) 
           backgroundSize: backgroundImage ? "cover" : undefined,
           backgroundPosition: backgroundImage ? "center" : undefined,
           backgroundRepeat: backgroundImage ? "no-repeat" : undefined,
-          minHeight: "100vh",
+          height: "100%",
+          minHeight: "100dvh",
         }}
       >
         {children}

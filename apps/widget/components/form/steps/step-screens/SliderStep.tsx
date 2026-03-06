@@ -97,7 +97,7 @@ export function SliderStep({
     >
       <div
         className={cn(
-          compactInPreview ? "flex h-full min-h-0 flex-col justify-center overflow-y-auto py-2 pr-1 space-y-2.5" : null,
+          compactInPreview ? "mx-auto flex h-full min-h-0 w-full max-w-2xl flex-col justify-end overflow-y-auto py-2 pr-1 space-y-2.5" : null,
           !compactInPreview && (isCompact ? "py-3 space-y-3" : "py-5 sm:py-8 space-y-4 sm:space-y-6")
         )}
       >

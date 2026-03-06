@@ -135,8 +135,9 @@ export function ImageChoiceGridStep({
       headerInlineControl={headerInlineControl}
       actionsVariant={actionsVariant}
       compactInPreview={compactInPreview}
+      preferWideLayout={!compactInPreview}
     >
-      <div className="flex h-full min-h-0 w-full min-w-0 flex-col overflow-hidden">
+      <div className={compactInPreview ? "mx-auto flex h-full min-h-0 w-full max-w-4xl min-w-0 flex-col overflow-hidden" : "flex min-h-0 w-full min-w-0 flex-col"}>
         <ImageChoiceGrid
           value={value}
           onChange={setValue}

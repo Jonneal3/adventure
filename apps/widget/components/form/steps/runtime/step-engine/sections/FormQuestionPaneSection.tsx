@@ -100,7 +100,8 @@ export function FormQuestionSection({
 }: FormQuestionSectionProps) {
   const showPromptControls = Boolean(previewEnabled && previewHasImage && !isRefinementUploadStep);
   const usePreviewPaneLayout = Boolean(previewEnabled && previewHasImage && usePreviewDominantLayout);
-  const useCompactNav = Boolean(usePreviewPaneLayout && showQuestionPaneUnderPreview && isMobileViewport);
+  const useBottomDockLayout = Boolean(usePreviewPaneLayout && showQuestionPaneUnderPreview && isMobileViewport);
+  const useCompactNav = useBottomDockLayout;
   const promptText = promptDraft.trim();
   const canGoBack = (state?.currentStepIndex || 0) > 0;
   const inputModeToggle = showPromptControls ? (
@@ -141,30 +142,36 @@ export function FormQuestionSection({
           className={cn(
             "relative flex w-full min-h-0 flex-col overflow-hidden",
             usePreviewPaneLayout
-              ? (isMobileViewport ? "h-full shrink-0 sticky bottom-0 z-20 backdrop-blur" : "h-full shrink-0")
+              ? (
+                  useBottomDockLayout
+                    ? "h-full shrink-0 border-t border-[color:var(--form-surface-border-color)] bg-[var(--form-surface-color)]"
+                    : "h-full shrink-0"
+                )
               : "flex-1"
           )}
           style={undefined}
         >
           <div
             className={cn(
-              "flex h-full min-h-0 flex-col overflow-hidden",
-              useCompactNav ? "justify-center" : null,
+              useBottomDockLayout ? "flex h-full min-h-0 flex-col overflow-hidden" : "flex h-full min-h-0 flex-col overflow-hidden",
+              useBottomDockLayout ? "justify-end" : useCompactNav ? "justify-center" : null,
               usePreviewPaneLayout && !showQuestionPaneUnderPreview ? "max-h-0" : null
             )}
           >
             <div
               ref={questionContentRef}
               className={cn(
-                "mx-auto flex h-full min-h-0 w-full flex-col overflow-hidden",
-                usePreviewPaneLayout ? "max-w-none" : "max-w-5xl"
+                useBottomDockLayout
+                  ? "mx-auto flex h-full min-h-0 w-full flex-col overflow-hidden"
+                  : "mx-auto flex h-full min-h-0 w-full flex-col overflow-hidden",
+                usePreviewPaneLayout ? "max-w-[76rem]" : "max-w-6xl"
               )}
             >
               <div
                 className={cn(
                   "flex min-h-0 flex-1 flex-col overflow-hidden",
-                  useCompactNav ? "justify-center" : null,
-                  usePreviewPaneLayout ? "px-1" : null
+                  useBottomDockLayout ? "justify-end" : useCompactNav ? "justify-center" : null,
+                  usePreviewPaneLayout ? "px-1 sm:px-2" : null
                 )}
                 style={
                   !usePreviewPaneLayout && questionScale < 0.999
@@ -324,12 +331,8 @@ export function FormQuestionSection({
                         transition={{ duration: 0.18, ease: "easeOut" }}
                         className="w-full min-h-0 flex flex-col"
                       >
-                        <div className="w-full max-w-5xl mx-auto px-3 py-2.5 sm:px-4 sm:py-3">
-                          {inputModeToggle ? (
-                            <div className="mb-2.5 flex justify-end">
-                              {inputModeToggle}
-                            </div>
-                          ) : null}
+                        <div className="w-full max-w-[68rem] mx-auto px-2.5 py-2 sm:px-3 sm:py-2.5">
+                          {inputModeToggle ? <div className="mb-2 flex justify-center">{inputModeToggle}</div> : null}
                           {useCompactNav ? (
                             <div className="flex items-center gap-3 min-w-0">
                               {canGoBack ? (

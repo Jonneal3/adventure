@@ -2721,8 +2721,10 @@ export function StepEngine({
   const previewRailActive = previewEnabled;
   const density = previewRailActive ? "compact" : "normal";
   const desktopQuestionMinHeight = "clamp(300px, 36dvh, 520px)";
-  const previewSectionBasis = isMobileViewport ? "80%" : "47%";
-  const questionSectionBasis = isMobileViewport ? "20%" : "53%";
+  const previewSectionBasis = "47%";
+  const questionSectionBasis = "53%";
+  const mobilePreviewSectionBasis = "70%";
+  const mobileQuestionSectionBasis = "30%";
   useEffect(() => {
     if (!previewEnabled) setPreviewVisible(false);
   }, [previewEnabled]);
@@ -2791,8 +2793,15 @@ export function StepEngine({
     }
     const capturedId = previewGenerationStepIdRef.current;
     const currentId = String(currentStep?.id || "");
-    if (!capturedId || !currentId || currentId !== capturedId) {
+    if (!capturedId) {
       setPreviewQuestionRevealReady(true);
+      return;
+    }
+    if (!currentId || currentId === capturedId) {
+      // Keep the lower question pane hidden while we're still sitting on the
+      // same pre-preview step. This prevents stale content (for example the
+      // old budget question) from flashing back in before the next step arrives.
+      setPreviewQuestionRevealReady(false);
       return;
     }
     setPreviewQuestionRevealReady(true);
@@ -2943,8 +2952,7 @@ export function StepEngine({
 	      {/* Header always owns its height budget so the body starts below it. */}
 	      <div
           className={cn(
-            "z-50 shrink-0 backdrop-blur",
-            headerVisible ? "border-b border-[color:var(--form-surface-border-color,rgba(0,0,0,0.08))]" : null
+            "z-50 shrink-0 backdrop-blur"
           )}
           style={{ backgroundColor: "var(--form-surface-color, rgba(255,255,255,0.85))" }}
         >
@@ -3018,12 +3026,12 @@ export function StepEngine({
       </div>
 
 	      {/* Main body inherits the post-header height budget. */}
-	      <main className="relative flex flex-1 min-h-0 items-stretch justify-center overflow-hidden px-2 pb-2 pt-2 sm:px-3 sm:pb-3 sm:pt-3">
+	      <main className="relative flex flex-1 min-h-0 items-stretch justify-center overflow-hidden px-2 pb-0 pt-2 sm:px-3 sm:pb-3 sm:pt-3">
 		        <div className="mx-auto h-full min-h-0 w-full max-w-[92rem] overflow-hidden">
           <motion.div
               ref={previewColumnRef}
 				              className={cn(
-				                "flex h-full min-h-0 max-h-full flex-col overflow-hidden",
+				                "relative flex h-full min-h-0 max-h-full flex-col overflow-hidden",
 				                previewLayoutActive
                               ? (isMobileViewport ? "gap-0" : "gap-3")
                               : usePreviewDominantLayout
@@ -3039,16 +3047,8 @@ export function StepEngine({
                       ref={previewViewportRef}
                       className={cn(
                         "flex min-h-0 flex-col overflow-hidden",
-                        previewLayoutActive ? "shrink-0" : "shrink-0"
+                        previewLayoutActive ? "flex-1 min-h-0" : "shrink-0"
                       )}
-                      style={
-                        previewLayoutActive
-                          ? {
-                              flexBasis: previewSectionBasis,
-                              minHeight: isMobileViewport ? undefined : 0,
-                            }
-                          : undefined
-                      }
                     >
                       <PreviewSection
                         adventureInputMode={adventureInputMode}
@@ -3078,17 +3078,11 @@ export function StepEngine({
                   <div
                     className={cn(
                       previewLayoutActive
-                        ? "mt-auto min-h-0 shrink-0 pb-0.5 sm:pb-1"
-                        : "flex-1 min-h-0"
+                        ? isMobileViewport
+                          ? "shrink-0 pb-[max(env(safe-area-inset-bottom),8px)]"
+                          : "shrink-0 pb-0.5 sm:pb-1"
+                        : "flex flex-col flex-1 min-h-0"
                     )}
-                    style={
-                      previewLayoutActive
-                        ? {
-                            flexBasis: questionSectionBasis,
-                            minHeight: isMobileViewport ? undefined : desktopQuestionMinHeight,
-                          }
-                        : undefined
-                    }
                   >
                     <FormQuestionSection
                       config={config}

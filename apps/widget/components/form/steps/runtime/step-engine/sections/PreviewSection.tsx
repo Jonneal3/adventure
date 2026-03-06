@@ -104,13 +104,6 @@ export function PreviewSection({
             onHasImageChange={setPreviewHasImage}
             variant="hero"
             previewMaxPx={previewMaxPx ?? undefined}
-            previewMaxVh={
-              useMobilePreviewLayout
-                ? 80
-                : useDesktopPreviewLayout
-                  ? 48
-                  : 78
-            }
             previewChromePx={8}
             suppressUploadOverlay={isRefinementUploadStep}
           />
