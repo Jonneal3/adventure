@@ -1,0 +1,107 @@
+[
+  {
+    "context": {"service_summary": "Kitchen remodel: cabinets, countertops, layout. Mid-range finishes.", "industry": "Remodeling", "service": "Kitchen Remodeling"},
+    "image_price_range": {"low": 28000, "high": 52000},
+    "service_price_range": {"low": 3000, "high": 350000}
+  },
+  {
+    "context": {"service_summary": "Bathroom refresh: vanity, fixtures, flooring. No tub/shower change.", "industry": "Remodeling", "service": "Bathroom Remodel"},
+    "image_price_range": {"low": 9500, "high": 22000},
+    "service_price_range": {"low": 2000, "high": 250000}
+  },
+  {
+    "context": {"service_summary": "Full bathroom remodel: new vanity, tub/shower, tile, fixtures. Mid to high-end finishes.", "industry": "Remodeling", "service": "Bathroom Remodeling"},
+    "image_price_range": {"low": 32000, "high": 55000},
+    "service_price_range": {"low": 5000, "high": 150000}
+  },
+  {
+    "context": {"service_summary": "Replace asphalt shingle roof. Single-family home.", "industry": "Roofing", "service": "Roof Replacement"},
+    "image_price_range": {"low": 9000, "high": 18000},
+    "service_price_range": {"low": 3000, "high": 500000}
+  },
+  {
+    "context": {"service_summary": "Backyard landscaping: sod, irrigation, paver patio, plants.", "industry": "Landscaping", "service": "Landscape Design"},
+    "image_price_range": {"low": 6000, "high": 14000},
+    "service_price_range": {"low": 2000, "high": 400000}
+  },
+  {
+    "context": {"service_summary": "HVAC replacement: central AC + furnace. Single-family home.", "industry": "HVAC", "service": "HVAC Replacement"},
+    "image_price_range": {"low": 7000, "high": 15000},
+    "service_price_range": {"low": 2000, "high": 75000}
+  },
+  {
+    "context": {"service_summary": "Pool design and build. In-ground pool, basic finish.", "industry": "Pool & Spa", "service": "Pool Build"},
+    "image_price_range": {"low": 45000, "high": 85000},
+    "service_price_range": {"low": 8000, "high": 500000}
+  },
+  {
+    "context": {"service_summary": "Patio or deck addition. Composite or wood decking.", "industry": "Outdoor", "service": "Patio / Deck"},
+    "image_price_range": {"low": 12000, "high": 35000},
+    "service_price_range": {"low": 3000, "high": 175000}
+  },
+  {
+    "context": {"service_summary": "Interior design: living room refresh. Furniture and styling.", "industry": "Interior Design", "service": "Living Room"},
+    "image_price_range": {"low": 4000, "high": 12000},
+    "service_price_range": {"low": 1000, "high": 250000}
+  },
+  {
+    "context": {"service_summary": "Full kitchen and bath remodel. High-end finishes.", "industry": "Remodeling", "service": "Full Remodel"},
+    "image_price_range": {"low": 55000, "high": 95000},
+    "service_price_range": {"low": 5000, "high": 600000}
+  },
+  {
+    "context": {"service_summary": "Exterior lighting design. Pathway, facade, landscape lighting.", "industry": "Lighting", "service": "Exterior Lighting"},
+    "image_price_range": {"low": 8000, "high": 22000},
+    "service_price_range": {"low": 2000, "high": 250000}
+  },
+  {
+    "context": {"service_summary": "Flooring: hardwood or LVP. Whole main level.", "industry": "Flooring", "service": "Flooring Install"},
+    "image_price_range": {"low": 8000, "high": 18000},
+    "service_price_range": {"low": 1500, "high": 125000}
+  },
+  {
+    "context": {"service_summary": "Custom ring design. Engagement or wedding band.", "industry": "Jewelry", "service": "Custom Ring"},
+    "image_price_range": {"low": 2500, "high": 8000},
+    "service_price_range": {"low": 300, "high": 150000}
+  },
+  {
+    "context": {"service_summary": "Tiny home interior design. Space planning and finishes.", "industry": "Tiny Home", "service": "Interior Design"},
+    "image_price_range": {"low": 5000, "high": 15000},
+    "service_price_range": {"low": 1000, "high": 150000}
+  },
+  {
+    "context": {"service_summary": "Guest bath refresh. Modern vanity, tile, fixtures.", "industry": "Remodeling", "service": "Bathroom Remodel"},
+    "image_price_range": {"low": 7000, "high": 16000},
+    "service_price_range": {"low": 2000, "high": 250000}
+  },
+  {
+    "context": {"service_summary": "Driveway replacement or new concrete. Residential.", "industry": "Concrete", "service": "Driveway"},
+    "image_price_range": {"low": 6000, "high": 18000},
+    "service_price_range": {"low": 2000, "high": 100000}
+  },
+  {
+    "context": {"service_summary": "Siding replacement. Vinyl or fiber cement.", "industry": "Siding", "service": "Siding Replacement"},
+    "image_price_range": {"low": 14000, "high": 28000},
+    "service_price_range": {"low": 4000, "high": 85000}
+  },
+  {
+    "context": {"service_summary": "Window replacement. Double-pane, standard install.", "industry": "Windows", "service": "Window Replacement"},
+    "image_price_range": {"low": 6000, "high": 14000},
+    "service_price_range": {"low": 1500, "high": 75000}
+  },
+  {
+    "context": {"service_summary": "Interior paint. Whole house, walls and trim.", "industry": "Painting", "service": "Interior Painting"},
+    "image_price_range": {"low": 3500, "high": 9000},
+    "service_price_range": {"low": 500, "high": 75000}
+  },
+  {
+    "context": {"service_summary": "Pool area refresh. Coping, tile, deck around pool.", "industry": "Pool & Spa", "service": "Pool Remodel"},
+    "image_price_range": {"low": 18000, "high": 45000},
+    "service_price_range": {"low": 8000, "high": 450000}
+  },
+  {
+    "context": {"service_summary": "Home office design. Built-ins, desk, lighting.", "industry": "Interior Design", "service": "Home Office"},
+    "image_price_range": {"low": 4000, "high": 14000},
+    "service_price_range": {"low": 1000, "high": 200000}
+  }
+]

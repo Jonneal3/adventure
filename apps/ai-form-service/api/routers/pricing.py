@@ -49,6 +49,12 @@ def register(router: APIRouter, compat_router: APIRouter) -> None:
             )
 
         body = parsed.model_dump(by_alias=True, exclude_none=True)
+        # Preserve previewImageUrl from raw payload (not in NewBatchRequest; used for VLM pricing).
+        for key in ("previewImageUrl", "preview_image_url", "imageUrl", "image_url"):
+            val = payload.get(key) if isinstance(payload, dict) else None
+            if val is not None and val != "":
+                body["previewImageUrl"] = val
+                break
         adapted = to_next_steps_payload(instance_id=instanceId, body=body)
         resp = estimate_pricing(adapted)
         status = http_status_for_pipeline_response(resp)

@@ -85,6 +85,16 @@ function withAlpha(color: string | undefined, alpha: number): string {
   return `color-mix(in srgb, ${c} ${pct}%, transparent)`;
 }
 
+function darkenHex(hex: string, mixBlack: number): string {
+  const h = String(hex || '').replace('#', '').trim();
+  const full = h.length === 3 ? h.split('').map((c) => c + c).join('') : h;
+  if (full.length !== 6) return hex;
+  const r = Math.round(parseInt(full.slice(0, 2), 16) * (1 - mixBlack));
+  const g = Math.round(parseInt(full.slice(2, 4), 16) * (1 - mixBlack));
+  const b = Math.round(parseInt(full.slice(4, 6), 16) * (1 - mixBlack));
+  return `#${[r, g, b].map((x) => Math.max(0, Math.min(255, x)).toString(16).padStart(2, '0')).join('')}`;
+}
+
 function maskedLockedParts(_value: string | undefined | null): { prefix: string; masked: string } {
   // Intentional, consistent mask: "$1" + "XXXXX" (only X's are blurred in UI)
   return { prefix: '$1', masked: 'XXXXX' };
@@ -156,8 +166,8 @@ const PricingPill = React.forwardRef<HTMLButtonElement, PricingPillProps>(functi
   const topLabel = (label && String(label).trim()) ? String(label).trim() : (canShowPricingAction ? 'Estimate' : 'Pricing');
   const base = accent || '#0f172a';
   const tagBg = withAlpha(accent || base, 1);
-  // When transparentBackground, use accent for outer bg so we match parent pill color exactly (no transparency quirks)
-  const outerBg = transparentBackground ? (accent || tagBg) : tagBg;
+  // When transparentBackground, parent provides the bg — stay fully transparent to avoid double-layer/halo
+  const outerBg = transparentBackground ? 'transparent' : tagBg;
 
   return (
     <div
@@ -192,7 +202,11 @@ const PricingPill = React.forwardRef<HTMLButtonElement, PricingPillProps>(functi
           'min-w-[140px]',
           className
         )}
-        style={{ ...(propsStyle || {}), color: '#fff' }}
+        style={{
+          ...(propsStyle || {}),
+          color: '#fff',
+          ...(transparentBackground && propsStyle?.backgroundColor ? { backgroundColor: 'transparent' } : {}),
+        }}
         {...props}
       >
         {!revealed ? (
@@ -511,12 +525,16 @@ function PricingExperiencePanel(props: PricingExperiencePanelProps) {
                     onOpenChange={setShowUnlockGate}
                     instanceId={instanceId}
                     sessionId={sessionId}
-	                    gateContext={gateContext}
-	                    title="Your personalized estimate is ready"
-	                    description="Enter your email to see pricing and download options"
-	                    finePrint="Instant unlock after sending."
-	                    ctaLabel="Unlock My Estimate"
-	                    requirePhone
+                    gateContext={gateContext}
+                    surface="overlay"
+                    contentStyle={{
+                      ["--sif-lead-gen-overlay-bg" as any]: withAlpha(darkenHex(primaryColor, 0.4), 0.85),
+                    }}
+                    title="Your personalized estimate is ready"
+                    description="Enter your email to see pricing and download options"
+                    finePrint="Instant unlock after sending."
+                    ctaLabel="Unlock My Estimate"
+                    requirePhone
                     submitOnEmail={false}
                     enableExitIntentSubmit
                     phoneTitle="Best phone number?"

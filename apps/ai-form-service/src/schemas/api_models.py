@@ -183,6 +183,15 @@ class FormResponse(BaseModel):
     mini_steps: List[Dict[str, Any]] = Field(default_factory=list, alias="miniSteps")
 
 
+class ServicePriceRange(BaseModel):
+    """Typical price range for a service type (e.g., Landscape $5k-$175k)."""
+
+    model_config = ConfigDict(extra="allow", populate_by_name=True)
+
+    low: int = 0
+    high: int = 0
+
+
 class PricingResponse(BaseModel):
     """
     Response for `POST /v1/api/pricing/{instanceId}`.
@@ -195,6 +204,7 @@ class PricingResponse(BaseModel):
     range_low: int = Field(alias="rangeLow")
     range_high: int = Field(alias="rangeHigh")
     confidence: str = Field(default="low")
+    service_price_range: Optional[ServicePriceRange] = Field(default=None, alias="servicePriceRange")
 
 
 class ExecuteFunctionRequest(BaseModel):

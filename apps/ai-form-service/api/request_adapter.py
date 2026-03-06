@@ -45,6 +45,20 @@ def to_next_steps_payload(*, instance_id: str, body: Dict[str, Any]) -> Dict[str
             or {}
         )
 
+    # Merge top-level budgetRange into stepDataSoFar so server-side prompt logic has budget.
+    step_data = out.get("stepDataSoFar")
+    if isinstance(step_data, dict):
+        budget_raw = out.get("budgetRange") or out.get("budget_range") or out.get("budget")
+        if budget_raw is not None and budget_raw != "":
+            try:
+                budget_val = int(float(str(budget_raw)))
+            except (TypeError, ValueError):
+                budget_val = str(budget_raw)
+            for key in ("budget_range", "budgetRange", "step-budget-range"):
+                if key not in step_data or step_data.get(key) in (None, ""):
+                    step_data = {**step_data, key: budget_val}
+            out["stepDataSoFar"] = step_data
+
     if "askedStepIds" not in out:
         out["askedStepIds"] = (
             out.get("alreadyAskedKeys")
@@ -66,6 +80,14 @@ def to_next_steps_payload(*, instance_id: str, body: Dict[str, Any]) -> Dict[str
         ctx = state.get("context")
         if isinstance(ctx, dict):
             out["instanceContext"] = ctx
+
+    # Pass through preview image URL for pricing (VLM analyzes the image when present).
+    for key in ("previewImageUrl", "preview_image_url", "imageUrl", "image_url"):
+        val = out.get(key)
+        if val is not None and val != "":
+            if "previewImageUrl" not in out:
+                out["previewImageUrl"] = val
+            break
 
     return out
 

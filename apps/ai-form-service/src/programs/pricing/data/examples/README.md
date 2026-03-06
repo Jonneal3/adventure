@@ -1,38 +1,15 @@
 # Pricing examples
 
-This folder contains **example inputs + outputs** for the pricing estimator.
+Pricing few-shot examples live in the parent directory:
 
-## Input shape
+- **[../pricing_examples.json](../pricing_examples.json)** — Single consolidated JSON array of ~20 examples (industry-agnostic). Used by the VLM in `replicate_vlm.py` for few-shot prompting. Each item has `context` (service_summary, industry, service), `image_price_range`, and `service_price_range` (intentionally wide ranges, e.g. $5k–$150k).
 
-These examples are shaped like the request body for:
+The old per-file examples (example_01_*.json through example_05_*.json) were removed in favor of that single file.
 
-- `POST /v1/api/pricing/{instanceId}`
+## API output shape (frontend contract)
 
-The endpoint accepts the same shapes as step generation (see `NewBatchRequest`), including:
+The pricing API response includes:
 
-- top-level `sessionId`
-- `stepDataSoFar` (answers)
-- optional `answeredQA` (plain-English memory)
-- optional `instanceContext` (industry/service)
-- optional `serviceSummary` / `companySummary`
-
-## Output shape (frontend contract)
-
-The stable fields to consume from the pricing API response are:
-
-```json
-{
-  "ok": true,
-  "requestId": "pricing_1730000000000",
-  "currency": "USD",
-  "rangeLow": 12000,
-  "rangeHigh": 28000,
-  "confidence": "low"
-}
-```
-
-Notes:
-
-- `rangeLow` / `rangeHigh` are **integers** (minor units are not used; treat as whole dollars).
-- The response may include extra keys (`basis`, `notes`, `inputs`) for debugging/telemetry; clients should ignore unknown fields.
-
+- `rangeLow` / `rangeHigh` — integers, whole dollars (image/design estimate).
+- `servicePriceRange` — optional `{ low, high }` for the full typical range for the service type.
+- `currency`, `confidence`, `requestId`, etc.

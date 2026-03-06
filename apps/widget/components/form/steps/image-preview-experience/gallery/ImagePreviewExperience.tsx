@@ -463,7 +463,18 @@ export function ImagePreviewExperience(props: {
   const promptSubmitNonceInitializedRef = useRef(false);
   const previewRefreshNonceRef = useRef<number>(0);
   const pendingManualGenerateRef = useRef(false);
-  const [accuratePricing, setAccuratePricing] = useState<null | { totalMin: number; totalMax: number; currency: string }>(null);
+  const pendingBudgetRefineRef = useRef(false);
+  const prevRunsLengthRef = useRef(0);
+  const fetchAccuratePricingRef = useRef<() => Promise<void>>(null);
+  const [accuratePricing, setAccuratePricing] = useState<null | {
+    totalMin: number;
+    totalMax: number;
+    currency: string;
+    /** Image-specific price range (for this design). Used for budget slider bounds. */
+    imagePriceRange?: { low: number; high: number };
+    /** Typical service price range (e.g. Landscape $5k–$175k). For validation/display. */
+    servicePriceRange?: { low: number; high: number };
+  }>(null);
   const [accuratePricingStatus, setAccuratePricingStatus] = useState<"idle" | "running" | "complete" | "error">("idle");
   const [liveBudget, setLiveBudget] = useState<number | null>(() => extractBudgetValue(stepDataSoFar || {}));
   const [liveBudgetDirty, setLiveBudgetDirty] = useState(false);
@@ -997,6 +1008,7 @@ export function ImagePreviewExperience(props: {
           return next;
         });
       } catch (e) {
+        pendingBudgetRefineRef.current = false;
         const message = e instanceof Error ? e.message : "Failed to generate preview.";
         const details =
           e && typeof e === "object" && "details" in e && typeof (e as any).details === "string"
@@ -1224,6 +1236,7 @@ export function ImagePreviewExperience(props: {
   const showRefreshMask = Boolean(hero && busy);
   const leadGateActive = leadGateEnabled && Boolean(hero) && !leadCaptured;
   const canUseLiveBudgetSlider = !leadGateEnabled || leadCaptured;
+  const hasBudgetRangeLoaded = accuratePricingStatus !== "running";
   const formattedLoaderCountdown = useMemo(() => {
     const safe = Math.max(0, Math.floor(IMAGE_GENERATION_ESTIMATED_SECONDS - loaderElapsedSec));
     const minutes = String(Math.floor(safe / 60)).padStart(2, "0");
@@ -1321,8 +1334,11 @@ export function ImagePreviewExperience(props: {
 
   const budgetSliderBounds = useMemo(() => {
     const previewPricingSeed = buildPreviewPricingFromConfig((config as any)?.previewPricing, sessionId);
-    const sourceMin = accuratePricing?.totalMin ?? previewPricingSeed?.totalMin ?? 2000;
-    const sourceMax = accuratePricing?.totalMax ?? previewPricingSeed?.totalMax ?? 50000;
+    // Slider uses service price range (wider) only; never image range (totalMin/totalMax)
+    const sourceMin =
+      accuratePricing?.servicePriceRange?.low ?? previewPricingSeed?.totalMin ?? 2000;
+    const sourceMax =
+      accuratePricing?.servicePriceRange?.high ?? previewPricingSeed?.totalMax ?? 50000;
     const min = Math.max(500, Math.min(sourceMin, sourceMax));
     const max = Math.max(min + 500, Math.max(sourceMin, sourceMax));
     const span = Math.max(0, max - min);
@@ -1333,11 +1349,133 @@ export function ImagePreviewExperience(props: {
     return { min, max, step };
   }, [accuratePricing, config, sessionId]);
 
-  // Default budget to the lowest value (clean, predictable starting point)
+  const previewPricing = useMemo(() => {
+    return buildPreviewPricingFromConfig((config as any)?.previewPricing, sessionId);
+  }, [(config as any)?.previewPricing, sessionId]);
+  const pricingLocale =
+    typeof navigator !== "undefined"
+      ? ((navigator.languages && navigator.languages[0]) || navigator.language || undefined)
+      : undefined;
+  const pricingCurrency = (previewPricing?.currency || detectCurrencyFromLocale(pricingLocale) || "USD").toUpperCase();
+
+  const budgetSliderLabels = useMemo(() => {
+    const { min, max } = budgetSliderBounds;
+    const currency = (accuratePricing?.currency || pricingCurrency || "USD").toUpperCase();
+    return [0, 0.5, 1].map((pct) => {
+      const val = pct === 0 ? min : pct === 1 ? max : Math.round(min + (max - min) * pct);
+      return formatCurrency(val, { locale: pricingLocale, currency, compact: true });
+    });
+  }, [accuratePricing?.currency, budgetSliderBounds, pricingCurrency, pricingLocale]);
+
+  const fetchAccuratePricing = useCallback(async () => {
+    if (!instanceId || !sessionId) return;
+    if (accuratePricingStatus === "running") return;
+    setAccuratePricingStatus("running");
+
+    try {
+      const stepsForQA = typeof window !== "undefined" ? loadStepState(instanceId)?.steps ?? [] : [];
+      const answeredQA = buildAnsweredQAFromSteps(stepsForQA, effectiveStepDataSoFar || {}, 60);
+      const askedStepIds = stepsForQA
+        .map((s: any) => String(s?.id ?? s?.stepId ?? s?.key ?? ""))
+        .filter((v: string) => Boolean(v && v.trim().length));
+
+      const formCtx = loadFormStateContext(sessionId);
+      const serviceIdRaw =
+        (effectiveStepDataSoFar as any)?.["step-service-primary"] ??
+        (effectiveStepDataSoFar as any)?.["step-service"] ??
+        (effectiveStepDataSoFar as any)?.["step_service_primary"] ??
+        (effectiveStepDataSoFar as any)?.["step_service"];
+      const selectedServiceId = Array.isArray(serviceIdRaw) ? String(serviceIdRaw[0] || "") : String(serviceIdRaw || "");
+      const perServiceSummary =
+        selectedServiceId
+          ? (() => {
+              const cat = loadServiceCatalog(sessionId);
+              const meta: any = cat?.byServiceId?.[selectedServiceId];
+              return typeof meta?.serviceSummary === "string" ? meta.serviceSummary : null;
+            })()
+          : null;
+      const combinedServiceSummary =
+        [formCtx.serviceSummary, perServiceSummary].filter((s) => typeof s === "string" && String(s).trim()).join("\n\n") || null;
+      const instanceContext = {
+        businessContext: (config as any)?.businessContext ?? formCtx.businessContext,
+        serviceSummary: combinedServiceSummary,
+      };
+
+      const res = await fetch(`/api/ai-form/${encodeURIComponent(instanceId)}/pricing`, {
+        method: "POST",
+        headers: { "content-type": "application/json", Accept: "application/json" },
+        cache: "no-store",
+        body: JSON.stringify({
+          sessionId,
+          useCase: (config as any)?.useCase,
+          stepDataSoFar: effectiveStepDataSoFar,
+          answeredQA,
+          askedStepIds,
+          instanceContext,
+          noCache: true,
+          ...(hero && (hero.startsWith("http://") || hero.startsWith("https://")) ? { previewImageUrl: hero } : {}),
+        }),
+      });
+      const json = await res.json().catch(() => null);
+      if (!res.ok) {
+        const message = typeof (json as any)?.error === "string" ? String((json as any).error) : `Pricing failed (${res.status})`;
+        throw new Error(message);
+      }
+      const est = (json as any)?.estimate ?? json;
+      const totalMin = Number((est as any)?.totalMin);
+      const totalMax = Number((est as any)?.totalMax);
+      const currencyRaw = typeof (est as any)?.currency === "string" ? String((est as any).currency).trim().toUpperCase() : "USD";
+      if (!Number.isFinite(totalMin) || !Number.isFinite(totalMax)) {
+        throw new Error("Pricing returned invalid numbers");
+      }
+      const svcRange = (est as any)?.servicePriceRange ?? (est as any)?.service_price_range;
+      const servicePriceRange =
+        typeof svcRange === "object" &&
+        svcRange !== null &&
+        typeof svcRange.low === "number" &&
+        typeof svcRange.high === "number"
+          ? { low: Math.min(svcRange.low, svcRange.high), high: Math.max(svcRange.low, svcRange.high) }
+          : undefined;
+      const imgRange = (est as any)?.imagePriceRange ?? (est as any)?.image_price_range;
+      const imagePriceRange =
+        typeof imgRange === "object" &&
+        imgRange !== null &&
+        typeof imgRange.low === "number" &&
+        typeof imgRange.high === "number"
+          ? { low: Math.min(imgRange.low, imgRange.high), high: Math.max(imgRange.low, imgRange.high) }
+          : { low: Math.min(totalMin, totalMax), high: Math.max(totalMin, totalMax) };
+      setAccuratePricing((prev) => {
+        // Service range is fixed after first load — slider bounds stay the same; only image estimate updates.
+        const keepServiceRange = prev?.servicePriceRange &&
+          typeof prev.servicePriceRange.low === "number" &&
+          typeof prev.servicePriceRange.high === "number";
+        const finalServiceRange = keepServiceRange && prev?.servicePriceRange
+          ? prev.servicePriceRange
+          : servicePriceRange;
+        return {
+          totalMin: Math.min(totalMin, totalMax),
+          totalMax: Math.max(totalMin, totalMax),
+          currency: currencyRaw || "USD",
+          imagePriceRange,
+          ...(finalServiceRange ? { servicePriceRange: finalServiceRange } : {}),
+        };
+      });
+      setAccuratePricingStatus("complete");
+    } catch {
+      setAccuratePricingStatus("error");
+    }
+  }, [accuratePricingStatus, config, effectiveStepDataSoFar, hero, instanceId, sessionId]);
+  fetchAccuratePricingRef.current = fetchAccuratePricing;
+
+  // Default budget to 20% into the range when no value from step data
   useEffect(() => {
     if (liveBudget !== null) return;
-    setLiveBudget(budgetSliderBounds.min);
-  }, [budgetSliderBounds.min, liveBudget]);
+    const { min, max, step } = budgetSliderBounds;
+    const at20Pct = min + (max - min) * 0.2;
+    const stepped = Math.round(at20Pct / step) * step;
+    const clamped = Math.max(min, Math.min(max, stepped));
+    setLiveBudget(clamped);
+  }, [budgetSliderBounds, liveBudget]);
 
   useEffect(() => {
     if (!enabled) return;
@@ -1346,10 +1484,24 @@ export function ImagePreviewExperience(props: {
     if (!canUseLiveBudgetSlider) return;
     const timer = window.setTimeout(() => {
       setLiveBudgetDirty(false);
+      pendingBudgetRefineRef.current = true;
       void runGenerate("manual");
     }, 900);
     return () => window.clearTimeout(timer);
   }, [canUseLiveBudgetSlider, enabled, hero, liveBudgetDirty, runGenerate]);
+
+  // Defer pricing until after regeneration completes (when triggered by budget slider).
+  useEffect(() => {
+    if (!enabled || !leadCaptured) return;
+    if (!pendingBudgetRefineRef.current) {
+      prevRunsLengthRef.current = runs.length;
+      return;
+    }
+    if (runs.length <= prevRunsLengthRef.current) return;
+    prevRunsLengthRef.current = runs.length;
+    pendingBudgetRefineRef.current = false;
+    void fetchAccuratePricingRef.current?.();
+  }, [enabled, leadCaptured, runs.length]);
 
   const downloadActiveImage = useCallback(async () => {
     if (!hero) return;
@@ -1532,14 +1684,16 @@ export function ImagePreviewExperience(props: {
   const effectivePreviewSize = previewSize;
   // On-brand overlay: use one solid brand-tint for all overlay controls so colors match.
   const primary = theme.primaryColor || "#3b82f6";
-  const pillBg = withAlpha(darkenHex(primary, 0.4), 1);
+  const pillBg = withAlpha(darkenHex(primary, 0.4), 0.55);
   const overlayBg = pillBg;
-  const overlayHoverBg = withAlpha(darkenHex(primary, 0.34), 1);
+  const overlayHoverBg = withAlpha(darkenHex(primary, 0.34), 0.6);
   const overlayBorder = hexToRgba(primary, 0.35) || "rgba(255,255,255,0.2)";
+  const leadGenOverlayBg = withAlpha(darkenHex(primary, 0.4), 0.85);
   const overlayVars = {
     ["--sif-overlay-bg" as any]: overlayBg,
     ["--sif-overlay-hover-bg" as any]: overlayHoverBg,
     ["--sif-overlay-border" as any]: overlayBorder,
+    ["--sif-lead-gen-overlay-bg" as any]: leadGenOverlayBg,
   } as React.CSSProperties;
   const overlayButtonClass =
     "h-8 sm:h-7 inline-flex items-center gap-1.5 rounded-xl px-3 text-[11px] leading-none text-white/95 shadow-sm backdrop-blur-md bg-[var(--sif-overlay-bg)] hover:bg-[var(--sif-overlay-hover-bg)] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50 disabled:opacity-60 disabled:cursor-not-allowed";
@@ -1552,20 +1706,12 @@ export function ImagePreviewExperience(props: {
     ["--sif-overlay-bg" as any]: pillBg,
     ["--sif-overlay-hover-bg" as any]: pricingPillOverlayHoverBg,
     ["--sif-pill-fg" as any]: "#ffffff",
+    ["--sif-lead-gen-overlay-bg" as any]: leadGenOverlayBg,
   } as React.CSSProperties;
-
-  const previewPricing = useMemo(() => {
-    return buildPreviewPricingFromConfig((config as any)?.previewPricing, sessionId);
-  }, [(config as any)?.previewPricing, sessionId]);
 
   // Pricing pill: show whenever we have hero image + pricing config. In dominant layout (full-screen preview),
   // the pill is the only UI besides the image — user explicitly wants it visible at that stage.
   const shouldShowPricingPill = Boolean(hero && variant === "hero" && previewPricing);
-  const pricingLocale =
-    typeof navigator !== "undefined"
-      ? ((navigator.languages && navigator.languages[0]) || navigator.language || undefined)
-      : undefined;
-  const pricingCurrency = (previewPricing?.currency || detectCurrencyFromLocale(pricingLocale) || "USD").toUpperCase();
   const formattedPricingRange = previewPricing
     ? `${formatCurrency(previewPricing.totalMin, { locale: pricingLocale, currency: pricingCurrency })} – ${formatCurrency(
         previewPricing.totalMax,
@@ -1579,90 +1725,20 @@ export function ImagePreviewExperience(props: {
       })
     : null;
 
-  const fetchAccuratePricing = useCallback(async () => {
-    if (!instanceId || !sessionId) return;
-    if (accuratePricingStatus === "running") return;
-    setAccuratePricingStatus("running");
-
-    try {
-      const stepsForQA = typeof window !== "undefined" ? loadStepState(instanceId)?.steps ?? [] : [];
-      const answeredQA = buildAnsweredQAFromSteps(stepsForQA, effectiveStepDataSoFar || {}, 60);
-      const askedStepIds = stepsForQA
-        .map((s: any) => String(s?.id ?? s?.stepId ?? s?.key ?? ""))
-        .filter((v: string) => Boolean(v && v.trim().length));
-
-      const formCtx = loadFormStateContext(sessionId);
-      const serviceIdRaw =
-        (effectiveStepDataSoFar as any)?.["step-service-primary"] ??
-        (effectiveStepDataSoFar as any)?.["step-service"] ??
-        (effectiveStepDataSoFar as any)?.["step_service_primary"] ??
-        (effectiveStepDataSoFar as any)?.["step_service"];
-      const selectedServiceId = Array.isArray(serviceIdRaw) ? String(serviceIdRaw[0] || "") : String(serviceIdRaw || "");
-      const perServiceSummary =
-        selectedServiceId
-          ? (() => {
-              const cat = loadServiceCatalog(sessionId);
-              const meta: any = cat?.byServiceId?.[selectedServiceId];
-              return typeof meta?.serviceSummary === "string" ? meta.serviceSummary : null;
-            })()
-          : null;
-      const combinedServiceSummary =
-        [formCtx.serviceSummary, perServiceSummary].filter((s) => typeof s === "string" && String(s).trim()).join("\n\n") || null;
-      const instanceContext = {
-        businessContext: (config as any)?.businessContext ?? formCtx.businessContext,
-        serviceSummary: combinedServiceSummary,
-      };
-
-      const res = await fetch(`/api/ai-form/${encodeURIComponent(instanceId)}/pricing`, {
-        method: "POST",
-        headers: { "content-type": "application/json", Accept: "application/json" },
-        cache: "no-store",
-        body: JSON.stringify({
-          sessionId,
-          useCase: (config as any)?.useCase,
-          stepDataSoFar: effectiveStepDataSoFar,
-          answeredQA,
-          askedStepIds,
-          instanceContext,
-          noCache: true,
-        }),
-      });
-      const json = await res.json().catch(() => null);
-      if (!res.ok) {
-        const message = typeof (json as any)?.error === "string" ? String((json as any).error) : `Pricing failed (${res.status})`;
-        throw new Error(message);
-      }
-      const est = (json as any)?.estimate ?? json;
-      const totalMin = Number((est as any)?.totalMin);
-      const totalMax = Number((est as any)?.totalMax);
-      const currencyRaw = typeof (est as any)?.currency === "string" ? String((est as any).currency).trim().toUpperCase() : "USD";
-      if (!Number.isFinite(totalMin) || !Number.isFinite(totalMax)) {
-        throw new Error("Pricing returned invalid numbers");
-      }
-      setAccuratePricing({
-        totalMin: Math.min(totalMin, totalMax),
-        totalMax: Math.max(totalMin, totalMax),
-        currency: currencyRaw || "USD",
-      });
-      setAccuratePricingStatus("complete");
-    } catch {
-      setAccuratePricingStatus("error");
-    }
-  }, [accuratePricingStatus, config, effectiveStepDataSoFar, instanceId, sessionId]);
-
   const formattedAccuratePricingRange = useMemo(() => {
     if (!accuratePricing) return null;
     const c = (accuratePricing.currency || pricingCurrency || "USD").toUpperCase();
-    return `${formatCurrency(accuratePricing.totalMin, { locale: pricingLocale, currency: c })} – ${formatCurrency(
-      accuratePricing.totalMax,
-      {
-        locale: pricingLocale,
-        currency: c,
-      }
-    )}`;
+    // Prefer imagePriceRange (raw AI estimate) for the pill so we always show the actual range
+    const low = accuratePricing.imagePriceRange?.low ?? accuratePricing.totalMin;
+    const high = accuratePricing.imagePriceRange?.high ?? accuratePricing.totalMax;
+    return `${formatCurrency(low, { locale: pricingLocale, currency: c })} – ${formatCurrency(high, {
+      locale: pricingLocale,
+      currency: c,
+    })}`;
   }, [accuratePricing, pricingCurrency, pricingLocale]);
 
   const pillLabel = leadGateEnabled ? (leadCaptured ? "pricing" : "SHOW PRICING") : "pricing";
+  // Price pill shows the image-specific price range (totalMin – totalMax) from the API
   const pillPrice = formattedAccuratePricingRange
     ? formattedAccuratePricingRange
     : accuratePricingStatus === "error"
@@ -1681,8 +1757,8 @@ export function ImagePreviewExperience(props: {
     if (!leadCaptured) return;
     if (formattedAccuratePricingRange) return;
     if (accuratePricingStatus !== "idle") return;
-    void fetchAccuratePricing();
-  }, [accuratePricingStatus, fetchAccuratePricing, formattedAccuratePricingRange, leadCaptured, leadGateEnabled]);
+    void fetchAccuratePricingRef.current?.();
+  }, [accuratePricingStatus, formattedAccuratePricingRange, leadCaptured, leadGateEnabled]);
 
   if (!enabled) return null;
 
@@ -2210,19 +2286,19 @@ export function ImagePreviewExperience(props: {
 	              </div>{/* end inner overflow-hidden container */}
 
               {/* Bottom controls row — keeps pricing reveal + budget slider aligned side-by-side. Hidden when lightbox open. Budget hidden when preview is dominant/large. */}
-              {!lightboxOpen && ((hero && canUseLiveBudgetSlider && !hideBudgetInOverlay) || (shouldShowPricingPill && formattedPricingRange)) ? (
+              {!lightboxOpen && ((hero && canUseLiveBudgetSlider && hasBudgetRangeLoaded && !hideBudgetInOverlay) || (shouldShowPricingPill && formattedPricingRange)) ? (
                 <div className="absolute bottom-3 left-3 right-3 z-30 pointer-events-auto sm:left-4 sm:right-4 sm:bottom-4">
                   <div className="flex items-stretch gap-2 sm:gap-3">
-                    {hero && canUseLiveBudgetSlider && !hideBudgetInOverlay ? (
+                    {hero && canUseLiveBudgetSlider && hasBudgetRangeLoaded && !hideBudgetInOverlay ? (
                       <div
-                        className="min-w-0 flex-1 h-[82px] flex flex-col justify-center rounded-2xl border border-white/10 px-5 py-4"
+                        className="min-w-0 flex-1 h-[52px] flex flex-col justify-center rounded-2xl border border-white/10 px-3 py-2 backdrop-blur-md"
                         style={{
                           backgroundColor: pillBg,
-                          backdropFilter: 'none',
-                          WebkitBackdropFilter: 'none',
+                          backdropFilter: 'blur(12px)',
+                          WebkitBackdropFilter: 'blur(12px)',
                         }}
                       >
-                        <div className="flex items-center justify-between text-[12px] font-medium text-white/95">
+                        <div className="flex items-center justify-between text-[11px] font-medium text-white/95">
                           <span>Budget</span>
                         </div>
                         <input
@@ -2237,28 +2313,29 @@ export function ImagePreviewExperience(props: {
                             setLiveBudget(n);
                             setLiveBudgetDirty(true);
                           }}
-                          className="mt-1 w-full h-1 rounded-full [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:shadow [&::-webkit-slider-thumb]:cursor-pointer"
+                          className="mt-0.5 w-full h-1 rounded-full [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:shadow [&::-webkit-slider-thumb]:cursor-pointer"
                           style={{
                             accentColor: primary,
                           }}
                           aria-label="Adjust budget and regenerate preview"
                         />
-                        <div className="mt-1 flex items-center justify-between text-[11px] font-medium text-white/70">
-                          <span>$</span>
-                          <span>$$$$</span>
+                        <div className="mt-0.5 flex items-center justify-between text-[11px] font-medium text-white/70">
+                          {budgetSliderLabels.map((label, i) => (
+                            <span key={i}>{label}</span>
+                          ))}
                         </div>
                       </div>
                     ) : null}
                     {shouldShowPricingPill && formattedPricingRange ? (
                       <div
-                        className="ml-auto shrink-0 w-fit h-[82px] flex flex-col rounded-2xl border border-white/10 overflow-hidden shadow-lg shadow-black/25"
+                        className="ml-auto shrink-0 w-fit h-[52px] flex flex-col rounded-2xl border border-white/10 overflow-hidden shadow-lg shadow-black/25 backdrop-blur-md"
                         style={{
                           backgroundColor: pillBg,
-                          backdropFilter: 'none',
-                          WebkitBackdropFilter: 'none',
+                          backdropFilter: 'blur(12px)',
+                          WebkitBackdropFilter: 'blur(12px)',
                         }}
                       >
-                        <div className="flex-1 min-h-0 flex flex-col justify-center px-5 py-[18px]">
+                        <div className="flex-1 min-h-0 flex flex-col justify-center px-4 py-2.5">
                           <PricingExperience
                             variant="pill"
                             className="w-full flex-1 min-h-0 border-0 !bg-transparent !p-0"
@@ -2268,7 +2345,7 @@ export function ImagePreviewExperience(props: {
                           termsHref="/terms"
                           price={pillPrice}
                           loading={pillLoading}
-                          lockedPrice={formattedSeedPricing || "$•••"}
+                          lockedPrice={formattedAccuratePricingRange || formattedPricingRange || formattedSeedPricing || "$•••"}
                           revealed={leadGateEnabled ? leadCaptured : true}
                           allowToggle
                           autoReveal
@@ -2296,7 +2373,7 @@ export function ImagePreviewExperience(props: {
 	                <button
 	                  type="button"
 	                  onClick={goPrev}
-                  className="absolute left-0 top-1/2 -translate-y-1/2 z-30 flex h-16 w-8 sm:h-20 sm:w-9 items-center justify-center rounded-r-lg border-y border-r border-white/20 bg-black/40 text-3xl sm:text-4xl font-thin leading-none text-white/90 transition-colors hover:bg-black/55 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+	                  className="absolute left-0 top-1/2 -translate-y-1/2 z-30 flex h-16 w-8 sm:h-20 sm:w-9 items-center justify-center rounded-r-lg border-y border-r border-white/20 bg-black/25 text-3xl sm:text-4xl font-thin leading-none text-white/90 transition-colors hover:bg-black/35 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
 	                  aria-label="Previous preview"
 	                >
 	                  ‹
@@ -2306,7 +2383,7 @@ export function ImagePreviewExperience(props: {
 	                <button
 	                  type="button"
 	                  onClick={goNext}
-                  className="absolute right-0 top-1/2 -translate-y-1/2 z-30 flex h-16 w-8 sm:h-20 sm:w-9 items-center justify-center rounded-l-lg border-y border-l border-white/20 bg-black/40 text-3xl sm:text-4xl font-thin leading-none text-white/90 transition-colors hover:bg-black/55 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+	                  className="absolute right-0 top-1/2 -translate-y-1/2 z-30 flex h-16 w-8 sm:h-20 sm:w-9 items-center justify-center rounded-l-lg border-y border-l border-white/20 bg-black/25 text-3xl sm:text-4xl font-thin leading-none text-white/90 transition-colors hover:bg-black/35 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
 	                  aria-label="Next preview"
 	                >
 	                  ›

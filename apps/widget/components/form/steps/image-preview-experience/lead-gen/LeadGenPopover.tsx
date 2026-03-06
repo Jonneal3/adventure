@@ -236,7 +236,7 @@ export function LeadGenPopover({
   const accent = (theme.primaryColor || "#3b82f6").trim();
   const secondary = (theme.secondaryColor || accent).trim();
   const textColor = isOverlay ? "rgba(255,255,255,0.92)" : (theme.textColor || "#0f172a");
-  const popBg = isOverlay ? "var(--sif-overlay-bg, rgba(15,23,42,0.86))" : "var(--form-surface-color, rgba(255,255,255,0.92))";
+  const popBg = isOverlay ? "var(--sif-lead-gen-overlay-bg, var(--sif-overlay-bg, rgba(15,23,42,0.92)))" : "var(--form-surface-color, rgba(255,255,255,0.97))";
   const popBorder = isOverlay ? "rgba(255,255,255,0.10)" : withAlpha(accent, 0.22);
   const iconMuted = isOverlay ? "rgba(255,255,255,0.65)" : withAlpha(theme.textColor || "#0f172a", 0.55);
   const inputBorder = isOverlay ? "rgba(255,255,255,0.14)" : withAlpha(accent, 0.22);

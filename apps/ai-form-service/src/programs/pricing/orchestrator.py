@@ -5,9 +5,49 @@ import time
 from typing import Any, Dict, List, Optional, Tuple
 
 from programs.form_pipeline.context_builder import build_context
+from programs.pricing.replicate_vlm import estimate_pricing_with_vlm
 
 
 _CURRENCY_RE = re.compile(r"(?i)\b(usd|cad|aud|gbp|eur)\b")
+
+
+def _get_preview_image_url(payload: Dict[str, Any]) -> Optional[str]:
+    """Extract preview image URL from payload (supports multiple key names)."""
+    url = (
+        payload.get("previewImageUrl")
+        or payload.get("preview_image_url")
+        or payload.get("imageUrl")
+        or payload.get("image_url")
+    )
+    if isinstance(url, str) and url.strip():
+        u = url.strip()
+        if u.startswith("http://") or u.startswith("https://"):
+            return u
+    return None
+
+
+def _service_price_range_for_heuristic(text: str) -> Tuple[int, int]:
+    """
+    Return the widest typical range for a service type (for heuristic fallback).
+    Examples: Landscape $5k-$175k, Bathroom $5k-$150k, Nail salon $40-$1k.
+    """
+    t = (text or "").lower()
+    rules: List[Tuple[str, Tuple[int, int]]] = [
+        ("landscap", (5000, 175000)),
+        ("bath", (5000, 150000)),
+        ("nail", (40, 1000)),
+        ("kitchen", (10000, 150000)),
+        ("roof", (5000, 50000)),
+        ("hvac", (3000, 25000)),
+        ("pool", (15000, 200000)),
+        ("deck", (5000, 60000)),
+        ("floor", (2000, 50000)),
+        ("paint", (1000, 25000)),
+    ]
+    for key, (lo, hi) in rules:
+        if key in t:
+            return lo, hi
+    return 2000, 100000
 
 
 def _parse_money_token(raw: str) -> Optional[int]:
@@ -215,11 +255,71 @@ def _clamp_range(lo: int, hi: int) -> Tuple[int, int]:
 
 def estimate_pricing(payload: Dict[str, Any]) -> Dict[str, Any]:
     """
-    Estimate a rough pricing range (no model calls).
+    Estimate a rough pricing range.
 
-    Input payload is expected to match the same general shape as `next_steps_jsonl()`.
+    When previewImageUrl is present: uses AI (Replicate GPT-4.1-nano) to analyze the image.
+    Otherwise: uses heuristics (no model calls).
     """
     request_id = f"pricing_{int(time.time() * 1000)}"
+    preview_url = _get_preview_image_url(payload)
+
+    if preview_url:
+        try:
+            vlm_result = estimate_pricing_with_vlm(payload, preview_image_url=preview_url)
+            currency = _detect_currency(payload)
+            range_low = int(vlm_result["rangeLow"])
+            range_high = int(vlm_result["rangeHigh"])
+            svc_range = vlm_result.get("servicePriceRange") or {}
+            svc_lo = int(svc_range.get("low") or 0)
+            svc_hi = int(svc_range.get("high") or 0)
+
+            # Sanity clamp: VLM often underestimates (e.g. $1.5k–$3k for a bathroom). Ensure image range is plausible for the service.
+            ctx = build_context(payload)
+            basis_text = " ".join([
+                str(ctx.get("services_summary") or ctx.get("service_summary") or ""),
+                str(ctx.get("industry") or ""),
+                str(ctx.get("service") or ""),
+            ]).strip()
+            base_lo, base_hi, _ = _base_range_for_service(basis_text)
+            if base_lo > 0 and range_high < base_lo:
+                # VLM returned implausibly low. Clamp low to service minimum; set high to at least mid-range.
+                range_low = max(range_low, base_lo)
+                mid = (base_lo + base_hi) // 2 if base_hi > base_lo else base_lo * 2
+                range_high = max(range_high, mid)
+            elif svc_lo > 0 and range_high < svc_lo:
+                range_low = max(range_low, svc_lo)
+                mid = (svc_lo + svc_hi) // 2 if svc_hi > svc_lo else svc_lo * 2
+                range_high = max(range_high, mid)
+
+            # Cap image range to a narrow window: ~10–15% of service span (e.g. $10k–$15k), not $10k–$60k.
+            service_span = max(0, (svc_hi or 0) - (svc_lo or 0))
+            if service_span > 0:
+                target_window_pct = 0.15  # 15% of service range
+                target_window = max(8_000, min(20_000, int(service_span * target_window_pct)))
+                current_width = max(0, range_high - range_low)
+                if current_width > target_window:
+                    mid = (range_low + range_high) // 2
+                    half = target_window // 2
+                    range_low = max(svc_lo or 0, mid - half)
+                    range_high = min(svc_hi or 0, mid + half)
+                    if range_high - range_low < 1_000:
+                        range_high = min(svc_hi or 0, range_low + 1_000)
+                    range_high = max(range_low, range_high)
+
+            return {
+                "ok": True,
+                "requestId": request_id,
+                "currency": currency,
+                "rangeLow": range_low,
+                "rangeHigh": range_high,
+                "servicePriceRange": vlm_result.get("servicePriceRange"),
+                "confidence": vlm_result.get("confidence", "medium"),
+                "basis": vlm_result.get("basis", "ai_v1"),
+                "notes": ["AI estimate from image analysis."],
+            }
+        except Exception:
+            # Fall back to heuristic on VLM failure
+            pass
 
     ctx = build_context(payload)
     services_summary = str(ctx.get("services_summary") or ctx.get("service_summary") or "").strip()
@@ -283,12 +383,15 @@ def estimate_pricing(payload: Dict[str, Any]) -> Dict[str, Any]:
     if qty:
         notes.append("Incorporates size/quantity hints from answers.")
 
+    svc_lo, svc_hi = _service_price_range_for_heuristic(basis_text)
+
     return {
         "ok": True,
         "requestId": request_id,
         "currency": currency,
         "rangeLow": int(lo),
         "rangeHigh": int(hi),
+        "servicePriceRange": {"low": svc_lo, "high": svc_hi},
         "confidence": confidence,
         "basis": "heuristic_v1",
         "notes": notes,

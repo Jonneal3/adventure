@@ -337,7 +337,7 @@ export function LeadGenModal({
   const progressPct = step === 0 ? 45 : 85;
   const accent = (theme.primaryColor || "#3b82f6").trim();
   const secondary = (theme.secondaryColor || accent).trim();
-  const popBg = "var(--form-surface-color, rgba(255,255,255,0.92))";
+  const popBg = "var(--form-surface-color, rgba(255,255,255,0.97))";
   const popBorder = withAlpha(accent, 0.22);
   const ring = withAlpha(accent, 0.35);
   const inputBorder = withAlpha(accent, 0.22);

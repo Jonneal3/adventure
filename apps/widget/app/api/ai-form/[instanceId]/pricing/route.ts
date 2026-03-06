@@ -111,7 +111,15 @@ function narrowPriceWindow(totalMin: number, totalMax: number): { totalMin: numb
 
 function parsePricingEstimate(
   json: any
-): { totalMin: number; totalMax: number; currency: string; confidence?: string; requestId?: string } | null {
+): {
+  totalMin: number;
+  totalMax: number;
+  currency: string;
+  confidence?: string;
+  requestId?: string;
+  servicePriceRange?: { low: number; high: number };
+  imagePriceRange?: { low: number; high: number };
+} | null {
   if (!json || typeof json !== "object") return null;
 
   // Allow either direct payload or wrapped { estimate: {...} }
@@ -164,12 +172,20 @@ function parsePricingEstimate(
               ? String((json as any).request_id).trim()
               : undefined;
     const narrowed = narrowPriceWindow(totalMin, totalMax);
+    const svcRange = root?.servicePriceRange ?? root?.service_price_range;
+    const servicePriceRange =
+      typeof svcRange === "object" && svcRange !== null && typeof svcRange.low === "number" && typeof svcRange.high === "number"
+        ? { low: Math.min(svcRange.low, svcRange.high), high: Math.max(svcRange.low, svcRange.high) }
+        : undefined;
+    const imagePriceRange = { low: totalMin, high: totalMax };
     return {
       totalMin: narrowed.totalMin,
       totalMax: narrowed.totalMax,
       currency,
+      imagePriceRange,
       ...(confidence ? { confidence } : {}),
       ...(requestId ? { requestId } : {}),
+      ...(servicePriceRange ? { servicePriceRange } : {}),
     };
   }
   return null;
@@ -402,6 +418,7 @@ export async function POST(request: NextRequest, { params }: { params: { instanc
       configServicesCount: configServices.length,
     });
     const seedRange = buildPreviewPricingFromConfig(aiFormConfig.previewPricing, sessionId);
+    const defaultServiceRange = { low: 5000, high: 150000 };
     return NextResponse.json(
       {
         estimate: {
@@ -409,6 +426,7 @@ export async function POST(request: NextRequest, { params }: { params: { instanc
           totalMax: seedRange.totalMax,
           currency: seedRange.currency || "USD",
           source: "fallback_preview_missing_context",
+          servicePriceRange: defaultServiceRange,
         },
       },
       { status: 200, headers: { "Cache-Control": "no-store" } }
@@ -426,8 +444,17 @@ export async function POST(request: NextRequest, { params }: { params: { instanc
       noCache,
     });
     const seedRange = buildPreviewPricingFromConfig(aiFormConfig.previewPricing, sessionId);
+    const defaultServiceRange = { low: 5000, high: 150000 };
     return NextResponse.json(
-      { estimate: { totalMin: seedRange.totalMin, totalMax: seedRange.totalMax, currency: seedRange.currency || "USD", source: "fallback_preview" } },
+      {
+        estimate: {
+          totalMin: seedRange.totalMin,
+          totalMax: seedRange.totalMax,
+          currency: seedRange.currency || "USD",
+          source: "fallback_preview",
+          servicePriceRange: defaultServiceRange,
+        },
+      },
       { status: 200, headers: { "Cache-Control": "no-store" } }
     );
   }
@@ -435,12 +462,20 @@ export async function POST(request: NextRequest, { params }: { params: { instanc
   const attemptedEndpoints: string[] = [];
   const upstreamCompanySummary = typeof mergedContext?.companySummary === "string" ? mergedContext.companySummary.trim() : null;
   const upstreamServiceSummary = typeof mergedContext?.serviceSummary === "string" ? mergedContext.serviceSummary.trim() : null;
+  const previewImageUrl =
+    typeof body?.previewImageUrl === "string"
+      ? body.previewImageUrl.trim()
+      : typeof body?.preview_image_url === "string"
+        ? body.preview_image_url.trim()
+        : null;
+
   const upstreamPayload: Record<string, any> = {
     useCase,
     session: { sessionId, instanceId },
     // Pricing endpoint expects these at the top-level (not only in state.context).
     ...(upstreamCompanySummary ? { companySummary: upstreamCompanySummary } : {}),
     ...(upstreamServiceSummary ? { serviceSummary: upstreamServiceSummary } : {}),
+    ...(previewImageUrl ? { previewImageUrl } : {}),
     state: {
       answers: stepDataSoFar,
       askedStepIds,
@@ -570,6 +605,7 @@ export async function POST(request: NextRequest, { params }: { params: { instanc
             upstreamError: upstreamErrorText,
           });
           const seedRange = buildPreviewPricingFromConfig(aiFormConfig.previewPricing, sessionId);
+          const defaultServiceRange = { low: 5000, high: 150000 };
           return NextResponse.json(
             {
               estimate: {
@@ -577,6 +613,7 @@ export async function POST(request: NextRequest, { params }: { params: { instanc
                 totalMax: seedRange.totalMax,
                 currency: seedRange.currency || "USD",
                 source: "fallback_preview_missing_context",
+                servicePriceRange: defaultServiceRange,
               },
             },
             { status: 200, headers: { "Cache-Control": "no-store" } }
@@ -633,6 +670,33 @@ export async function POST(request: NextRequest, { params }: { params: { instanc
         estimate,
       });
 
+      const root = (json as any)?.estimate && typeof (json as any).estimate === "object" ? (json as any).estimate : json;
+      const servicePriceRange =
+        typeof (root as any)?.servicePriceRange === "object" && (root as any).servicePriceRange !== null
+          ? (root as any).servicePriceRange
+          : typeof (root as any)?.service_price_range === "object" && (root as any).service_price_range !== null
+            ? (root as any).service_price_range
+            : undefined;
+      const serviceRange =
+        servicePriceRange &&
+        typeof servicePriceRange.low === "number" &&
+        typeof servicePriceRange.high === "number"
+          ? { low: servicePriceRange.low, high: servicePriceRange.high }
+          : estimate.servicePriceRange &&
+              typeof estimate.servicePriceRange.low === "number" &&
+              typeof estimate.servicePriceRange.high === "number"
+            ? {
+                low: estimate.servicePriceRange.low,
+                high: estimate.servicePriceRange.high,
+              }
+            : undefined;
+
+      const imageRange =
+        estimate.imagePriceRange &&
+        typeof estimate.imagePriceRange.low === "number" &&
+        typeof estimate.imagePriceRange.high === "number"
+          ? { low: estimate.imagePriceRange.low, high: estimate.imagePriceRange.high }
+          : undefined;
       return NextResponse.json(
         {
           estimate: {
@@ -642,6 +706,8 @@ export async function POST(request: NextRequest, { params }: { params: { instanc
             source: "ai",
             ...(estimate.confidence ? { confidence: estimate.confidence } : {}),
             ...(estimate.requestId ? { requestId: estimate.requestId } : {}),
+            ...(serviceRange ? { servicePriceRange: serviceRange } : {}),
+            ...(imageRange ? { imagePriceRange: imageRange } : {}),
           },
         },
         { status: 200, headers: { "Cache-Control": "no-store" } }
@@ -660,8 +726,17 @@ export async function POST(request: NextRequest, { params }: { params: { instanc
   });
 
   const seedRange = buildPreviewPricingFromConfig(aiFormConfig.previewPricing, sessionId);
+  const defaultServiceRange = { low: 5000, high: 150000 };
   return NextResponse.json(
-    { estimate: { totalMin: seedRange.totalMin, totalMax: seedRange.totalMax, currency: seedRange.currency || "USD", source: "fallback_preview" } },
+    {
+      estimate: {
+        totalMin: seedRange.totalMin,
+        totalMax: seedRange.totalMax,
+        currency: seedRange.currency || "USD",
+        source: "fallback_preview",
+        servicePriceRange: defaultServiceRange,
+      },
+    },
     { status: 200, headers: { "Cache-Control": "no-store" } }
   );
 }

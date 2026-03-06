@@ -55,18 +55,36 @@ export function detectCurrencyFromLocale(locale?: string, opts?: { currencyOverr
   return "USD";
 }
 
+export type FormatCurrencyOptions = {
+  locale?: string;
+  currency?: string;
+  currencyOverride?: string | null;
+  /** Use compact notation (e.g. $16K instead of $16,000) for cleaner display in tight spaces */
+  compact?: boolean;
+};
+
 export function formatCurrency(
   amount: number,
-  opts?: { locale?: string; currency?: string; currencyOverride?: string | null }
+  opts?: FormatCurrencyOptions
 ): string {
   const locale = opts?.locale;
   const currency = (opts?.currency || detectCurrencyFromLocale(locale, { currencyOverride: opts?.currencyOverride }))
     .toUpperCase();
   try {
-    return new Intl.NumberFormat(locale, { style: "currency", currency, maximumFractionDigits: 0 }).format(amount);
+    const options: Intl.NumberFormatOptions = {
+      style: "currency",
+      currency,
+      maximumFractionDigits: opts?.compact ? 1 : 0,
+      ...(opts?.compact ? { notation: "compact", compactDisplay: "short" } : {}),
+    };
+    return new Intl.NumberFormat(locale, options).format(amount);
   } catch {
     // Fallback: basic formatting
     const rounded = Math.round(amount);
+    if (opts?.compact && rounded >= 1000) {
+      const k = Math.round(rounded / 1000);
+      return `${currency === "USD" ? "$" : currency + " "}${k}K`;
+    }
     return `${currency} ${rounded.toLocaleString()}`;
   }
 }
