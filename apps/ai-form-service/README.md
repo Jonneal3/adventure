@@ -143,39 +143,6 @@ Use the exported demo pack at runtime:
 export DSPY_PLANNER_DEMO_PACK=src/programs/question_planner/data/optimized_outputs/question_planner_demo_pack.jsonl
 ```
 
-## Image request optimization (DSPy + Replicate)
-
-This service also includes an offline optimization loop for image request generation.
-It optimizes prompt/negative/params generation for first-try consistency across seeds.
-
-### Train and persist the compiled image-request program
-
-Run:
-
-```bash
-PYTHONPATH=.:src python3 -m api.train_image_request_program --trainset /absolute/path/to/train_specs.json --model black-forest-labs/flux-1.1-pro --seeds 101,303,707 --lambda 0.8 --max-iters 12
-```
-
-Artifact output:
-
-- `artifacts/image-optimization/compiled_image_request_program.json`
-
-### API endpoints
-
-- `POST /v1/api/image-optimization/train` (and `/api/image-optimization/train`)
-- `GET /v1/api/image-optimization/artifact` (and `/api/image-optimization/artifact`)
-
-### Runtime integration toggle
-
-Set `IMAGE_OPT_USE_ARTIFACT=true` to let runtime image generation apply the compiled image-request policy before provider calls.
-
-### Key knobs
-
-- `REPLICATE_MODEL_ID` (default model for optimization/rendering)
-- `REPLICATE_OPTION_IMAGES_MODEL_ID` (option-image model)
-- `IMAGE_OPT_LAMBDA` (variance penalty weight in objective)
-- `IMAGE_OPT_USE_ARTIFACT` (enable runtime compiled policy usage)
-
 ## Deploy to Vercel
 
 This repo is set up as a Vercel **Python Serverless Function** with a catch-all route to `api/index.py`

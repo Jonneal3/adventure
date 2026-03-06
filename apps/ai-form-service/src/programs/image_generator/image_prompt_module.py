@@ -1,83 +1,36 @@
+"""Facade that delegates to use-case-specific DSPy modules (scene, scene-placement, tryon)."""
+
 from __future__ import annotations
 
-import dspy
+from typing import Any
+
+from programs.image_generator.scene_placement_prompt_module import ScenePlacementPromptModule
+from programs.image_generator.scene_prompt_module import ScenePromptModule
+from programs.image_generator.tryon_prompt_module import TryonPromptModule
 
 
-class ImagePromptSignature(dspy.Signature):
-    """Generate an optimal image generation prompt for a professional services design preview.
+def _normalize_use_case(use_case: str) -> str:
+    raw = str(use_case or "scene").strip().lower().replace("_", "-")
+    if raw in ("tryon", "try-on"):
+        return "tryon"
+    if raw == "scene-placement":
+        return "scene-placement"
+    if raw == "drilldown":
+        return "scene"
+    return raw if raw in ("scene", "scene-placement", "tryon") else "scene"
 
-    You are an expert prompt engineer for AI image generation models (Flux, Stable Diffusion).
-    Given structured context about a service project and user preferences, produce a
-    concise, visually descriptive prompt that will generate a photorealistic design preview.
-    The service could be anything — home renovation, landscaping, jewelry, automotive,
-    fashion, commercial fit-out, etc. Derive all domain-specific visual language from
-    service_name and service_summary; never assume a specific industry.
 
-    Rules:
-    - Never include UUIDs, URLs, or technical identifiers in the prompt.
-    - Never include text instructions like "no text" in the main prompt (use negative_prompt).
-    - For edit mode (is_edit=true): The uploaded reference image is the BEFORE state.
-      Generate the fully-completed, professional AFTER state.
-      Use service_name and service_summary to understand exactly what this project entails —
-      what elements would be replaced, upgraded, or transformed — and make ALL of those things
-      look brand-new and professionally done. Nothing the service would have touched should look
-      old, worn, or original. Preserve only the structural/contextual elements that would NOT
-      be changed by this service (e.g. background environment, camera angle, unchanged parts of
-      the subject). Replace or transform everything the service covers.
-    - For generation mode (is_edit=false): use descriptive language painting the final result.
-      Use service_summary to understand the scope of work and ensure the scene reflects a
-      fully-completed professional project.
-    - Focus on materials, colors, textures, lighting, and spatial arrangement.
-    - Keep prompts under 300 words; be specific and visual, not abstract.
-    - CRITICAL: Budget level MUST be reflected in the visual quality shown.
-      Do NOT default to luxury finishes or materials when budget is low or mid-range.
-      Apply this principle to whatever domain the service is in:
-        Low budget:    entry-level, builder-grade, standard, off-the-shelf quality
-        Mid budget:    mid-range, good quality, professionally selected
-        High budget:   premium, custom, high-end, designer quality
-        Luxury budget: bespoke, top-of-the-line, finest available materials/finishes
-      Translate these quality tiers into the specific materials/finishes appropriate for
-      the service_name and service_summary — do not assume a home renovation context.
+class ImagePromptModule:
+    """
+    Facade: delegates to ScenePromptModule, ScenePlacementPromptModule, or TryonPromptModule
+    based on use_case. Preserves backward compatibility for callers that pass the legacy
+    unified input shape (including use_case).
     """
 
-    service_name: str = dspy.InputField(desc="Name of the service (e.g. 'Bathroom Remodeling')")
-    service_summary: str = dspy.InputField(
-        desc=(
-            "Description of what this service entails — use this to understand what gets replaced/upgraded. "
-            "For edit mode: any element this service would touch must look brand-new in the output."
-        )
-    )
-    use_case: str = dspy.InputField(desc="One of: scene, scene-placement, tryon")
-    is_edit: bool = dspy.InputField(desc="True if editing an uploaded image, False for text-to-image")
-    user_preferences: str = dspy.InputField(
-        desc="Structured user preferences as key-value pairs (style, materials, colors, etc.)"
-    )
-    style_tags: str = dspy.InputField(desc="Comma-separated style keywords (e.g. 'modern, coastal')")
-    budget_level: str = dspy.InputField(
-        desc=(
-            "Budget range that DIRECTLY controls the visual material quality shown. "
-            "Map to materials: "
-            "~$1k-10k = vinyl/laminate/stock/basic; "
-            "~$10k-30k = engineered hardwood/quartz/semi-custom; "
-            "~$30k-70k = hardwood/natural stone/custom cabinetry; "
-            "~$70k+ = marble/bespoke/luxury. "
-            "Never show luxury materials for a low budget."
-        )
-    )
-    location: str = dspy.InputField(desc="Geographic location if known")
-
-    prompt: str = dspy.OutputField(
-        desc="The image generation prompt: concise, visual, photorealistic description"
-    )
-    negative_prompt: str = dspy.OutputField(
-        desc="Negative prompt: things to avoid (text, logos, artifacts, low quality)"
-    )
-
-
-class ImagePromptModule(dspy.Module):
     def __init__(self) -> None:
-        super().__init__()
-        self.generate = dspy.ChainOfThought(ImagePromptSignature)
+        self._scene = ScenePromptModule()
+        self._scene_placement = ScenePlacementPromptModule()
+        self._tryon = TryonPromptModule()
 
     def forward(
         self,
@@ -90,14 +43,39 @@ class ImagePromptModule(dspy.Module):
         style_tags: str = "",
         budget_level: str = "",
         location: str = "",
-        # Legacy compat
         context_json: str = "",
         batch_id: str = "",
-    ):
-        return self.generate(
+    ) -> Any:
+        uc = _normalize_use_case(use_case)
+
+        if uc == "scene":
+            return self._scene(
+                service_name=service_name or "Home improvement",
+                service_summary=service_summary or "",
+                is_edit=is_edit,
+                user_preferences=user_preferences,
+                style_tags=style_tags,
+                budget_level=budget_level,
+                location=location,
+            )
+        if uc == "scene-placement":
+            return self._scene_placement(
+                service_summary=service_summary or "Place product in scene.",
+                subject=service_name.strip()[:140] or "project",
+                style_tags=style_tags,
+                location=location,
+                scene_context="User provided a scene as background.",
+                product_context="User provided a product to place in the scene.",
+            )
+        if uc == "tryon":
+            return self._tryon(
+                product_or_style_context=service_summary or "Photorealistic virtual try-on.",
+                style_direction=style_tags or "photorealistic try-on",
+                constraints="Natural fit, correct draping and shadows.",
+            )
+        return self._scene(
             service_name=service_name or "Home improvement",
             service_summary=service_summary or "",
-            use_case=use_case,
             is_edit=is_edit,
             user_preferences=user_preferences,
             style_tags=style_tags,
@@ -106,4 +84,4 @@ class ImagePromptModule(dspy.Module):
         )
 
 
-__all__ = ["ImagePromptModule", "ImagePromptSignature"]
+__all__ = ["ImagePromptModule"]

@@ -171,6 +171,91 @@ def _extract_dspy_inputs(payload: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
+def _normalize_use_case_for_dispatch(payload: Dict[str, Any]) -> str:
+    """Normalize use_case for DSPy dispatch; map drilldown -> scene."""
+    raw = str(payload.get("useCase") or payload.get("use_case") or "scene").strip().lower().replace("_", "-")
+    if raw in ("tryon", "try-on"):
+        return "tryon"
+    if raw == "scene-placement":
+        return "scene-placement"
+    if raw == "drilldown":
+        return "scene"
+    return raw if raw in ("scene", "scene-placement", "tryon") else "scene"
+
+
+def _extract_scene_inputs(payload: Dict[str, Any]) -> Dict[str, Any]:
+    """Extract inputs for ScenePromptModule (scene use case)."""
+    inputs = _extract_dspy_inputs(payload)
+    out = {k: v for k, v in inputs.items() if k != "use_case"}
+    return out
+
+
+def _extract_scene_placement_inputs(payload: Dict[str, Any]) -> Dict[str, Any]:
+    """Extract inputs for ScenePlacementPromptModule."""
+    step_data = payload.get("stepDataSoFar") or payload.get("step_data_so_far") or {}
+    if not isinstance(step_data, dict):
+        step_data = {}
+    ctx = payload.get("instanceContext") or payload.get("instance_context") or {}
+    if not isinstance(ctx, dict):
+        ctx = {}
+    svc = ctx.get("service") or {}
+    service_name = (svc.get("name") or "") if isinstance(svc, dict) else ""
+    service_summary = str(ctx.get("serviceSummary") or ctx.get("service_summary") or "")[:500]
+    subject = str(step_data.get("step-service-primary") or step_data.get("service_primary") or service_name or "project").strip()[:140] or "project"
+
+    style_raw = step_data.get("style")
+    style_tags = ""
+    if isinstance(style_raw, list):
+        style_tags = ", ".join(str(x).strip() for x in style_raw if str(x).strip())
+    elif isinstance(style_raw, str):
+        style_tags = style_raw
+
+    location_city = str(step_data.get("location_city") or step_data.get("locationCity") or "")
+    location_state = str(step_data.get("location_state") or step_data.get("locationState") or "")
+    location = f"{location_city}, {location_state}".strip(", ") if location_city or location_state else ""
+
+    reference_images, scene_image, product_image = extract_reference_images(payload)
+    scene_context = "User provided a scene as background." if (scene_image and scene_image.strip()) else "Background scene provided."
+    product_context = "User provided a product to place in the scene." if (product_image and product_image.strip()) else "Product to integrate provided."
+
+    return {
+        "service_summary": service_summary or "Place product in scene.",
+        "subject": subject,
+        "style_tags": style_tags,
+        "location": location,
+        "scene_context": scene_context,
+        "product_context": product_context,
+    }
+
+
+def _extract_tryon_inputs(payload: Dict[str, Any]) -> Dict[str, Any]:
+    """Extract inputs for TryonPromptModule."""
+    step_data = payload.get("stepDataSoFar") or payload.get("step_data_so_far") or {}
+    if not isinstance(step_data, dict):
+        step_data = {}
+    ctx = payload.get("instanceContext") or payload.get("instance_context") or {}
+    if not isinstance(ctx, dict):
+        ctx = {}
+    service_summary = str(ctx.get("serviceSummary") or ctx.get("service_summary") or "")[:300]
+
+    style_raw = step_data.get("style")
+    style_tags = ""
+    if isinstance(style_raw, list):
+        style_tags = ", ".join(str(x).strip() for x in style_raw if str(x).strip())
+    elif isinstance(style_raw, str):
+        style_tags = style_raw
+    style_direction = style_tags.strip() or "photorealistic try-on"
+
+    product_or_style_context = service_summary or "Photorealistic virtual try-on."
+    constraints = str(payload.get("negativePrompt") or payload.get("negative_prompt") or "").strip() or "Natural fit, correct draping and shadows."
+
+    return {
+        "product_or_style_context": product_or_style_context,
+        "style_direction": style_direction,
+        "constraints": constraints,
+    }
+
+
 def _build_deterministic_prompt(payload: Dict[str, Any], request_id: str) -> Dict[str, Any]:
     """Deterministic prompt construction (no LLM call)."""
     try:
@@ -197,6 +282,7 @@ def _build_dspy_prompt(payload: Dict[str, Any], request_id: str) -> Optional[Dic
     """
     Attempt DSPy-based prompt generation.  Returns None on any failure
     so the caller can fall back to the deterministic builder.
+    Dispatches to use-case-specific module: scene, scene-placement, tryon.
     """
     try:
         from programs.form_pipeline.orchestrator import _configure_dspy as _configure_dspy
@@ -210,9 +296,11 @@ def _build_dspy_prompt(payload: Dict[str, Any], request_id: str) -> Optional[Dic
 
     try:
         import dspy
-        from programs.image_generator.image_prompt_module import ImagePromptModule
-        from programs.image_generator.signatures.image_prompt import ImagePromptSpec
         from programs.image_generator.image_prompt_library import get_negative_prompt
+        from programs.image_generator.scene_placement_prompt_module import ScenePlacementPromptModule
+        from programs.image_generator.scene_prompt_module import ScenePromptModule
+        from programs.image_generator.signatures.image_prompt import ImagePromptSpec
+        from programs.image_generator.tryon_prompt_module import TryonPromptModule
     except Exception:
         return None
 
@@ -230,13 +318,43 @@ def _build_dspy_prompt(payload: Dict[str, Any], request_id: str) -> Optional[Dic
     if callable(_configure_dspy):
         _configure_dspy(lm)
 
-    inputs = _extract_dspy_inputs(payload)
+    use_case = _normalize_use_case_for_dispatch(payload)
+    reference_images, _, _ = extract_reference_images(payload)
+    is_edit = len(reference_images) > 0
+
+    pred = None
+    used_module_name = ""
+    style_tags_str = ""
 
     try:
-        module = ImagePromptModule()
-        pred = module(**inputs)
+        if use_case == "scene":
+            inputs = _extract_scene_inputs(payload)
+            module = ScenePromptModule()
+            pred = module(**inputs)
+            used_module_name = "scene"
+            style_tags_str = inputs.get("style_tags", "")
+
+        elif use_case == "scene-placement":
+            inputs = _extract_scene_placement_inputs(payload)
+            module = ScenePlacementPromptModule()
+            pred = module(**inputs)
+            used_module_name = "scene-placement"
+            style_tags_str = inputs.get("style_tags", "")
+
+        elif use_case == "tryon":
+            inputs = _extract_tryon_inputs(payload)
+            module = TryonPromptModule()
+            pred = module(**inputs)
+            used_module_name = "tryon"
+            style_tags_str = inputs.get("style_direction", "")
+
+        else:
+            return None
     except Exception as e:
-        print(f"[image_generator] DSPy module failed: {type(e).__name__}: {e}", flush=True)
+        print(f"[image_generator] DSPy module failed ({use_case}): {type(e).__name__}: {e}", flush=True)
+        return None
+
+    if pred is None:
         return None
 
     prompt_text = str(getattr(pred, "prompt", "") or "").strip()
@@ -248,15 +366,12 @@ def _build_dspy_prompt(payload: Dict[str, Any], request_id: str) -> Optional[Dic
     if not neg_text:
         neg_text = get_negative_prompt()
 
-    reference_images, _, _ = extract_reference_images(payload)
-    is_edit = len(reference_images) > 0
-
     spec_obj = {
         "prompt": prompt_text,
         "negativePrompt": neg_text,
-        "styleTags": [t.strip() for t in inputs.get("style_tags", "").split(",") if t.strip()],
+        "styleTags": [t.strip() for t in style_tags_str.split(",") if t.strip()],
         "isEdit": is_edit,
-        "metadata": {"useCase": inputs["use_case"], "dspy": True, "isEdit": is_edit},
+        "metadata": {"useCase": use_case, "dspy": True, "isEdit": is_edit},
     }
 
     try:
@@ -264,6 +379,7 @@ def _build_dspy_prompt(payload: Dict[str, Any], request_id: str) -> Optional[Dic
     except Exception:
         return None
 
+    print(f"[image_generator] prompt built via DSPy ({used_module_name})", flush=True)
     return {"ok": True, "requestId": request_id, "prompt": spec}
 
 
@@ -281,7 +397,6 @@ def build_image_prompt(payload: Dict[str, Any]) -> Dict[str, Any]:
     if mode == "dspy":
         dspy_result = _build_dspy_prompt(payload, request_id)
         if dspy_result and dspy_result.get("ok"):
-            print("[image_generator] prompt built via DSPy", flush=True)
             return dspy_result
         print("[image_generator] DSPy prompt failed or unavailable, falling back to deterministic", flush=True)
 
@@ -322,28 +437,17 @@ def generate_image(payload: Dict[str, Any]) -> Dict[str, Any]:
     except Exception:
         pass
 
-    optimized_req = payload.get("__optimizedImageRequest") if isinstance(payload.get("__optimizedImageRequest"), dict) else None
-    optimized_params = optimized_req.get("params") if isinstance(optimized_req, dict) and isinstance(optimized_req.get("params"), dict) else {}
-    if optimized_req and isinstance(optimized_req.get("prompt"), str) and str(optimized_req.get("prompt")).strip():
-        prompt_text = str(optimized_req.get("prompt") or "").strip()
-        prompt_obj = {"prompt": prompt_text, "negativePrompt": str(optimized_req.get("negativePrompt") or "").strip()}
-        _log_verbose("generated_prompt_spec", {"source": "optimized_artifact", **prompt_obj})
-    else:
-        prompt_result = build_image_prompt(payload)
-        if not isinstance(prompt_result, dict) or not prompt_result.get("ok"):
-            return prompt_result
-        prompt_obj = prompt_result.get("prompt") if isinstance(prompt_result.get("prompt"), dict) else {}
-        _log_verbose("generated_prompt_spec", prompt_obj)
-        prompt_text = ((prompt_obj.get("prompt") if isinstance(prompt_obj, dict) else "") or "").strip()
+    prompt_result = build_image_prompt(payload)
+    if not isinstance(prompt_result, dict) or not prompt_result.get("ok"):
+        return prompt_result
+    prompt_obj = prompt_result.get("prompt") if isinstance(prompt_result.get("prompt"), dict) else {}
+    _log_verbose("generated_prompt_spec", prompt_obj)
+    prompt_text = ((prompt_obj.get("prompt") if isinstance(prompt_obj, dict) else "") or "").strip()
 
     # Prefer prompt-spec negativePrompt, fall back to payload negativePrompt.
     negative_prompt = None
     if isinstance(prompt_obj, dict) and isinstance(prompt_obj.get("negativePrompt"), str):
         negative_prompt = str(prompt_obj.get("negativePrompt") or "").strip() or None
-    if optimized_req and isinstance(optimized_req.get("negativePrompt"), str):
-        neg = str(optimized_req.get("negativePrompt") or "").strip()
-        if neg:
-            negative_prompt = neg
     if not negative_prompt:
         negative_prompt = extract_negative_prompt(payload) or None
 
@@ -387,15 +491,11 @@ def generate_image(payload: Dict[str, Any]) -> Dict[str, Any]:
     width = _as_int(payload.get("width"))
     height = _as_int(payload.get("height"))
     num_inference_steps = _as_int(
-        optimized_params.get("steps")
-        or optimized_params.get("num_inference_steps")
-        or payload.get("numInferenceSteps")
+        payload.get("numInferenceSteps")
         or payload.get("num_inference_steps")
     )
     guidance_scale = _as_float(
-        optimized_params.get("guidance")
-        or optimized_params.get("guidance_scale")
-        or payload.get("guidanceScale")
+        payload.get("guidanceScale")
         or payload.get("guidance_scale")
     )
 

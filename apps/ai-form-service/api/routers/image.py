@@ -11,7 +11,6 @@ from starlette.status import HTTP_400_BAD_REQUEST
 from api.request_adapter import to_next_steps_payload
 from api.utils import dedup_urls, normalize_output_urls
 from programs.image_generator.orchestrator import build_image_prompt, generate_image
-from programs.image_request.runtime import maybe_build_optimized_request
 
 
 def register(router: APIRouter, compat_router: APIRouter) -> None:
@@ -36,12 +35,6 @@ def register(router: APIRouter, compat_router: APIRouter) -> None:
             return
         ttl = max(5, min(3600, int(ttl_sec or 0)))
         _PROMPT_CACHE[key] = (time.time() + ttl, value)
-
-    def _generate_with_optional_optimized_request(adapted: Dict[str, Any]) -> Any:
-        optimized = maybe_build_optimized_request(adapted)
-        if isinstance(optimized, dict):
-            adapted = {**adapted, "__optimizedImageRequest": optimized}
-        return generate_image(adapted)
 
     @router.post("/image")
     def image(payload: Dict[str, Any] = Body(default_factory=dict)) -> Any:
@@ -82,7 +75,7 @@ def register(router: APIRouter, compat_router: APIRouter) -> None:
         ):
             if k in payload and payload.get(k) is not None:
                 adapted[k] = payload.get(k)
-        return _generate_with_optional_optimized_request(adapted)
+        return generate_image(adapted)
 
     @router.post("/image/prompt")
     def image_prompt(payload: Dict[str, Any] = Body(default_factory=dict)) -> Any:

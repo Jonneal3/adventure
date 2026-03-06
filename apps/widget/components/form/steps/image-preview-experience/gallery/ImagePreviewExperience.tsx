@@ -700,6 +700,13 @@ export function ImagePreviewExperience(props: {
         .filter(isValidUrlLikeImage)
         .slice(0, 6);
       const useCase = normalizeUseCase((config as any)?.useCase);
+      // After first image exists, use scene-placement (nano banana) for all refinements and budget changes.
+      const canUseScenePlacementForRefinement =
+        hasExistingPreview &&
+        (useCase === "scene" || useCase === "scene-placement") &&
+        (activeAnchorImage || stepSceneUpload || primaryReferenceImage) &&
+        (stepProductUpload || selectedOptionReferenceImages[0]);
+      const effectiveUseCase = canUseScenePlacementForRefinement ? "scene-placement" : useCase;
       // For refinements: use latest image as base. scene-placement + hasExistingPreview = drilldown edit.
       const sceneImageForRequest =
         useCase === "scene" && activeAnchorImage
@@ -811,7 +818,7 @@ export function ImagePreviewExperience(props: {
 		          return src;
 		        };
 
-		        const normalizedUseCase = useCase;
+		        const normalizedUseCase = effectiveUseCase;
 		        const promptResult =
 		          contextState && typeof contextState === "object"
 		            ? await buildImagePromptViaDSPy({
@@ -2298,11 +2305,28 @@ export function ImagePreviewExperience(props: {
                           WebkitBackdropFilter: 'blur(12px)',
                         }}
                       >
+                        <style dangerouslySetInnerHTML={{ __html: `
+                          input[data-budget-slider]::-webkit-slider-thumb:hover,
+                          input[data-budget-slider]::-webkit-slider-thumb:active { background: white !important; filter: none !important; }
+                          input[data-budget-slider]::-webkit-slider-runnable-track:hover { filter: none !important; opacity: 1 !important; }
+                          input[data-budget-slider]::-moz-range-thumb:hover,
+                          input[data-budget-slider]::-moz-range-thumb:active { background: white !important; filter: none !important; }
+                          input[data-budget-slider]::-moz-range-track:hover { filter: none !important; opacity: 1 !important; }
+                          input[data-budget-slider]:hover { accent-color: var(--slider-accent) !important; }
+                        ` }} />
                         <div className="flex items-center justify-between text-[11px] font-medium text-white/95">
                           <span>Budget</span>
+                          <span aria-live="polite">
+                            {formatCurrency(liveBudget ?? budgetSliderBounds.min, {
+                              locale: pricingLocale,
+                              currency: (accuratePricing?.currency || pricingCurrency || "USD").toUpperCase(),
+                              compact: true,
+                            })}
+                          </span>
                         </div>
                         <input
                           type="range"
+                          data-budget-slider
                           min={budgetSliderBounds.min}
                           max={budgetSliderBounds.max}
                           step={budgetSliderBounds.step}
@@ -2313,10 +2337,11 @@ export function ImagePreviewExperience(props: {
                             setLiveBudget(n);
                             setLiveBudgetDirty(true);
                           }}
-                          className="mt-0.5 w-full h-1 rounded-full [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:shadow [&::-webkit-slider-thumb]:cursor-pointer"
+                          className="mt-0.5 w-full h-1 rounded-full [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:shadow [&::-webkit-slider-thumb]:cursor-pointer [&::-webkit-slider-thumb:hover]:!bg-white [&::-webkit-slider-thumb:hover]:!shadow [&::-webkit-slider-thumb:active]:!bg-white [&::-webkit-slider-thumb:active]:!shadow [&::-moz-range-thumb]:appearance-none [&::-moz-range-thumb]:w-3.5 [&::-moz-range-thumb]:h-3.5 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-white [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:cursor-pointer [&::-moz-range-thumb:hover]:!bg-white [&::-moz-range-thumb:active]:!bg-white [&:hover]:[accent-color:var(--slider-accent)]"
                           style={{
                             accentColor: primary,
-                          }}
+                            ['--slider-accent' as string]: primary,
+                          } as React.CSSProperties}
                           aria-label="Adjust budget and regenerate preview"
                         />
                         <div className="mt-0.5 flex items-center justify-between text-[11px] font-medium text-white/70">
