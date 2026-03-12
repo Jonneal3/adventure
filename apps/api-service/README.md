@@ -1,4 +1,4 @@
-# sif-ai-form-service
+# sif-api-service
 
 Python microservice for the SIF AI form flow. Runs the DSPy planner and returns form steps as JSON.
 
@@ -8,6 +8,10 @@ Python microservice for the SIF AI form flow. Runs the DSPy planner and returns 
 - `POST /v1/api/form`
 - `GET /v1/api/form/capabilities` (JSON; contract schema + version)
 - `POST /v1/api/image` (image prompt + image generation)
+- `POST /v1/api/generate/scene`
+- `POST /v1/api/generate/try-on`
+- `POST /v1/api/generate/scene-placement`
+- `POST /v1/api/generate/drilldown`
 
 ## API contract workflow (OpenAPI)
 
@@ -124,6 +128,7 @@ curl -X POST http://localhost:8008/v1/api/image \
 ```
 
 Note: client-supplied `prompt` / `promptTemplate` are not supported; the service generates prompts server-side from context. `negativePrompt` is accepted as a parameter.
+Provider/model routing is owned by `api-service` in `/v1/api/generate/*`; widget/API-edge routes should forward requests and not call model providers directly.
 
 To inspect the exact payloads, prompt text, and downstream Replicate request/response, enable `IMAGE_LOG_DETAILED_PAYLOADS=true` before starting the service; the new logs print the inbound JSON, the deterministic `ImagePromptSpec`, and the provider I/O in pretty-printed chunks.
 

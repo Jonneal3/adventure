@@ -668,7 +668,7 @@ export async function POST(request: NextRequest, { params }: { params: { instanc
 
         const baseUrls = resolveFormServiceBaseUrls();
         if (baseUrls.length === 0) {
-          throw new Error("DSPY_SERVICE_URL or PROD_DSPY_SERVICE_URL is not set (required for sif-ai-form-service)");
+          throw new Error("DSPY_SERVICE_URL or PROD_DSPY_SERVICE_URL is not set (required for sif-api-service)");
         }
 
         // Build payload matching DSPy API schema:

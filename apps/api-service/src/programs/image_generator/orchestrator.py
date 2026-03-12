@@ -187,11 +187,61 @@ def _extract_scene_inputs(payload: Dict[str, Any]) -> Dict[str, Any]:
     """Extract inputs for ScenePromptModule (scene use case)."""
     inputs = _extract_dspy_inputs(payload)
     out = {k: v for k, v in inputs.items() if k != "use_case"}
+    reference_images, scene_image, _ = extract_reference_images(payload)
+    if bool(inputs.get("is_edit")):
+        anchor_hint = "uploaded reference image"
+        if isinstance(scene_image, str) and scene_image.strip():
+            anchor_hint = "scene image"
+        elif reference_images:
+            anchor_hint = "primary reference image"
+        out["reference_adherence"] = (
+            f"Hard constraint: treat the {anchor_hint} as immutable anchor. Preserve camera/framing, geometry, perspective, "
+            "lighting direction, depth relationships, and all unchanged structures/objects. Only apply edits requested by "
+            "service scope and user preferences."
+        )
+    else:
+        out["reference_adherence"] = ""
     return out
 
 
 def _extract_scene_placement_inputs(payload: Dict[str, Any]) -> Dict[str, Any]:
     """Extract inputs for ScenePlacementPromptModule."""
+    def _normalize_budget_raw(v: Any) -> str:
+        if v is None:
+            return ""
+        s = str(v).strip()
+        return s
+
+    def _budget_requirements(budget_raw: str) -> str:
+        b = (budget_raw or "").strip()
+        if not b:
+            return "Use budget-appropriate, realistic mid-range materials; avoid luxury/overdesigned finishes."
+        try:
+            n = int(float(b))
+        except Exception:
+            n = None
+        if n is None:
+            return f"Hard constraint: match finish/material quality to this budget signal: {b}. Do not exceed this tier."
+        if n <= 10000:
+            return (
+                f"Hard constraint: budget is ~${n:,}. Use entry-level/builder-grade materials and simple finishes. "
+                "Avoid premium/luxury details."
+            )
+        if n <= 30000:
+            return (
+                f"Hard constraint: budget is ~${n:,}. Use solid mid-range materials and practical professional finishes. "
+                "Avoid high-end bespoke details."
+            )
+        if n <= 70000:
+            return (
+                f"Hard constraint: budget is ~${n:,}. Use premium but realistic professional materials. "
+                "Do not escalate to ultra-luxury styling."
+            )
+        return (
+            f"Hard constraint: budget is ~${n:,}. High-end quality is acceptable, but keep compositing realistic and coherent."
+        )
+
+    base = _extract_dspy_inputs(payload)
     step_data = payload.get("stepDataSoFar") or payload.get("step_data_so_far") or {}
     if not isinstance(step_data, dict):
         step_data = {}
@@ -215,8 +265,37 @@ def _extract_scene_placement_inputs(payload: Dict[str, Any]) -> Dict[str, Any]:
     location = f"{location_city}, {location_state}".strip(", ") if location_city or location_state else ""
 
     reference_images, scene_image, product_image = extract_reference_images(payload)
-    scene_context = "User provided a scene as background." if (scene_image and scene_image.strip()) else "Background scene provided."
+    scene_context = (
+        "User provided a scene anchor image as the inpaint background."
+        if (scene_image and scene_image.strip())
+        else "Background scene provided."
+    )
     product_context = "User provided a product to place in the scene." if (product_image and product_image.strip()) else "Product to integrate provided."
+    budget_raw = _normalize_budget_raw(
+        step_data.get("step-budget-range")
+        or step_data.get("budget_range")
+        or step_data.get("budgetRange")
+        or step_data.get("step-budget")
+        or payload.get("budgetRange")
+        or payload.get("budget_range")
+        or base.get("budget_level")
+    )
+    budget_level = budget_raw
+    budget_requirements = _budget_requirements(budget_raw)
+    if isinstance(scene_image, str) and scene_image.strip():
+        reference_adherence = (
+            "Hard anchor constraint: preserve the scene image composition and camera exactly (perspective, horizon, lens/framing, "
+            "lighting direction, shadow behavior, and room geometry). Apply only local inpaint edits needed for requested placement."
+        )
+    elif reference_images:
+        reference_adherence = (
+            "Hard anchor constraint: preserve the primary reference image composition/camera and overall geometry; "
+            "limit edits to requested local placement changes."
+        )
+    else:
+        reference_adherence = (
+            "Preserve geometry/camera continuity and avoid global scene drift; treat edits as localized inpaint updates."
+        )
 
     return {
         "service_summary": service_summary or "Place product in scene.",
@@ -225,6 +304,10 @@ def _extract_scene_placement_inputs(payload: Dict[str, Any]) -> Dict[str, Any]:
         "location": location,
         "scene_context": scene_context,
         "product_context": product_context,
+        "user_preferences": str(base.get("user_preferences") or "").strip(),
+        "reference_adherence": reference_adherence,
+        "budget_level": budget_level,
+        "budget_requirements": budget_requirements,
     }
 
 
@@ -469,6 +552,17 @@ def generate_image(payload: Dict[str, Any]) -> Dict[str, Any]:
         except Exception:
             return None
 
+    def _as_bool(v: Any) -> Optional[bool]:
+        if isinstance(v, bool):
+            return v
+        if isinstance(v, str):
+            s = v.strip().lower()
+            if s in {"1", "true", "yes", "on"}:
+                return True
+            if s in {"0", "false", "no", "off"}:
+                return False
+        return None
+
     num_outputs = (
         payload.get("numOutputs")
         or payload.get("num_outputs")
@@ -498,6 +592,19 @@ def generate_image(payload: Dict[str, Any]) -> Dict[str, Any]:
         payload.get("guidanceScale")
         or payload.get("guidance_scale")
     )
+    prompt_strength = _as_float(
+        payload.get("promptStrength")
+        or payload.get("prompt_strength")
+        or payload.get("strength")
+    )
+    image_prompt_strength = _as_float(
+        payload.get("imagePromptStrength")
+        or payload.get("image_prompt_strength")
+    )
+    go_fast = _as_bool(
+        payload.get("goFast")
+        or payload.get("go_fast")
+    )
 
     # Provider call
     from programs.image_generator.providers.image_generation import generate_images  # local import (keeps module light)
@@ -515,6 +622,9 @@ def generate_image(payload: Dict[str, Any]) -> Dict[str, Any]:
             height=height,
             num_inference_steps=num_inference_steps,
             guidance_scale=guidance_scale,
+            prompt_strength=prompt_strength,
+            image_prompt_strength=image_prompt_strength,
+            go_fast=go_fast,
             reference_images=reference_images_list,
             scene_image=scene_image,
             product_image=product_image,

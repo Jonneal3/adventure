@@ -15,9 +15,15 @@ class ScenePlacementPromptSignature(dspy.Signature):
     The result should look like the product was photographed in that exact environment.
 
     Rules:
+    - PRIORITY ORDER (highest to lowest):
+      1) budget_requirements (hard constraint)
+      2) reference_adherence (hard anchor constraint)
+      3) preserve scene geometry/camera and realistic compositing
+      4) user_preferences/style details
     - Never include UUIDs, URLs, or technical identifiers in the prompt.
     - Never include text instructions like "no text" in the main prompt (use negative_prompt).
     - Keep prompts under 300 words; be specific and visual.
+    - Treat this as an image-edit/inpaint task: preserve geometry/camera while updating content.
     """
 
     service_summary: str = dspy.InputField(
@@ -33,6 +39,24 @@ class ScenePlacementPromptSignature(dspy.Signature):
     )
     product_context: str = dspy.InputField(
         desc="One-line context for the product to place (e.g. 'user provided product to integrate')."
+    )
+    user_preferences: str = dspy.InputField(
+        desc="Condensed user answers/preferences from prior Q&A (materials, style, constraints). Secondary to budget_requirements."
+    )
+    reference_adherence: str = dspy.InputField(
+        desc=(
+            "HARD anchor-image constraint. Keep the scene image composition/camera geometry stable; "
+            "apply only local inpaint edits needed to integrate or update requested elements."
+        )
+    )
+    budget_requirements: str = dspy.InputField(
+        desc=(
+            "HARD budget directive. Must dominate finish/material choices and realism level. "
+            "Never drift into higher-tier/luxury finishes when budget is low."
+        )
+    )
+    budget_level: str = dspy.InputField(
+        desc="Budget signal if available (e.g. '$$', 'mid-range', '~10k')."
     )
 
     prompt: str = dspy.OutputField(
@@ -59,6 +83,10 @@ class ScenePlacementPromptModule(dspy.Module):
         location: str = "",
         scene_context: str = "",
         product_context: str = "",
+        user_preferences: str = "",
+        reference_adherence: str = "",
+        budget_requirements: str = "",
+        budget_level: str = "",
     ):
         return self.generate(
             service_summary=service_summary or "",
@@ -67,6 +95,10 @@ class ScenePlacementPromptModule(dspy.Module):
             location=location or "",
             scene_context=scene_context or "User provided a scene as background.",
             product_context=product_context or "User provided a product to place in the scene.",
+            user_preferences=user_preferences or "",
+            reference_adherence=reference_adherence or "",
+            budget_requirements=budget_requirements or "",
+            budget_level=budget_level or "",
         )
 
 

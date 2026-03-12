@@ -4,7 +4,7 @@
       "path": "."
     },
     {
-      "path": "../sif-ai-form-service"
+      "path": "../sif-api-service"
     }
   ],
   "settings": {}

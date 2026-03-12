@@ -5,7 +5,7 @@ import { ImagePreviewExperience } from "../../../image-preview-experience/ImageP
 import { cn } from "@/lib/utils";
 
 interface PreviewSectionProps {
-  adventureInputMode: "questions" | "prompt";
+  adventureInputMode: "questions" | "prompt" | "budget";
   completedQuestionCount: number;
   config?: any;
   hasPreviewSubsections: boolean;
@@ -106,7 +106,7 @@ export function PreviewSection({
             previewMaxPx={previewMaxPx ?? undefined}
             previewChromePx={8}
             suppressUploadOverlay={isRefinementUploadStep}
-            hideBudgetInOverlay={false}
+            hideBudgetInOverlay={true}
           />
         </div>
       </div>

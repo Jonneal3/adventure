@@ -30,7 +30,7 @@ pnpm dev
 
 This repo uses shared contracts for the AI form system:
 - **UI step schema/types**: `shared/ai-form-ui-contract/` (local setup: symlink to `/Users/jon/Desktop/sif-ai-form-contract`)
-- **Service OpenAPI**: `shared/ai-form-service-openapi/openapi.json`
+- **Service OpenAPI**: `shared/api-service-openapi/openapi.json`
 
 ## Building for Production
 

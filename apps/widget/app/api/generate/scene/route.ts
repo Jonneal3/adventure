@@ -224,11 +224,6 @@ export async function POST(request: NextRequest) {
 		};
 		const computedAspect = body.aspectRatio || deriveAspectRatio(body.width, body.height);
 
-		const baseUrls = resolveFormServiceBaseUrls();
-		if (baseUrls.length === 0) {
-			return NextResponse.json({ error: "DSPY service URL is not configured" }, { status: 500 });
-		}
-
 		const upstreamPayload = {
 			...body,
 			instanceId: body.instanceId,
@@ -242,29 +237,34 @@ export async function POST(request: NextRequest) {
 			referenceImages: [primaryImage, ...(referenceImages || [])].filter(Boolean),
 		};
 
-		let upstream: any = null;
-		let lastError: any = null;
-		for (const baseUrl of baseUrls) {
-			const endpoint = new URL("/v1/api/generate/scene", baseUrl).toString();
-			try {
-				const resp = await fetch(endpoint, {
-					method: "POST",
-					headers: { "content-type": "application/json" },
-					body: JSON.stringify(upstreamPayload),
-					cache: "no-store",
-				});
-				const text = await resp.text().catch(() => "");
-				const json = text ? (() => { try { return JSON.parse(text); } catch { return null; } })() : null;
-				if (!resp.ok) {
-					lastError = { status: resp.status, details: json ?? text.slice(0, 2000) };
-					continue;
-				}
-				upstream = json;
-				break;
-			} catch (e) {
-				lastError = e instanceof Error ? e.message : String(e);
+			let upstream: any = null;
+			let lastError: any = null;
+			const baseUrls = resolveFormServiceBaseUrls();
+			if (baseUrls.length === 0) {
+				return NextResponse.json({ error: "DSPY service URL is not configured" }, { status: 500 });
 			}
-		}
+			for (const baseUrl of baseUrls) {
+				const endpoint = new URL("/v1/api/generate/scene", baseUrl).toString();
+				try {
+					const resp = await fetch(endpoint, {
+						method: "POST",
+						headers: { "content-type": "application/json" },
+						body: JSON.stringify(upstreamPayload),
+						cache: "no-store",
+					});
+					const text = await resp.text().catch(() => "");
+					const json = text ? (() => { try { return JSON.parse(text); } catch { return null; } })() : null;
+					if (!resp.ok) {
+						lastError = { status: resp.status, details: json ?? text.slice(0, 2000) };
+						continue;
+					}
+					upstream = json;
+					break;
+				} catch (e) {
+					lastError = e instanceof Error ? e.message : String(e);
+				}
+			}
+
 		if (!upstream || upstream.ok === false) {
 			return NextResponse.json({ error: "Image generation failed", details: lastError || upstream }, { status: 502 });
 		}
@@ -308,7 +308,7 @@ export async function POST(request: NextRequest) {
 			images: isEdit ? filteredImages : upstreamImages,
 			predictionId: upstream?.predictionId || upstream?.id,
 			status: upstream?.status,
-			provider: "replicate",
+			provider: upstream?.provider || upstream?.attempts?.find((attempt: any) => attempt?.ok)?.providerId || "replicate",
 			modelId: upstream?.modelId || modelId,
 			instanceId: body.instanceId,
 			creditsDeducted: requiredCredits,

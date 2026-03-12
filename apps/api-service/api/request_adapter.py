@@ -46,6 +46,8 @@ def to_next_steps_payload(*, instance_id: str, body: Dict[str, Any]) -> Dict[str
         )
 
     # Merge top-level budgetRange into stepDataSoFar so server-side prompt logic has budget.
+    # If top-level budget is present, it is treated as the latest user-selected value and
+    # intentionally overwrites older budget keys in stepDataSoFar.
     step_data = out.get("stepDataSoFar")
     if isinstance(step_data, dict):
         budget_raw = out.get("budgetRange") or out.get("budget_range") or out.get("budget")
@@ -54,9 +56,8 @@ def to_next_steps_payload(*, instance_id: str, body: Dict[str, Any]) -> Dict[str
                 budget_val = int(float(str(budget_raw)))
             except (TypeError, ValueError):
                 budget_val = str(budget_raw)
-            for key in ("budget_range", "budgetRange", "step-budget-range"):
-                if key not in step_data or step_data.get(key) in (None, ""):
-                    step_data = {**step_data, key: budget_val}
+            for key in ("budget_range", "budgetRange", "step-budget-range", "step-budget"):
+                step_data = {**step_data, key: budget_val}
             out["stepDataSoFar"] = step_data
 
     if "askedStepIds" not in out:
@@ -90,4 +91,3 @@ def to_next_steps_payload(*, instance_id: str, body: Dict[str, Any]) -> Dict[str
             break
 
     return out
-

@@ -32,28 +32,6 @@ function hexToRgba(hex: string, alpha: number): string | null {
   return `rgba(${r}, ${g}, ${b}, ${a})`;
 }
 
-function withAlpha(color: string, alpha: number): string {
-  const c = String(color || "").trim();
-  const a = Math.max(0, Math.min(1, alpha));
-  if (!c) return `rgba(15, 23, 42, ${a})`;
-  const rgba = c.startsWith("#") ? hexToRgba(c, a) : null;
-  if (rgba) return rgba;
-  // Works for rgb()/hsl()/var()/named colors. (If unsupported, browser will ignore and fall back below.)
-  const pct = Math.round(a * 100);
-  return `color-mix(in srgb, ${c} ${pct}%, transparent)`;
-}
-
-function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
-  const h = String(hex || "").replace("#", "").trim();
-  const full = h.length === 3 ? h.split("").map((c) => c + c).join("") : h;
-  if (full.length !== 6) return null;
-  const r = parseInt(full.slice(0, 2), 16);
-  const g = parseInt(full.slice(2, 4), 16);
-  const b = parseInt(full.slice(4, 6), 16);
-  if (![r, g, b].every((n) => Number.isFinite(n))) return null;
-  return { r, g, b };
-}
-
 /** Darken a hex color by mixing with black. mixBlack 0.5 = 50% black. */
 function darkenHex(hex: string, mixBlack: number): string {
   const h = String(hex || "").replace("#", "").trim();
@@ -446,8 +424,6 @@ export function ImagePreviewExperience(props: {
   }, [stepDataSoFar]);
   // Image uploaded through the form's dedicated upload step — shown as a static thumbnail.
   const formStepUploadThumbnail = sceneUploadUrl ?? userUploadUrl ?? null;
-  // Legacy: images added via the preview's own "Upload your own image" button.
-  const primaryUploadThumbnail = formStepUploadThumbnail ?? uploadedImages[0] ?? null;
   const [leadCaptured, setLeadCaptured] = useState<boolean>(() => loadLeadState(sessionId).leadCaptured);
   const devMode = useMemo(() => isDevModeEnabled(), []);
   const debugSessionRef = useRef<string | null>(null);
@@ -464,8 +440,9 @@ export function ImagePreviewExperience(props: {
   const previewRefreshNonceRef = useRef<number>(0);
   const pendingManualGenerateRef = useRef(false);
   const pendingBudgetRefineRef = useRef(false);
+  const prevBudgetForPricingRef = useRef<number | null>(null);
   const prevRunsLengthRef = useRef(0);
-  const fetchAccuratePricingRef = useRef<() => Promise<void>>(null);
+  const fetchAccuratePricingRef = useRef<(() => Promise<void>) | null>(null);
   const [accuratePricing, setAccuratePricing] = useState<null | {
     totalMin: number;
     totalMax: number;
@@ -631,16 +608,16 @@ export function ImagePreviewExperience(props: {
         normalizeUploadToStrings((effectiveStepDataSoFar as any)?.["step-upload-user-image"]).filter(isValidUrlLikeImage)[0] ?? null;
       const stepProductUpload =
         normalizeUploadToStrings((effectiveStepDataSoFar as any)?.["step-upload-product-image"]).filter(isValidUrlLikeImage)[0] ?? null;
-      const storedUploads = Array.from(
-        new Set([
-          ...(stepSceneUpload ? [stepSceneUpload] : []),
-          ...(stepUserUpload ? [stepUserUpload] : []),
-          ...(stepProductUpload ? [stepProductUpload] : []),
-          ...loadUploadedImages(instanceId, sessionId),
-        ])
-      )
-        .filter(isValidUrlLikeImage)
-        .slice(0, 6);
+	      const storedUploads = Array.from(
+	        new Set([
+	          ...(stepSceneUpload ? [stepSceneUpload] : []),
+	          ...(stepUserUpload ? [stepUserUpload] : []),
+	          ...(stepProductUpload ? [stepProductUpload] : []),
+	          ...uploadedImages,
+	        ])
+	      )
+	        .filter(isValidUrlLikeImage)
+	        .slice(0, 6);
 
       const selectedOptionReferenceImages = (() => {
         try {
@@ -700,12 +677,11 @@ export function ImagePreviewExperience(props: {
         .filter(isValidUrlLikeImage)
         .slice(0, 6);
       const useCase = normalizeUseCase((config as any)?.useCase);
-      // After first image exists, use scene-placement (nano banana) for all refinements and budget changes.
+      // After first image exists, use scene-placement inpaint for refinements/budget changes.
       const canUseScenePlacementForRefinement =
         hasExistingPreview &&
         (useCase === "scene" || useCase === "scene-placement") &&
-        (activeAnchorImage || stepSceneUpload || primaryReferenceImage) &&
-        (stepProductUpload || selectedOptionReferenceImages[0]);
+        (activeAnchorImage || stepSceneUpload || primaryReferenceImage);
       const effectiveUseCase = canUseScenePlacementForRefinement ? "scene-placement" : useCase;
       // For refinements: use latest image as base. scene-placement + hasExistingPreview = drilldown edit.
       const sceneImageForRequest =
@@ -873,13 +849,15 @@ export function ImagePreviewExperience(props: {
 		          })();
 
 		          let header: string;
-		          if (hasUploadedImage) {
-		            header = normalizedUseCase === "tryon"
-		              ? "Create a photorealistic try-on preview showing the product on the person."
-		              : normalizedUseCase === "scene-placement"
-		                ? `Seamlessly place the product into this scene for a ${serviceName} project.`
-		                : `Redesign this space to show a completed ${serviceName} project. Keep the room layout, walls, windows, and camera angle. Transform the finishes, fixtures, and materials to match these preferences:`;
-		          } else {
+			          if (hasUploadedImage) {
+			            header = normalizedUseCase === "tryon"
+			              ? "Create a photorealistic try-on preview showing the product on the person."
+			              : normalizedUseCase === "scene-placement"
+			                ? (stepProductUpload
+			                    ? `Seamlessly place the product into this scene for a ${serviceName} project.`
+			                    : `Edit this uploaded scene in place for a ${serviceName} project while preserving camera angle, layout, and perspective.`)
+			                : `Redesign this space to show a completed ${serviceName} project. Keep the room layout, walls, windows, and camera angle. Transform the finishes, fixtures, and materials to match these preferences:`;
+			          } else {
 		            header = normalizedUseCase === "tryon"
 		              ? "Photorealistic try-on preview."
 		              : normalizedUseCase === "scene-placement"
@@ -895,18 +873,18 @@ export function ImagePreviewExperience(props: {
 		        const prompt = promptFromBuilder || promptFallback;
 
 		        const userImage = stepUserUpload ? await ensureUrlLikeImage(stepUserUpload) : null;
-		        const productImageRaw =
-		          stepProductUpload || (normalizedUseCase === "scene-placement" && hasExistingPreview && selectedOptionReferenceImages[0]);
-		        const productImage = productImageRaw ? await ensureUrlLikeImage(productImageRaw) : null;
-		        const sceneImage =
-		          sceneImageForRequest && typeof sceneImageForRequest === "string" ? await ensureUrlLikeImage(sceneImageForRequest) : null;
+			        const productImageRaw = stepProductUpload || null;
+			        const productImage = productImageRaw ? await ensureUrlLikeImage(productImageRaw) : null;
+			        const sceneImage =
+			          sceneImageForRequest && typeof sceneImageForRequest === "string" ? await ensureUrlLikeImage(sceneImageForRequest) : null;
 
-            // For scene edits, avoid injecting option-card style references into generation.
-            // Keep the edit tightly anchored to the user's scene image.
-            const refsForGeneration =
-              normalizedUseCase === "scene"
-                ? [sceneImage || sceneImageForRequest].filter(isValidUrlLikeImage)
-                : referenceImagesForRequest;
+	            // For scene edits, avoid injecting option-card style references into generation.
+	            // Keep the edit tightly anchored to the user's scene image.
+	            const scenePlacementInpaintMode = normalizedUseCase === "scene-placement" && !productImage;
+	            const refsForGeneration =
+	              normalizedUseCase === "scene" || scenePlacementInpaintMode
+	                ? [sceneImage || sceneImageForRequest].filter(isValidUrlLikeImage)
+	                : referenceImagesForRequest;
 		        const ensuredRefs = await Promise.all(refsForGeneration.map((u) => ensureUrlLikeImage(u)));
 		        const uniqueRefs = Array.from(new Set(ensuredRefs.filter(isValidUrlLikeImage))).slice(0, 6);
 
@@ -925,21 +903,21 @@ export function ImagePreviewExperience(props: {
 		        const modelRec = typeof (promptResult as any)?.modelRecommendation === "object" ? (promptResult as any).modelRecommendation : null;
 		        if (modelRec) requestBody.modelRecommendation = modelRec;
 
-		        if (normalizedUseCase === "tryon") {
-		          if (!userImage || !productImage) {
-		            throw new Error("Please upload both a person photo and a product photo to generate a try-on preview.");
-		          }
-		          requestBody.userImage = userImage;
-		          requestBody.productImage = productImage;
-		          requestBody.referenceImages = Array.from(new Set([userImage, productImage, ...uniqueRefs])).slice(0, 6);
-		        } else if (normalizedUseCase === "scene-placement") {
-		          if (!sceneImage || !productImage) {
-		            throw new Error("Please upload both a scene photo and a product photo to generate a placement preview.");
-		          }
-		          requestBody.sceneImage = sceneImage;
-		          requestBody.productImage = productImage;
-		          requestBody.referenceImages = Array.from(new Set([sceneImage, productImage, ...uniqueRefs])).slice(0, 6);
-		        } else {
+			        if (normalizedUseCase === "tryon") {
+			          if (!userImage || !productImage) {
+			            throw new Error("Please upload both a person photo and a product photo to generate a try-on preview.");
+			          }
+			          requestBody.userImage = userImage;
+			          requestBody.productImage = productImage;
+			          requestBody.referenceImages = Array.from(new Set([userImage, productImage, ...uniqueRefs])).slice(0, 6);
+			        } else if (normalizedUseCase === "scene-placement") {
+			          if (!sceneImage) {
+			            throw new Error("Please upload a scene photo to generate a placement/inpaint preview.");
+			          }
+			          requestBody.sceneImage = sceneImage;
+			          if (productImage) requestBody.productImage = productImage;
+			          requestBody.referenceImages = Array.from(new Set([sceneImage, ...(productImage ? [productImage] : []), ...uniqueRefs])).slice(0, 6);
+			        } else {
 		          if (sceneImage) requestBody.sceneImage = sceneImage;
 		          if (uniqueRefs.length > 0) requestBody.referenceImages = uniqueRefs.slice(0, 6);
 		        }
@@ -1484,6 +1462,22 @@ export function ImagePreviewExperience(props: {
     setLiveBudget(clamped);
   }, [budgetSliderBounds, liveBudget]);
 
+  // If budget changes while pricing is revealed, refetch accurate pricing after the next regeneration.
+  // This covers both the in-overlay slider and external budget changes (e.g. question-pane Budget mode).
+  useEffect(() => {
+    if (liveBudget === null || !Number.isFinite(liveBudget)) return;
+    if (prevBudgetForPricingRef.current === null) {
+      prevBudgetForPricingRef.current = liveBudget;
+      return;
+    }
+    if (prevBudgetForPricingRef.current === liveBudget) return;
+    prevBudgetForPricingRef.current = liveBudget;
+    if (!enabled || !hero) return;
+    if (!leadCaptured) return;
+    pendingBudgetRefineRef.current = true;
+    prevRunsLengthRef.current = runs.length;
+  }, [enabled, hero, leadCaptured, liveBudget, runs.length]);
+
   useEffect(() => {
     if (!enabled) return;
     if (!hero) return;
@@ -1650,15 +1644,6 @@ export function ImagePreviewExperience(props: {
       return next;
     });
   };
-  const goToRun = (id: string) => {
-    setCache((prev) => {
-      const base = prev ?? loadCache(instanceId, sessionId);
-      if (!base) return prev;
-      const next: PreviewCacheV3 = { ...base, activeRunId: id, updatedAt: Date.now() };
-      saveCache(instanceId, sessionId, next);
-      return next;
-    });
-  };
   // previewMaxVh >= 95 means full-screen dominant layout (mobile/adventure) — no space below the image.
   const isDominantLayout = typeof previewMaxVh === "number" && previewMaxVh >= 95;
 
@@ -1680,27 +1665,44 @@ export function ImagePreviewExperience(props: {
   const maxPx = Math.max(0, maxPxRaw - (hasValidPreviewMaxPx ? chromePx : 0));
   const maxVh = typeof previewMaxVh === "number" && Number.isFinite(previewMaxVh) ? Math.min(base.vh, previewMaxVh) : base.vh;
 
-  // Use measured parent px when available so parent layout (header/timeline/question pane)
-  // is the source of truth. Fall back to vh only before first measurement settles.
-  const previewSize = hasValidPreviewMaxPx
-    ? `min(100%, ${maxVw}vw, ${maxPx}px)`
-    : `min(100%, ${maxVw}vw, ${maxPx}px, ${maxVh}dvh)`;
+  // Keep the sizing expression stable across the entire lifecycle (generating -> revealed),
+  // so we don't "snap" between different min() constraints as measurements settle.
+  const previewSize = `min(100%, ${maxVw}vw, ${maxPx}px, ${maxVh}dvh)`;
 
   // Let the preview size respond to parent layout changes (e.g. toggling between prompt/questions)
-  // and rely on layout animation to keep it feeling smooth.
+  // without using framer-motion layout animations (they can jitter while measurements settle).
   const effectivePreviewSize = previewSize;
-  // On-brand overlay: use one solid brand-tint for all overlay controls so colors match.
+  // Neutral glass palette for all overlay controls (pills + lead popover).
   const primary = theme.primaryColor || "#3b82f6";
-  const pillBg = withAlpha(darkenHex(primary, 0.4), 0.55);
+  const pillBg = "rgba(51, 65, 85, 0.52)";
   const overlayBg = pillBg;
-  const overlayHoverBg = withAlpha(darkenHex(primary, 0.34), 0.6);
-  const overlayBorder = hexToRgba(primary, 0.35) || "rgba(255,255,255,0.2)";
-  const leadGenOverlayBg = withAlpha(darkenHex(primary, 0.4), 0.85);
+  const overlayHoverBg = "rgba(51, 65, 85, 0.64)";
+  const overlayBorder = "rgba(255,255,255,0.24)";
+  // Keep lead popover on the exact same glass color token as overlay pills.
+  const leadGenOverlayBg = overlayBg;
+  const leadGenFg = "rgba(255,255,255,0.95)";
+  const leadGenMuted = "rgba(255,255,255,0.72)";
+  const leadGenInputBg = "rgba(255,255,255,0.12)";
+  const leadGenInputBorder = "rgba(255,255,255,0.20)";
+  const leadGenPlaceholder = "rgba(255,255,255,0.58)";
+  const leadGenActionBg = "rgba(255,255,255,0.18)";
+  const leadGenActionFg = "#ffffff";
+  const leadGenActionBorder = "rgba(255,255,255,0.26)";
+  const leadGenRing = "rgba(255,255,255,0.38)";
   const overlayVars = {
     ["--sif-overlay-bg" as any]: overlayBg,
     ["--sif-overlay-hover-bg" as any]: overlayHoverBg,
     ["--sif-overlay-border" as any]: overlayBorder,
     ["--sif-lead-gen-overlay-bg" as any]: leadGenOverlayBg,
+    ["--sif-lead-gen-fg" as any]: leadGenFg,
+    ["--sif-lead-gen-muted" as any]: leadGenMuted,
+    ["--sif-lead-gen-input-bg" as any]: leadGenInputBg,
+    ["--sif-lead-gen-input-border" as any]: leadGenInputBorder,
+    ["--sif-lead-gen-placeholder" as any]: leadGenPlaceholder,
+    ["--sif-lead-gen-action-bg" as any]: leadGenActionBg,
+    ["--sif-lead-gen-action-fg" as any]: leadGenActionFg,
+    ["--sif-lead-gen-action-border" as any]: leadGenActionBorder,
+    ["--sif-lead-gen-ring" as any]: leadGenRing,
   } as React.CSSProperties;
   const overlayButtonClass =
     "h-8 sm:h-7 inline-flex items-center gap-1.5 rounded-xl px-3 text-[11px] leading-none text-white/95 shadow-sm backdrop-blur-md bg-[var(--sif-overlay-bg)] hover:bg-[var(--sif-overlay-hover-bg)] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50 disabled:opacity-60 disabled:cursor-not-allowed";
@@ -1714,6 +1716,15 @@ export function ImagePreviewExperience(props: {
     ["--sif-overlay-hover-bg" as any]: pricingPillOverlayHoverBg,
     ["--sif-pill-fg" as any]: "#ffffff",
     ["--sif-lead-gen-overlay-bg" as any]: leadGenOverlayBg,
+    ["--sif-lead-gen-fg" as any]: leadGenFg,
+    ["--sif-lead-gen-muted" as any]: leadGenMuted,
+    ["--sif-lead-gen-input-bg" as any]: leadGenInputBg,
+    ["--sif-lead-gen-input-border" as any]: leadGenInputBorder,
+    ["--sif-lead-gen-placeholder" as any]: leadGenPlaceholder,
+    ["--sif-lead-gen-action-bg" as any]: leadGenActionBg,
+    ["--sif-lead-gen-action-fg" as any]: leadGenActionFg,
+    ["--sif-lead-gen-action-border" as any]: leadGenActionBorder,
+    ["--sif-lead-gen-ring" as any]: leadGenRing,
   } as React.CSSProperties;
 
   // Pricing pill: show whenever we have hero image + pricing config. In dominant layout (full-screen preview),
@@ -1785,18 +1796,17 @@ export function ImagePreviewExperience(props: {
 	          <CardContent className={cn(previewMaxPx ? "p-0" : transparentChrome ? "p-0" : "p-3", stackedPreviewLayers.length > 0 ? "overflow-visible" : "overflow-hidden")}>
 	            {previewMaxPx && chromePx > 0 ? <div style={{ height: chromePx }} /> : null}
             <div className={cn("flex justify-center", stackedPreviewLayers.length > 0 && "pl-14")}>
-            <motion.div
-              layout
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ type: "spring", stiffness: 400, damping: 35 }}
-			              className="relative mx-auto overflow-visible"
-			              style={{
-			                width: effectivePreviewSize,
-			                maxWidth: "100%",
-			                aspectRatio: "1 / 1",
-			                maxHeight: effectivePreviewSize,
-			              }}
+	            <motion.div
+	              initial={{ opacity: 0 }}
+	              animate={{ opacity: 1 }}
+	              transition={{ duration: 0.18, ease: "easeOut" }}
+				              className="relative mx-auto overflow-visible"
+				              style={{
+				                width: effectivePreviewSize,
+				                maxWidth: "100%",
+				                aspectRatio: "1 / 1",
+				                maxHeight: effectivePreviewSize,
+				              }}
 			            >
 			              {/* Keep prior previews visually present, but only use the deck animation when browsing history. */}
 				              <AnimatePresence initial={false}>
@@ -2045,17 +2055,11 @@ export function ImagePreviewExperience(props: {
 	                  animate={
 	                    activeNavigationTransition
 	                      ? {
-	                          x: [activeNavigationTransition.direction * 34, 0],
-	                          y: [8, 0],
-	                          rotate: [activeNavigationTransition.direction * 1.6, 0],
-	                          scale: [0.97, 1],
-	                          opacity: [0.76, 1],
+	                          x: [activeNavigationTransition.direction * 28, 0],
+	                          opacity: [0.8, 1],
 	                        }
 	                      : {
 	                          x: 0,
-	                          y: 0,
-	                          rotate: 0,
-	                          scale: 1,
 	                          opacity: 1,
 	                        }
 	                  }
@@ -2074,20 +2078,10 @@ export function ImagePreviewExperience(props: {
 	                  }}
 	                >
 	                  {/* eslint-disable-next-line @next/next/no-img-element */}
-	                  <motion.img
+	                  <img
 	                    src={hero}
 	                    alt="Preview"
 	                    className="h-full w-full object-cover"
-	                    animate={
-	                      activeNavigationTransition
-	                        ? { filter: ["blur(10px)", "blur(0px)"] }
-	                        : { filter: "blur(0px)" }
-	                    }
-	                    transition={
-	                      activeNavigationTransition
-	                        ? { type: "spring", stiffness: 400, damping: 35 }
-	                        : { duration: 0.12, ease: "easeOut" }
-	                    }
 	                  />
 	                </motion.div>
 	              ) : (
@@ -2296,15 +2290,15 @@ export function ImagePreviewExperience(props: {
               {!lightboxOpen && ((hero && canUseLiveBudgetSlider && hasBudgetRangeLoaded && !hideBudgetInOverlay) || (shouldShowPricingPill && formattedPricingRange)) ? (
                 <div className="absolute bottom-3 left-3 right-3 z-30 pointer-events-auto sm:left-4 sm:right-4 sm:bottom-4">
                   <div className="flex items-stretch gap-2 sm:gap-3">
-                    {hero && canUseLiveBudgetSlider && hasBudgetRangeLoaded && !hideBudgetInOverlay ? (
-                      <div
-                        className="min-w-0 flex-1 h-[52px] flex flex-col justify-center rounded-2xl border border-white/10 px-3 py-2 backdrop-blur-md"
-                        style={{
-                          backgroundColor: pillBg,
-                          backdropFilter: 'blur(12px)',
-                          WebkitBackdropFilter: 'blur(12px)',
-                        }}
-                      >
+		                    {hero && canUseLiveBudgetSlider && hasBudgetRangeLoaded && !hideBudgetInOverlay ? (
+		                      <div
+		                        className="min-w-0 flex-1 h-[56px] flex flex-col justify-center rounded-2xl px-3.5 py-2 backdrop-blur-md shadow-lg shadow-black/20"
+		                        style={{
+		                          backgroundColor: pillBg,
+		                          backdropFilter: 'blur(12px)',
+		                          WebkitBackdropFilter: 'blur(12px)',
+		                        }}
+		                      >
                         <style dangerouslySetInnerHTML={{ __html: `
                           input[data-budget-slider]::-webkit-slider-thumb:hover,
                           input[data-budget-slider]::-webkit-slider-thumb:active { background: white !important; filter: none !important; }
@@ -2314,17 +2308,17 @@ export function ImagePreviewExperience(props: {
                           input[data-budget-slider]::-moz-range-track:hover { filter: none !important; opacity: 1 !important; }
                           input[data-budget-slider]:hover { accent-color: var(--slider-accent) !important; }
                         ` }} />
-                        <div className="flex items-center justify-between text-[11px] font-medium text-white/95">
-                          <span>Budget</span>
-                          <span aria-live="polite">
-                            {formatCurrency(liveBudget ?? budgetSliderBounds.min, {
-                              locale: pricingLocale,
-                              currency: (accuratePricing?.currency || pricingCurrency || "USD").toUpperCase(),
-                              compact: true,
-                            })}
-                          </span>
-                        </div>
-                        <input
+	                        <div className="flex items-center justify-between text-[11px] font-medium text-white/95">
+	                          <span>Budget</span>
+	                          <span aria-live="polite">
+	                            {formatCurrency(liveBudget ?? budgetSliderBounds.min, {
+	                              locale: pricingLocale,
+	                              currency: (accuratePricing?.currency || pricingCurrency || "USD").toUpperCase(),
+	                              compact: true,
+	                            })}
+	                          </span>
+	                        </div>
+	                        <input
                           type="range"
                           data-budget-slider
                           min={budgetSliderBounds.min}
@@ -2337,34 +2331,33 @@ export function ImagePreviewExperience(props: {
                             setLiveBudget(n);
                             setLiveBudgetDirty(true);
                           }}
-                          className="mt-0.5 w-full h-1 rounded-full [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:shadow [&::-webkit-slider-thumb]:cursor-pointer [&::-webkit-slider-thumb:hover]:!bg-white [&::-webkit-slider-thumb:hover]:!shadow [&::-webkit-slider-thumb:active]:!bg-white [&::-webkit-slider-thumb:active]:!shadow [&::-moz-range-thumb]:appearance-none [&::-moz-range-thumb]:w-3.5 [&::-moz-range-thumb]:h-3.5 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-white [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:cursor-pointer [&::-moz-range-thumb:hover]:!bg-white [&::-moz-range-thumb:active]:!bg-white [&:hover]:[accent-color:var(--slider-accent)]"
-                          style={{
-                            accentColor: primary,
-                            ['--slider-accent' as string]: primary,
-                          } as React.CSSProperties}
-                          aria-label="Adjust budget and regenerate preview"
-                        />
-                        <div className="mt-0.5 flex items-center justify-between text-[11px] font-medium text-white/70">
-                          {budgetSliderLabels.map((label, i) => (
-                            <span key={i}>{label}</span>
-                          ))}
-                        </div>
-                      </div>
-                    ) : null}
-                    {shouldShowPricingPill && formattedPricingRange ? (
-                      <div
-                        className="ml-auto shrink-0 w-fit h-[52px] flex flex-col rounded-2xl border border-white/10 overflow-hidden shadow-lg shadow-black/25 backdrop-blur-md"
-                        style={{
-                          backgroundColor: pillBg,
-                          backdropFilter: 'blur(12px)',
-                          WebkitBackdropFilter: 'blur(12px)',
-                        }}
-                      >
-                        <div className="flex-1 min-h-0 flex flex-col justify-center px-4 py-2.5">
-                          <PricingExperience
-                            variant="pill"
-                            className="w-full flex-1 min-h-0 border-0 !bg-transparent !p-0"
-                            containerClassName="w-full h-full flex-1 min-h-0"
+	                          className="mt-1 w-full h-1 rounded-full [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:shadow [&::-webkit-slider-thumb]:cursor-pointer [&::-webkit-slider-thumb:hover]:!bg-white [&::-webkit-slider-thumb:hover]:!shadow [&::-webkit-slider-thumb:active]:!bg-white [&::-webkit-slider-thumb:active]:!shadow [&::-moz-range-thumb]:appearance-none [&::-moz-range-thumb]:w-3.5 [&::-moz-range-thumb]:h-3.5 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-white [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:cursor-pointer [&::-moz-range-thumb:hover]:!bg-white [&::-moz-range-thumb:active]:!bg-white [&:hover]:[accent-color:var(--slider-accent)]"
+	                          style={{
+	                            accentColor: primary,
+	                            ['--slider-accent' as string]: primary,
+	                          } as React.CSSProperties}
+	                          aria-label="Adjust budget and regenerate preview"
+	                        />
+	                        <div className="mt-1 flex items-center justify-between text-[11px] font-medium text-white/70">
+	                          {budgetSliderLabels.map((label, i) => (
+	                            <span key={i}>{label}</span>
+	                          ))}
+	                        </div>
+	                      </div>
+	                    ) : null}
+				                    {shouldShowPricingPill && formattedPricingRange ? (
+			                      <div
+			                        className="ml-auto shrink-0 w-[176px] sm:w-[194px] h-[64px] flex flex-col rounded-2xl overflow-visible shadow-lg shadow-black/25 backdrop-blur-md"
+			                        style={{
+			                          backgroundColor: pillBg,
+			                          backdropFilter: 'blur(12px)',
+			                          WebkitBackdropFilter: 'blur(12px)',
+			                        }}
+			                      >
+			                          <PricingExperience
+			                            variant="pill"
+			                            className="w-full h-full border-0"
+			                            containerClassName="w-full h-full flex-1 min-h-0 p-1.5"
                             transparentBackground
                             label={pillLabel}
                           termsHref="/terms"
@@ -2386,7 +2379,6 @@ export function ImagePreviewExperience(props: {
                           }}
                           style={{ fontFamily: theme.fontFamily, backgroundColor: pillBg, ...pricingPillVars }}
                         />
-                        </div>
                       </div>
                     ) : null}
                   </div>

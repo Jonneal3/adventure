@@ -21,8 +21,8 @@ def _repo_root() -> Path:
 def _shared_env_file() -> Path:
     # Monorepo-first lookup: walk upward and pick the first env/.env.shared.local.
     # Supports both:
-    # - <repo>/apps/ai-form-service
-    # - <repo>/ai-form-service (legacy layout)
+    # - <repo>/apps/api-service
+    # - <repo>/api-service (legacy layout)
     root = _repo_root()
     for base in (root, *root.parents):
         candidate = base / "env" / ".env.shared.local"
@@ -58,7 +58,7 @@ def create_app() -> FastAPI:
     # Keep local fallback for non-monorepo usage.
     load_dotenv(_repo_root() / ".env", override=False)
 
-    app = FastAPI(title="sif-ai-form-service")
+    app = FastAPI(title="sif-api-service")
     router = APIRouter(prefix="/v1/api")
     compat_router = APIRouter(prefix="/api")
 

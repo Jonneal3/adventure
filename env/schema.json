@@ -15,9 +15,9 @@
       "directory": "apps/shopify",
       "projectName": "adv-shopify"
     },
-    "adv-ai-form-service": {
-      "directory": "apps/ai-form-service",
-      "projectName": "adv-ai-form-service"
+    "adv-api-service": {
+      "directory": "apps/api-service",
+      "projectName": "adv-api-service"
     }
   },
   "variables": [
@@ -264,7 +264,7 @@
     {
       "name": "REPLICATE_API_TOKEN",
       "group": "ai",
-      "apps": ["adv-widget", "adv-designer", "adv-ai-form-service"],
+      "apps": ["adv-widget", "adv-designer", "adv-api-service"],
       "targets": ["development", "preview", "production"],
       "required": false,
       "secret": true
@@ -280,7 +280,7 @@
     {
       "name": "GROQ_API_KEY",
       "group": "ai",
-      "apps": ["adv-widget", "adv-designer", "adv-ai-form-service"],
+      "apps": ["adv-widget", "adv-designer", "adv-api-service"],
       "targets": ["development", "preview", "production"],
       "required": false,
       "secret": true
@@ -288,7 +288,7 @@
     {
       "name": "DSPY_PROVIDER",
       "group": "ai",
-      "apps": ["adv-widget", "adv-ai-form-service"],
+      "apps": ["adv-widget", "adv-api-service"],
       "targets": ["development", "preview", "production"],
       "required": false,
       "secret": false
@@ -304,7 +304,7 @@
     {
       "name": "DSPY_MODEL_LOCK",
       "group": "ai",
-      "apps": ["adv-designer", "adv-ai-form-service"],
+      "apps": ["adv-designer", "adv-api-service"],
       "targets": ["development", "preview", "production"],
       "required": false,
       "secret": false
@@ -336,7 +336,7 @@
     {
       "name": "AI_FORM_DEBUG",
       "group": "ai",
-      "apps": ["adv-widget", "adv-ai-form-service"],
+      "apps": ["adv-widget", "adv-api-service"],
       "targets": ["development", "preview", "production"],
       "required": false,
       "secret": false
@@ -352,7 +352,7 @@
     {
       "name": "REPLICATE_MODEL_ID",
       "group": "ai",
-      "apps": ["adv-ai-form-service"],
+      "apps": ["adv-api-service"],
       "targets": ["development", "preview", "production"],
       "required": false,
       "secret": false
@@ -360,7 +360,7 @@
     {
       "name": "REPLICATE_OPTION_IMAGES_MODEL_ID",
       "group": "ai",
-      "apps": ["adv-ai-form-service"],
+      "apps": ["adv-api-service"],
       "targets": ["development", "preview", "production"],
       "required": false,
       "secret": false
@@ -368,7 +368,7 @@
     {
       "name": "AI_FORM_OPTION_IMAGES_REGENERATE",
       "group": "ai",
-      "apps": ["adv-ai-form-service"],
+      "apps": ["adv-api-service"],
       "targets": ["development", "preview", "production"],
       "required": false,
       "secret": false,
@@ -377,7 +377,7 @@
     {
       "name": "AI_FORM_OPTION_IMAGES_MAX_CONCURRENCY",
       "group": "ai",
-      "apps": ["adv-ai-form-service"],
+      "apps": ["adv-api-service"],
       "targets": ["development", "preview", "production"],
       "required": false,
       "secret": false

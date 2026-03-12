@@ -75,7 +75,7 @@ You are generating an image-editing prompt. The user uploaded a photo of their s
 Your prompt must tell the model what to CHANGE about the image.
 Use imperative language: "Replace the flooring with...", "Add subway tile backsplash...",
 "Change the vanity to a rustic wood style...".
-Preserve: camera angle, room geometry, windows, doors, overall layout.
+Hard anchor constraint: preserve camera angle, composition/framing, room geometry, perspective, windows, doors, overall layout.
 Transform: finishes, fixtures, materials, colors, styling, decor.
 Be specific about the desired end result, not the process.
 Never mention budget numbers, prices, or text in the visual description."""
@@ -85,7 +85,10 @@ You are generating a scene-placement/compositing prompt.
 The user provided a scene photo and a product photo.
 Your prompt must describe how to naturally integrate the product into the scene.
 Focus on matching: lighting direction, shadow angles, scale/perspective, color temperature.
-The result should look like the product was photographed in that exact environment."""
+The result should look like the product was photographed in that exact environment.
+Hard anchor constraint: treat the scene image as immutable base (composition, camera, geometry, and lighting).
+Treat this as inpainting/editing: preserve scene geometry and camera viewpoint; apply only local edits for placement.
+Hard constraint: budget tier must control quality/material level. Do not upscale to luxury when budget is low."""
 
 TRYON_SYSTEM = """\
 You are generating a virtual try-on prompt.

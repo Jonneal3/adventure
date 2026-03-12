@@ -54,6 +54,12 @@ class ImagePromptModule:
                 service_summary=service_summary or "",
                 is_edit=is_edit,
                 user_preferences=user_preferences,
+                reference_adherence=(
+                    "Hard constraint: treat uploaded reference image as the anchor. Preserve camera angle, geometry, perspective, "
+                    "lighting direction, and unchanged structures; only edit requested scope."
+                    if is_edit
+                    else ""
+                ),
                 style_tags=style_tags,
                 budget_level=budget_level,
                 location=location,
@@ -66,6 +72,17 @@ class ImagePromptModule:
                 location=location,
                 scene_context="User provided a scene as background.",
                 product_context="User provided a product to place in the scene.",
+                user_preferences=user_preferences,
+                reference_adherence=(
+                    "Hard constraint: preserve the scene anchor image composition, camera, geometry, and lighting; "
+                    "perform local inpaint-style changes only."
+                ),
+                budget_requirements=(
+                    f"Hard constraint: match final materials/finish realism to budget level '{budget_level}'"
+                    if str(budget_level or "").strip()
+                    else "Use realistic mid-range materials and avoid luxury overreach."
+                ),
+                budget_level=budget_level,
             )
         if uc == "tryon":
             return self._tryon(
@@ -78,6 +95,12 @@ class ImagePromptModule:
             service_summary=service_summary or "",
             is_edit=is_edit,
             user_preferences=user_preferences,
+            reference_adherence=(
+                "Hard constraint: treat uploaded reference image as the anchor. Preserve camera angle, geometry, perspective, "
+                "lighting direction, and unchanged structures; only edit requested scope."
+                if is_edit
+                else ""
+            ),
             style_tags=style_tags,
             budget_level=budget_level,
             location=location,

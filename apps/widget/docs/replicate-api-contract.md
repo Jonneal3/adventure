@@ -18,7 +18,7 @@ This project uses a single request contract for image generation:
 
 ## Where image generation now runs
 
-- Image generation is now delegated to `adv-ai-form-service` (`/v1/api/generate/*`).
+- Image generation is now delegated to `adv-api-service` (`/v1/api/generate/*`).
 - `adv-widget` keeps local credit checks/deductions and forwards generation payloads to the DSPy service.
 - Option thumbnail generation uses a single endpoint:
   - `app/api/ai-form/[instanceId]/option-images/generate/route.ts`
@@ -26,6 +26,6 @@ This project uses a single request contract for image generation:
 
 ## Prompt ownership
 
-- DSPy service builds and optimizes prompts server-side (`adv-ai-form-service`).
+- DSPy service builds and optimizes prompts server-side (`adv-api-service`).
 - `adv-widget` no longer performs direct Replicate generation in `/api/generate/*` routes.
 - `adv-widget` still controls billing/credits and wraps the service response for client compatibility.

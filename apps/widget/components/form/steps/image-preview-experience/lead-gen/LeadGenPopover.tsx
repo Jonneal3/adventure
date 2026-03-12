@@ -90,18 +90,6 @@ function isValidEmail(value: string): boolean {
   return re.test(s);
 }
 
-/** Formats phone digits as (XXX) XXX-XXXX */
-function formatPhoneMask(digits: string): string {
-  const d = digits.replace(/\D/g, "").slice(0, 10);
-  if (d.length <= 3) return d ? `(${d}` : "";
-  if (d.length <= 6) return `(${d.slice(0, 3)}) ${d.slice(3)}`;
-  return `(${d.slice(0, 3)}) ${d.slice(3, 6)}-${d.slice(6)}`;
-}
-
-function parsePhoneDigits(value: string): string {
-  return value.replace(/\D/g, "");
-}
-
 /** Formats phone input as (XXX) XXX-XXXX. Returns { display, digits } for mask + submission. */
 function formatPhoneInput(value: string): { display: string; digits: string } {
   const digits = value.replace(/\D/g, "").slice(0, 10);
@@ -235,12 +223,20 @@ export function LeadGenPopover({
   const isOverlay = surface === "overlay";
   const accent = (theme.primaryColor || "#3b82f6").trim();
   const secondary = (theme.secondaryColor || accent).trim();
-  const textColor = isOverlay ? "rgba(255,255,255,0.92)" : (theme.textColor || "#0f172a");
-  const popBg = isOverlay ? "var(--sif-lead-gen-overlay-bg, var(--sif-overlay-bg, rgba(15,23,42,0.92)))" : "var(--form-surface-color, rgba(255,255,255,0.97))";
-  const popBorder = isOverlay ? "rgba(255,255,255,0.10)" : withAlpha(accent, 0.22);
-  const iconMuted = isOverlay ? "rgba(255,255,255,0.65)" : withAlpha(theme.textColor || "#0f172a", 0.55);
-  const inputBorder = isOverlay ? "rgba(255,255,255,0.14)" : withAlpha(accent, 0.22);
-  const ring = isOverlay ? "rgba(255,255,255,0.22)" : withAlpha(accent, 0.35);
+  const themeText = theme.textColor || "#0f172a";
+  const textColor = isOverlay ? "var(--sif-lead-gen-fg, rgba(255,255,255,0.95))" : themeText;
+  const popBg = isOverlay
+    ? "var(--sif-lead-gen-overlay-bg, var(--sif-overlay-bg, rgba(15,23,42,0.90)))"
+    : "var(--form-surface-color, rgba(255,255,255,0.97))";
+  const popBorder = isOverlay ? "transparent" : withAlpha(accent, 0.22);
+  const iconMuted = isOverlay ? "var(--sif-lead-gen-muted, rgba(255,255,255,0.72))" : withAlpha(themeText, 0.55);
+  const inputBg = isOverlay ? "var(--sif-lead-gen-input-bg, rgba(255,255,255,0.10))" : "rgba(255,255,255,0.70)";
+  const inputBorder = isOverlay ? "transparent" : withAlpha(accent, 0.22);
+  const placeholderColor = isOverlay ? "var(--sif-lead-gen-placeholder, rgba(255,255,255,0.58))" : withAlpha(themeText, 0.48);
+  const actionBg = isOverlay ? "var(--sif-lead-gen-action-bg, rgba(255,255,255,0.16))" : accent;
+  const actionFg = isOverlay ? "var(--sif-lead-gen-action-fg, #ffffff)" : "#ffffff";
+  const actionBorder = isOverlay ? "transparent" : withAlpha(accent, 0.34);
+  const ring = isOverlay ? "var(--sif-lead-gen-ring, rgba(255,255,255,0.38))" : withAlpha(accent, 0.35);
   const popRadiusPx = Math.max(Number(theme.borderRadius ?? 14), 14);
 
   useEffect(() => {
@@ -471,12 +467,14 @@ export function LeadGenPopover({
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="you@company.com"
-                    className="h-8 rounded-xl pl-8 pr-[108px] text-[12px] bg-white/10 border-white/10 text-white placeholder:text-white/50 focus-visible:ring-2 focus-visible:ring-offset-0"
+                    className="h-7 rounded-xl pl-8 pr-[112px] text-[12px] placeholder:text-[color:var(--sif-lead-placeholder)] focus-visible:ring-2 focus-visible:ring-offset-0"
                     inputMode="email"
                     style={{
+                      backgroundColor: inputBg,
                       borderColor: inputBorder,
                       fontFamily: theme.fontFamily,
                       color: textColor,
+                      ["--sif-lead-placeholder" as any]: placeholderColor,
                       ["--tw-ring-color" as any]: ring,
                     }}
                     onKeyDown={(e) => {
@@ -489,8 +487,13 @@ export function LeadGenPopover({
                     size="sm"
                     disabled={!canSubmit || isSubmitting}
                     onClick={() => void handleEmailSubmit()}
-                    className="absolute right-1 top-1/2 -translate-y-1/2 h-7 rounded-full px-2.5 text-[12px] bg-white/10 text-white hover:bg-white/15 border border-white/10 shadow-sm whitespace-nowrap"
-                    style={{ fontFamily: theme.fontFamily }}
+                    className="absolute right-0.5 top-1/2 -translate-y-1/2 h-6 rounded-full px-2.5 text-[11px] font-medium leading-none hover:brightness-[0.96] active:brightness-[0.92] border shadow-sm whitespace-nowrap transition-[filter] flex items-center"
+                    style={{
+                      backgroundColor: actionBg,
+                      borderColor: actionBorder,
+                      color: actionFg,
+                      fontFamily: theme.fontFamily,
+                    }}
                   >
                     {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : ctaLabel}
                   </Button>
@@ -561,17 +564,19 @@ export function LeadGenPopover({
                 }}
                 placeholder="(555) 555-5555"
                 className={cn(
-                  "h-8 pl-8 text-[12px] focus-visible:ring-2 focus-visible:ring-offset-0",
+                  "h-7 pl-8 text-[12px] focus-visible:ring-2 focus-visible:ring-offset-0",
                   isOverlay
-                    ? "rounded-xl pr-[108px] bg-white/10 border-white/10 text-white placeholder:text-white/50"
+                    ? "rounded-xl pr-[112px] placeholder:text-[color:var(--sif-lead-placeholder)]"
                     : "pr-[88px] bg-white/70"
                 )}
                 inputMode="tel"
                 aria-label={phoneLabel}
                 style={{
+                  backgroundColor: inputBg,
                   borderColor: inputBorder,
                   fontFamily: theme.fontFamily,
                   color: textColor,
+                  ["--sif-lead-placeholder" as any]: placeholderColor,
                   ["--tw-ring-color" as any]: ring,
                 }}
                 onKeyDown={(e) => {
@@ -585,12 +590,21 @@ export function LeadGenPopover({
                 disabled={!canSubmitPhone || isSubmitting}
                 onClick={() => void handlePhoneSubmit()}
                 className={cn(
-                  "absolute right-1 top-1/2 -translate-y-1/2 h-7 text-[12px] whitespace-nowrap",
+                  "absolute right-0.5 top-1/2 -translate-y-1/2 h-6 text-[11px] font-medium leading-none whitespace-nowrap flex items-center",
                   isOverlay
-                    ? "rounded-full px-2.5 bg-white/10 text-white hover:bg-white/15 border border-white/10 shadow-sm"
+                    ? "rounded-full px-2.5 hover:brightness-[0.96] active:brightness-[0.92] border shadow-sm transition-[filter]"
                     : "rounded-lg px-3"
                 )}
-                style={isOverlay ? { fontFamily: theme.fontFamily } : { backgroundColor: accent, fontFamily: theme.fontFamily }}
+                style={
+                  isOverlay
+                    ? {
+                        backgroundColor: actionBg,
+                        borderColor: actionBorder,
+                        color: actionFg,
+                        fontFamily: theme.fontFamily,
+                      }
+                    : { backgroundColor: accent, fontFamily: theme.fontFamily }
+                }
               >
                 {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Continue"}
               </Button>
@@ -693,15 +707,21 @@ export function LeadGenPopover({
 	        sideOffset={sideOffset}
 	        collisionPadding={12}
 	        sticky="always"
-	        className={cn(
-            "relative max-w-[92vw] overflow-hidden rounded-2xl border shadow-xl",
-            isOverlay ? "w-80 p-2.5 text-white" : "w-72 p-3"
+        className={cn(
+            "relative max-w-[92vw] overflow-visible rounded-2xl shadow-xl",
+            isOverlay ? "w-80 p-2.5" : "w-72 p-3"
           )}
 	        style={{
               ...(contentStyle || {}),
 	          backgroundColor: popBg as any,
 	          borderColor: popBorder,
 	          borderRadius: `${popRadiusPx}px`,
+              ...(isOverlay
+                ? {
+                    backdropFilter: "blur(20px) saturate(1.15)",
+                    WebkitBackdropFilter: "blur(20px) saturate(1.15)",
+                  }
+                : {}),
 	        }}
 	      >
         <PopoverPrimitive.Arrow

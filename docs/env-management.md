@@ -14,7 +14,7 @@ Everything reads from `env/.env.shared.local`.
 - `adv-widget` -> `adv-widget`
 - `adv-designer` -> `adv-designer`
 - `adv-shopify` -> `adv-shopify`
-- `adv-ai-form-service` -> `adv-ai-form-service`
+- `adv-api-service` -> `adv-api-service`
 
 Team scope default in schema: `unfilteredmarketing-5949s-projects`
 

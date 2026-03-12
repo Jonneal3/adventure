@@ -178,7 +178,7 @@ export function StepEngine({
   const [, setPreviewAdvanceGateOpen] = useState(false);
   const pendingPreviewAdvanceRef = useRef<null | { stepId: string; data: any }>(null);
   const leadGateLocksQuestionAreaRef = useRef(false);
-  const [adventureInputMode, setAdventureInputMode] = useState<"questions" | "prompt">("questions");
+  const [adventureInputMode, setAdventureInputMode] = useState<"questions" | "prompt" | "budget">("questions");
   const [promptDraft, setPromptDraft] = useState("");
   const [promptSubmitCount, setPromptSubmitCount] = useState(0);
   const [previewRefreshNonce, setPreviewRefreshNonce] = useState(0);
@@ -340,6 +340,16 @@ export function StepEngine({
     };
   }, [config, normalizedUseCase]);
 
+  const budgetSliderConfig = useMemo(() => {
+    const data = (deterministicBudgetStep as any)?.data || {};
+    return {
+      min: Number(data.min ?? 2000),
+      max: Number(data.max ?? 50000),
+      step: Number(data.step ?? 500),
+      currency: typeof data.currency === "string" && data.currency.trim() ? String(data.currency).trim().toUpperCase() : "USD",
+    };
+  }, [deterministicBudgetStep]);
+
   const handleFlowComplete = useCallback(
     (allData: Record<string, any>) => {
       if (flowCompletedRef.current) return;
@@ -395,6 +405,20 @@ export function StepEngine({
     onFlowComplete: handleFlowComplete,
     extra: contextExtra
   });
+
+  const budgetValue = useMemo((): number | null => {
+    const raw = (state?.stepData as any)?.[DETERMINISTIC_BUDGET_ID];
+    const v = Array.isArray(raw) ? raw[0] : raw;
+    const n = typeof v === "number" ? v : Number(v);
+    return Number.isFinite(n) ? n : null;
+  }, [state?.stepData]);
+
+  const handleBudgetChange = useCallback(
+    (value: number) => {
+      updateStepData(DETERMINISTIC_BUDGET_ID, value);
+    },
+    [updateStepData]
+  );
 
   // Async refinements: when first concept is shown, prepend a deterministic upload step
   // then append refinement questions after designer step.
@@ -3086,14 +3110,17 @@ export function StepEngine({
                       isRefinementUploadStep={isRefinementUploadStep}
                       leadCapturedForUI={leadCapturedForUI}
                       leadGateLocksQuestionArea={leadGateLocksQuestionArea}
-                      loadingMessages={loadingMessages}
-                      adventureInputMode={adventureInputMode}
-                      setAdventureInputMode={setAdventureInputMode}
-                      promptDraft={promptDraft}
-                      setPromptDraft={setPromptDraft}
-                      handlePromptSubmit={() => {
-                        setPromptSubmitCount((prev) => prev + 1);
-                        setPreviewRefreshNonce((prev) => prev + 1);
+	                      loadingMessages={loadingMessages}
+	                      adventureInputMode={adventureInputMode}
+	                      setAdventureInputMode={setAdventureInputMode}
+	                      budgetSliderConfig={budgetSliderConfig}
+	                      budgetValue={budgetValue}
+	                      onBudgetChange={handleBudgetChange}
+	                      promptDraft={promptDraft}
+	                      setPromptDraft={setPromptDraft}
+	                      handlePromptSubmit={() => {
+	                        setPromptSubmitCount((prev) => prev + 1);
+	                        setPreviewRefreshNonce((prev) => prev + 1);
                       }}
                       onRegeneratePreview={(uploadedUrl?: string) => {
                         if (uploadedUrl && typeof uploadedUrl === "string") {

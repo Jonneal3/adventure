@@ -12,7 +12,7 @@ def register(app: FastAPI) -> None:
     def root() -> dict:
         return {
             "ok": True,
-            "service": "sif-ai-form-service",
+            "service": "sif-api-service",
             "message": "This is an API service. Try /health or /docs.",
         }
 

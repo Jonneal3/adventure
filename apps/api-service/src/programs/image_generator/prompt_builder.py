@@ -550,7 +550,11 @@ def build_image_prompt_text(payload: Dict[str, Any]) -> Dict[str, Any]:
 
     if use_case == "scene-placement":
         lines.append(f"Seamlessly place the product into this scene for a {subject} project.")
-        lines.append("Preserve the original scene's camera angle, lighting, and perspective.")
+        lines.append(
+            "Hard anchor constraint: preserve the original scene image composition and camera exactly "
+            "(framing, geometry, perspective, horizon, lighting direction, and depth relationships)."
+        )
+        lines.append("Only apply local inpaint-style edits needed for the requested placement; avoid global scene changes.")
         if scene_image:
             lines.append("Use the provided scene as the background environment.")
         if product_image:
@@ -572,6 +576,10 @@ def build_image_prompt_text(payload: Dict[str, Any]) -> Dict[str, Any]:
         lines.append(
             f"The uploaded photo is the BEFORE state. Generate the photorealistic AFTER state: "
             f"this exact space once a professional {subject} project has been fully completed."
+        )
+        lines.append(
+            "Hard anchor constraint: preserve camera framing/perspective, scene geometry, lighting direction, and "
+            "all unchanged structural elements from the reference image."
         )
         if service_summary:
             lines.append(

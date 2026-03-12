@@ -19,7 +19,7 @@ export function resolveDspyServiceBaseUrl(raw: unknown): string {
   if (!serviceUrl) {
     throw new Error("DSPY service URL is not set (set DSPY_SERVICE_URL or PROD_DSPY_SERVICE_URL)");
   }
-  // Accept bare hostnames (e.g. "sif-ai-form-service.vercel.app") by auto-prepending https://
+  // Accept bare hostnames (e.g. "sif-api-service.vercel.app") by auto-prepending https://
   if (!/^https?:\/\//i.test(serviceUrl)) {
     serviceUrl = `https://${serviceUrl.replace(/^\/+/, "")}`;
   }

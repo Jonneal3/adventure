@@ -16,6 +16,10 @@ class ScenePromptSignature(dspy.Signature):
     service_name and service_summary; never assume a specific industry.
 
     Rules:
+    - PRIORITY ORDER (highest to lowest):
+      1) reference_adherence (hard constraint for edit mode)
+      2) budget_level material/quality fit
+      3) user_preferences/style details
     - Never include UUIDs, URLs, or technical identifiers in the prompt.
     - Never include text instructions like "no text" in the main prompt (use negative_prompt).
     - For edit mode (is_edit=true): The uploaded reference image is the BEFORE state.
@@ -53,6 +57,13 @@ class ScenePromptSignature(dspy.Signature):
     user_preferences: str = dspy.InputField(
         desc="Structured user preferences as key-value pairs (style, materials, colors, etc.)"
     )
+    reference_adherence: str = dspy.InputField(
+        desc=(
+            "HARD reference-image constraint for edit mode. Treat uploaded image as anchor: "
+            "preserve camera/framing, room geometry, perspective, lighting direction, and unchanged objects. "
+            "Only edit requested scope."
+        )
+    )
     style_tags: str = dspy.InputField(desc="Comma-separated style keywords (e.g. 'modern, coastal')")
     budget_level: str = dspy.InputField(
         desc=(
@@ -89,6 +100,7 @@ class ScenePromptModule(dspy.Module):
         service_summary: str = "",
         is_edit: bool = False,
         user_preferences: str = "",
+        reference_adherence: str = "",
         style_tags: str = "",
         budget_level: str = "",
         location: str = "",
@@ -98,6 +110,7 @@ class ScenePromptModule(dspy.Module):
             service_summary=service_summary or "",
             is_edit=is_edit,
             user_preferences=user_preferences,
+            reference_adherence=reference_adherence or "",
             style_tags=style_tags,
             budget_level=budget_level,
             location=location,

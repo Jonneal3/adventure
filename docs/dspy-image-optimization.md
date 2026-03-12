@@ -1,6 +1,6 @@
 # DSPy Image Optimization
 
-This repo now includes a full optimization loop for image request generation in `adv-ai-form-service`:
+This repo now includes a full optimization loop for image request generation in `adv-api-service`:
 
 1. Build `ImageRequest` from `ImageSpec` via DSPy (`prompt`, `negative_prompt`, `params`).
 2. Render images via Replicate (t2i, img2img, inpaint payload mapping).
@@ -15,7 +15,7 @@ This repo now includes a full optimization loop for image request generation in 
 ## Train command
 
 ```bash
-cd adv-ai-form-service
+cd adv-api-service
 PYTHONPATH=.:src python3 -m api.train_image_request_program \
   --trainset ./path/to/train_specs.json \
   --model black-forest-labs/flux-1.1-pro \
@@ -28,7 +28,7 @@ PYTHONPATH=.:src python3 -m api.train_image_request_program \
 
 Saved to:
 
-- `adv-ai-form-service/artifacts/image-optimization/compiled_image_request_program.json`
+- `adv-api-service/artifacts/image-optimization/compiled_image_request_program.json`
 
 ## Runtime usage
 

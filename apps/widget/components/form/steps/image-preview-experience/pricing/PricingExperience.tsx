@@ -1,11 +1,11 @@
 'use client';
 
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useState } from 'react';
 import { useFormTheme } from '../../../demo/FormThemeProvider';
 import { detectCurrencyFromLocale, formatCurrency } from '@/lib/ai-form/utils/currency';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Button } from '@/components/ui/button';
-import { Info, Lock } from 'lucide-react';
+import { Info } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { LeadGenPopover } from '@/components/form/steps/image-preview-experience/lead-gen/LeadGenPopover';
 
@@ -85,17 +85,7 @@ function withAlpha(color: string | undefined, alpha: number): string {
   return `color-mix(in srgb, ${c} ${pct}%, transparent)`;
 }
 
-function darkenHex(hex: string, mixBlack: number): string {
-  const h = String(hex || '').replace('#', '').trim();
-  const full = h.length === 3 ? h.split('').map((c) => c + c).join('') : h;
-  if (full.length !== 6) return hex;
-  const r = Math.round(parseInt(full.slice(0, 2), 16) * (1 - mixBlack));
-  const g = Math.round(parseInt(full.slice(2, 4), 16) * (1 - mixBlack));
-  const b = Math.round(parseInt(full.slice(4, 6), 16) * (1 - mixBlack));
-  return `#${[r, g, b].map((x) => Math.max(0, Math.min(255, x)).toString(16).padStart(2, '0')).join('')}`;
-}
-
-function maskedLockedParts(_value: string | undefined | null): { prefix: string; masked: string } {
+function maskedLockedParts(): { prefix: string; masked: string } {
   // Intentional, consistent mask: "$1" + "XXXXX" (only X's are blurred in UI)
   return { prefix: '$1', masked: 'XXXXX' };
 }
@@ -116,7 +106,7 @@ export interface PricingPillProps extends Omit<React.ButtonHTMLAttributes<HTMLBu
   containerClassName?: string;
 }
 
-// Designer-style pill: horizontal layout, label left / price right, solid bg, clean typography.
+// Keep locked state easy to scan: lock + "Show pricing" + masked value.
 const PricingPill = React.forwardRef<HTMLButtonElement, PricingPillProps>(function PricingPill(
   {
     label,
@@ -138,42 +128,27 @@ const PricingPill = React.forwardRef<HTMLButtonElement, PricingPillProps>(functi
   },
   ref
 ) {
-  const [shown, setShown] = useState(false);
-  const autoRevealedRef = useRef(false);
-
-  useEffect(() => {
-    if (!revealed) {
-      setShown(false);
-      autoRevealedRef.current = false;
-      return;
-    }
-    if (!autoReveal) return;
-    if (autoRevealedRef.current) return;
-    autoRevealedRef.current = true;
-    setShown(true);
-  }, [autoReveal, revealed]);
-
   const effectiveDisabled = Boolean(disabled || (loading && revealed));
   const accent = typeof accentColor === 'string' && accentColor.trim().length > 0 ? accentColor.trim() : null;
-  const placeholderPrice = typeof lockedPrice === 'string' && lockedPrice.trim().length > 0 ? lockedPrice : maskedLockedParts(null).prefix;
-  const displayPrice = revealed ? (allowToggle ? (shown ? price : placeholderPrice) : price) : placeholderPrice;
-  const showLoading = Boolean(loading && revealed);
-  const canShowPricingAction = Boolean(allowToggle && (!revealed || !shown));
-  const lockedMask = maskedLockedParts(lockedPrice ?? null);
+  const lockedMask = maskedLockedParts();
 
   void termsHref;
+  void lockedPrice;
+  void allowToggle;
+  void autoReveal;
 
-  const topLabel = (label && String(label).trim()) ? String(label).trim() : (canShowPricingAction ? 'Estimate' : 'Pricing');
+  const pillLabel = (label && String(label).trim()) ? String(label).trim() : 'Show pricing';
   const base = accent || '#0f172a';
   const tagBg = withAlpha(accent || base, 1);
+  const pillInnerPadding = 'px-[6%] py-[8%]';
   // When transparentBackground, parent provides the bg — stay fully transparent to avoid double-layer/halo
   const outerBg = transparentBackground ? 'transparent' : tagBg;
 
   return (
     <div
       className={cn(
-        "overflow-hidden",
-        transparentBackground ? "w-full h-full border-0" : "w-fit rounded-2xl border border-white/10",
+        "w-full h-full overflow-hidden",
+        transparentBackground ? "border-0" : "rounded-[12%] border border-white/10",
         containerClassName
       )}
       style={{
@@ -186,20 +161,11 @@ const PricingPill = React.forwardRef<HTMLButtonElement, PricingPillProps>(functi
         ref={ref}
         type="button"
         disabled={effectiveDisabled}
-        onClick={(e) => {
-          onClick?.(e);
-          if (e.defaultPrevented) return;
-          if (!revealed) return;
-          if (!allowToggle) return;
-          if (revealed && shown) return;
-          setShown(true);
-        }}
+        onClick={onClick}
         className={cn(
-          'w-full text-left px-6 rounded-2xl text-white border-0 bg-transparent transition-all duration-200',
-          revealed ? 'py-3.5' : 'py-2.5',
-          'hover:bg-white/[0.07] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent',
+          'w-full h-full overflow-hidden rounded-[12%] text-white border-0 bg-white/[0.05] transition-all duration-200',
+          'hover:bg-white/[0.10] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent',
           'disabled:opacity-60 disabled:cursor-not-allowed',
-          'min-w-[140px]',
           className
         )}
         style={{
@@ -210,30 +176,33 @@ const PricingPill = React.forwardRef<HTMLButtonElement, PricingPillProps>(functi
         {...props}
       >
         {!revealed ? (
-          <div className="w-full flex flex-col items-center justify-center gap-1 leading-tight text-center">
-            <div className="flex items-center justify-center gap-1.5">
-              <Lock className="h-4 w-4 text-white shrink-0" aria-hidden />
-              <div className="text-[14px] font-medium tracking-wide text-white uppercase">{topLabel}</div>
+          <div className="relative box-border w-full h-full flex flex-col items-center justify-start gap-[3%] px-[6%] pt-[6%] pb-[8%] text-center leading-tight">
+            <span
+              className="pointer-events-none absolute left-[5%] top-1/2 -translate-y-1/2 size-[6%] rounded-full bg-black/30 ring-1 ring-white/20"
+              aria-hidden
+            />
+            <div className="w-full text-center text-[12px] font-normal tracking-[0.1em] leading-none text-white uppercase">
+              {pillLabel}
             </div>
-            <div className="text-[16px] font-semibold tabular-nums text-white/95 select-none tracking-wider leading-[1.4] pt-0.5 pb-0.5">
+            <div className="box-border w-[78%] max-w-full px-[6%] py-[3.5%] rounded-[14%] bg-white/[0.07] border border-white/10 flex items-center justify-center font-mono text-[22px] font-medium tabular-nums text-white/95 select-none tracking-[0.02em] leading-none">
               <span className="text-white/95">{lockedMask.prefix}</span>
-              <span className="inline-block ml-0.5 align-middle">
-                <span className="inline-block px-1 -mx-1 blur-[5px] opacity-95">{lockedMask.masked}</span>
+              <span className="inline-flex -ml-[1px] items-center">
+                <span className="inline-block px-[1px] blur-[6px] opacity-95">{lockedMask.masked}</span>
               </span>
             </div>
           </div>
         ) : (
-          <div className="flex items-center justify-between gap-4">
-            <div className="text-[13px] font-medium tracking-wide text-white/95 uppercase">{topLabel}</div>
-            {showLoading ? (
-              <div className="text-[12px] font-semibold tabular-nums text-white/90">Calculating…</div>
-            ) : canShowPricingAction ? (
-              <div className="flex items-center gap-2">
-                <div className="text-[14px] font-semibold tabular-nums select-none">{displayPrice}</div>
-              </div>
-            ) : (
-              <div className="text-[13px] font-semibold tabular-nums text-white/95">{displayPrice}</div>
-            )}
+          <div className={cn("w-full h-full flex items-center justify-between gap-3", pillInnerPadding)}>
+            <div className="truncate text-[12px] font-semibold tracking-[0.08em] text-white/92 uppercase">
+              {pillLabel}
+            </div>
+            <div className="shrink-0 font-mono text-[16px] font-medium tabular-nums tracking-[0.02em] text-white/95">
+              {loading ? (
+                <span className="text-white/90">Calculating…</span>
+              ) : (
+                price
+              )}
+            </div>
           </div>
         )}
       </button>
@@ -310,7 +279,7 @@ function PricingExperiencePill(props: PricingExperiencePillProps) {
       onSubmitted={() => onRevealed?.()}
       side="top"
       align="center"
-      sideOffset={14}
+      sideOffset={8}
     >
       {pill}
     </LeadGenPopover>
@@ -390,7 +359,7 @@ function PricingExperiencePanel(props: PricingExperiencePanelProps) {
               </span>
               <div className="flex items-center gap-2">
                 <div
-                  className="text-[38px] font-bold whitespace-nowrap tabular-nums leading-none"
+                  className="font-mono text-[36px] font-medium whitespace-nowrap tabular-nums tracking-[0.01em] leading-none text-white/95"
                   style={{ color: theme.primaryColor, fontFamily: theme.fontFamily }}
                 >
                   {formattedRangeMin && formattedRangeMax ? (
@@ -528,7 +497,17 @@ function PricingExperiencePanel(props: PricingExperiencePanelProps) {
                     gateContext={gateContext}
                     surface="overlay"
                     contentStyle={{
-                      ["--sif-lead-gen-overlay-bg" as any]: withAlpha(darkenHex(primaryColor, 0.4), 0.85),
+                      ["--sif-overlay-bg" as any]: "rgba(51, 65, 85, 0.52)",
+                      ["--sif-lead-gen-overlay-bg" as any]: "rgba(51, 65, 85, 0.52)",
+                      ["--sif-lead-gen-fg" as any]: "rgba(255,255,255,0.95)",
+                      ["--sif-lead-gen-muted" as any]: "rgba(255,255,255,0.72)",
+                      ["--sif-lead-gen-input-bg" as any]: "rgba(255,255,255,0.12)",
+                      ["--sif-lead-gen-input-border" as any]: "rgba(255,255,255,0.20)",
+                      ["--sif-lead-gen-placeholder" as any]: "rgba(255,255,255,0.58)",
+                      ["--sif-lead-gen-action-bg" as any]: "rgba(255,255,255,0.18)",
+                      ["--sif-lead-gen-action-fg" as any]: "#ffffff",
+                      ["--sif-lead-gen-action-border" as any]: "rgba(255,255,255,0.26)",
+                      ["--sif-lead-gen-ring" as any]: "rgba(255,255,255,0.38)",
                     }}
                     title="Your personalized estimate is ready"
                     description="Enter your email to see pricing and download options"

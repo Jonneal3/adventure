@@ -10,4 +10,4 @@ This folder contains a **minimal OpenAPI contract** used to keep the widget's **
 
 ## Updating
 
-Update `shared/ai-form-service-openapi/openapi.json` whenever you change the generate-steps handler's request/response payload shape.
+Update `shared/api-service-openapi/openapi.json` whenever you change the generate-steps handler's request/response payload shape.

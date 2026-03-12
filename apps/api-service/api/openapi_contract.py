@@ -8,7 +8,7 @@ from typing import Any, Dict, Tuple
 import jsonschema
 
 
-_SPEC_PATH = Path(__file__).resolve().parents[1] / "shared" / "ai-form-service-openapi" / "openapi.json"
+_SPEC_PATH = Path(__file__).resolve().parents[2] / "widget" / "shared" / "api-service-openapi" / "openapi.json"
 
 
 def _deref_json_pointer(root: Dict[str, Any], ref: str) -> Any:
@@ -101,4 +101,3 @@ def validate_new_batch_response(body: Any) -> None:
         e0 = errors[0]
         path = "/".join(str(p) for p in e0.path) or "<root>"
         raise ValueError(f"Response does not match OpenAPI schema at {path}: {e0.message}")
-

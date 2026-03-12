@@ -62,6 +62,44 @@ def _normalize_use_case(raw: Any) -> str:
     return ""
 
 
+def _is_grok_imagine_image_model(model_id: str) -> bool:
+    mid = str(model_id or "").strip().lower()
+    return mid == "xai/grok-imagine-image" or mid.startswith("xai/grok-imagine-image:")
+
+
+def _derive_aspect_ratio(width: Optional[int], height: Optional[int]) -> Optional[str]:
+    if not isinstance(width, int) or not isinstance(height, int) or width <= 0 or height <= 0:
+        return None
+    from math import gcd
+
+    g = gcd(width, height)
+    ratio = f"{width // g}:{height // g}"
+    allowed = {
+        "1:1",
+        "16:9",
+        "9:16",
+        "4:3",
+        "3:4",
+        "3:2",
+        "2:3",
+        "2:1",
+        "1:2",
+        "19.5:9",
+        "9:19.5",
+        "20:9",
+        "9:20",
+        "auto",
+    }
+    if ratio in allowed:
+        return ratio
+    # Fallback to closest coarse orientation buckets supported by the model.
+    if width == height:
+        return "1:1"
+    if width > height:
+        return "16:9" if (width / height) >= 1.6 else "4:3"
+    return "9:16" if (height / width) >= 1.6 else "3:4"
+
+
 def _replicate_default_model_id(*, use_case: Optional[str] = None) -> str:
     """
     Pick a Replicate model based on the instance `useCase` when available.
@@ -491,6 +529,9 @@ def generate_images(
     height: Optional[int] = None,
     num_inference_steps: Optional[int] = None,
     guidance_scale: Optional[float] = None,
+    prompt_strength: Optional[float] = None,
+    image_prompt_strength: Optional[float] = None,
+    go_fast: Optional[bool] = None,
     reference_images: Optional[List[str]] = None,
     scene_image: Optional[str] = None,
     product_image: Optional[str] = None,
@@ -501,40 +542,63 @@ def generate_images(
     model = str(model_id or "").strip() or _replicate_default_model_id(use_case=use_case)
     timeout_sec = float(os.getenv("REPLICATE_TIMEOUT_SEC") or "60")
 
-    # Minimal cross-model input. Replicate models differ; unknown keys are typically ignored.
-    inp: Dict[str, Any] = {"prompt": prompt}
-    # Common knobs (best-effort)
-    inp["num_outputs"] = n
-    if negative_prompt and str(negative_prompt).strip():
-        inp["negative_prompt"] = str(negative_prompt).strip()
-    if isinstance(width, int) and width > 0:
-        inp["width"] = width
-    if isinstance(height, int) and height > 0:
-        inp["height"] = height
-    if isinstance(num_inference_steps, int) and num_inference_steps > 0:
-        inp["num_inference_steps"] = num_inference_steps
-    if isinstance(guidance_scale, (int, float)) and float(guidance_scale) > 0:
-        inp["guidance_scale"] = float(guidance_scale)
-    if reference_images and isinstance(reference_images, list) and reference_images:
-        # Some models expect `image` or `input_image`. Send both (ignored if unsupported).
-        first = next((x for x in reference_images if isinstance(x, str) and x.strip()), None)
-        if first:
-            inp["image"] = first
-            inp["input_image"] = first
+    # Minimal cross-model input. Replicate models differ; some reject unknown keys.
+    # Build a strict payload for known strict schemas, otherwise use broad compatibility keys.
+    if _is_grok_imagine_image_model(model):
+        # xai/grok-imagine-image schema:
+        # - prompt (required)
+        # - image (optional; when present, model edits/inpaints)
+        # - aspect_ratio (optional; ignored in edit mode)
+        inp: Dict[str, Any] = {"prompt": prompt}
+        edit_image: Optional[str] = None
+        if isinstance(scene_image, str) and scene_image.strip():
+            edit_image = scene_image.strip()
+        elif reference_images and isinstance(reference_images, list):
+            edit_image = next((x for x in reference_images if isinstance(x, str) and x.strip()), None)
+        if edit_image:
+            inp["image"] = edit_image
+        else:
+            ratio = _derive_aspect_ratio(width, height)
+            if ratio:
+                inp["aspect_ratio"] = ratio
+    else:
+        inp = {"prompt": prompt}
+        inp["num_outputs"] = n
+        if negative_prompt and str(negative_prompt).strip():
+            inp["negative_prompt"] = str(negative_prompt).strip()
+        if isinstance(width, int) and width > 0:
+            inp["width"] = width
+        if isinstance(height, int) and height > 0:
+            inp["height"] = height
+        if isinstance(num_inference_steps, int) and num_inference_steps > 0:
+            inp["num_inference_steps"] = num_inference_steps
+        if isinstance(guidance_scale, (int, float)) and float(guidance_scale) > 0:
+            inp["guidance_scale"] = float(guidance_scale)
+        if isinstance(prompt_strength, (int, float)) and float(prompt_strength) > 0:
+            inp["prompt_strength"] = float(prompt_strength)
+        if isinstance(image_prompt_strength, (int, float)) and float(image_prompt_strength) > 0:
+            inp["image_prompt_strength"] = float(image_prompt_strength)
+        if isinstance(go_fast, bool):
+            inp["go_fast"] = go_fast
+        if reference_images and isinstance(reference_images, list) and reference_images:
+            # Some models expect `image` or `input_image`.
+            first = next((x for x in reference_images if isinstance(x, str) and x.strip()), None)
+            if first:
+                inp["image"] = first
+                inp["input_image"] = first
 
-    # Scene-placement / multi-image best-effort. Different Replicate models use different key names;
-    # Replicate typically ignores unknown keys, so we can safely include a few common variants.
-    if isinstance(scene_image, str) and scene_image.strip():
-        scene_u = scene_image.strip()
-        inp.setdefault("image", scene_u)
-        inp.setdefault("input_image", scene_u)
-        inp["scene_image"] = scene_u
-        inp["background_image"] = scene_u
-    if isinstance(product_image, str) and product_image.strip():
-        prod_u = product_image.strip()
-        inp["product_image"] = prod_u
-        inp["subject_image"] = prod_u
-        inp["overlay_image"] = prod_u
+        # Scene-placement / multi-image best-effort for non-grok models.
+        if isinstance(scene_image, str) and scene_image.strip():
+            scene_u = scene_image.strip()
+            inp.setdefault("image", scene_u)
+            inp.setdefault("input_image", scene_u)
+            inp["scene_image"] = scene_u
+            inp["background_image"] = scene_u
+        if isinstance(product_image, str) and product_image.strip():
+            prod_u = product_image.strip()
+            inp["product_image"] = prod_u
+            inp["subject_image"] = prod_u
+            inp["overlay_image"] = prod_u
 
     _log_provider("replicate_request_payload", inp)
     created = _replicate_create_prediction(model_id=model, input=inp)

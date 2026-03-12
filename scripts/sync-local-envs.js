@@ -8,9 +8,9 @@ const FILES_TO_DELETE = [
   "apps/designer/.env.local",
   "apps/designer/.env.preview.local",
   "apps/designer/.env.production.local",
-  "apps/ai-form-service/.env.example",
-  "apps/ai-form-service/.env.local",
-  "apps/ai-form-service/.env.local.bak",
+  "apps/api-service/.env.example",
+  "apps/api-service/.env.local",
+  "apps/api-service/.env.local.bak",
   "apps/widget/.env.local"
 ];
 

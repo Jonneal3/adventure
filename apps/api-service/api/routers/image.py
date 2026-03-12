@@ -10,6 +10,7 @@ from starlette.status import HTTP_400_BAD_REQUEST
 
 from api.request_adapter import to_next_steps_payload
 from api.utils import dedup_urls, normalize_output_urls
+from programs.image_generator.model_selector import select_model, select_routing_policy
 from programs.image_generator.orchestrator import build_image_prompt, generate_image
 
 
@@ -17,6 +18,86 @@ def register(router: APIRouter, compat_router: APIRouter) -> None:
     # Process-local prompt cache (keeps prompt-only fast). Suitable for single-process dev.
     # In serverless/prod, consider a shared cache (Redis/Upstash) if needed.
     _PROMPT_CACHE: dict[str, tuple[float, dict[str, Any]]] = {}
+
+    def _generate_with_optional_optimized_request(payload: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Service-side model routing entry point.
+
+        Keep provider-selection logic in api-service so widget routes remain a
+        thin transport/proxy layer.
+        """
+        return generate_image(payload)
+
+    def _provider_from_prediction(pred: Any) -> str:
+        if isinstance(pred, dict):
+            provider = str(pred.get("provider") or "").strip().lower()
+            if provider:
+                return provider
+        return "replicate"
+
+    def _has_explicit_value(payload: Dict[str, Any], *keys: str) -> bool:
+        for key in keys:
+            if key not in payload:
+                continue
+            value = payload.get(key)
+            if value is None:
+                continue
+            if isinstance(value, str) and not value.strip():
+                continue
+            if isinstance(value, (list, tuple, dict)) and len(value) == 0:
+                continue
+            return True
+        return False
+
+    def _apply_replicate_routing_defaults(
+        *,
+        payload: Dict[str, Any],
+        adapted: Dict[str, Any],
+        use_case: str,
+        num_input_images: int,
+        has_scene_image: bool = False,
+        has_product_image: bool = False,
+        has_user_image: bool = False,
+        is_edit: bool = False,
+    ) -> Dict[str, Any]:
+        recommendation = select_model(
+            use_case=use_case,
+            num_input_images=max(0, int(num_input_images or 0)),
+            has_scene_image=bool(has_scene_image),
+            has_product_image=bool(has_product_image),
+            has_user_image=bool(has_user_image),
+        )
+        routing_policy = select_routing_policy(use_case=use_case, is_edit=bool(is_edit))
+
+        if not _has_explicit_value(payload, "modelId", "model_id"):
+            adapted["modelId"] = recommendation.model_id
+        if not _has_explicit_value(payload, "guidanceScale", "guidance_scale"):
+            adapted["guidanceScale"] = recommendation.guidance_scale
+        if not _has_explicit_value(payload, "numInferenceSteps", "num_inference_steps"):
+            adapted["numInferenceSteps"] = recommendation.num_inference_steps
+        if not _has_explicit_value(payload, "outputFormat", "output_format"):
+            adapted["outputFormat"] = recommendation.output_format
+        if recommendation.prompt_upsampling is not None and not _has_explicit_value(payload, "promptUpsampling", "prompt_upsampling"):
+            adapted["promptUpsampling"] = recommendation.prompt_upsampling
+        if not _has_explicit_value(payload, "safetyTolerance", "safety_tolerance"):
+            adapted["safetyTolerance"] = recommendation.safety_tolerance
+        if routing_policy.prompt_strength is not None and not _has_explicit_value(payload, "promptStrength", "prompt_strength", "strength"):
+            adapted["promptStrength"] = routing_policy.prompt_strength
+        if routing_policy.image_prompt_strength is not None and not _has_explicit_value(payload, "imagePromptStrength", "image_prompt_strength"):
+            adapted["imagePromptStrength"] = routing_policy.image_prompt_strength
+        if routing_policy.go_fast is not None and not _has_explicit_value(payload, "goFast", "go_fast"):
+            adapted["goFast"] = routing_policy.go_fast
+
+        if not _has_explicit_value(payload, "traits"):
+            adapted["traits"] = list(routing_policy.traits)
+        if routing_policy.required_tags and not _has_explicit_value(payload, "requiredTags", "required_tags"):
+            adapted["requiredTags"] = list(routing_policy.required_tags)
+        if not _has_explicit_value(payload, "routingPriorities", "routing_priorities"):
+            adapted["routingPriorities"] = list(routing_policy.priorities)
+
+        adapted["provider"] = "replicate"
+        adapted["routingPolicy"] = routing_policy.to_dict()
+        return routing_policy.to_dict()
 
     def _prompt_cache_get(key: str) -> Optional[dict[str, Any]]:
         if not key:
@@ -75,6 +156,21 @@ def register(router: APIRouter, compat_router: APIRouter) -> None:
         ):
             if k in payload and payload.get(k) is not None:
                 adapted[k] = payload.get(k)
+        use_case = str(adapted.get("useCase") or payload.get("useCase") or "scene").strip().lower().replace("_", "-")
+        refs = adapted.get("referenceImages") if isinstance(adapted.get("referenceImages"), list) else []
+        scene_image = str(adapted.get("sceneImage") or "").strip()
+        product_image = str(adapted.get("productImage") or "").strip()
+        user_image = str(adapted.get("userImage") or "").strip()
+        _apply_replicate_routing_defaults(
+            payload=payload,
+            adapted=adapted,
+            use_case=use_case,
+            num_input_images=len(refs),
+            has_scene_image=bool(scene_image),
+            has_product_image=bool(product_image),
+            has_user_image=bool(user_image),
+            is_edit=bool(refs or scene_image or product_image or user_image),
+        )
         return generate_image(adapted)
 
     @router.post("/image/prompt")
@@ -333,6 +429,15 @@ def register(router: APIRouter, compat_router: APIRouter) -> None:
             adapted["userImage"] = user_image
         if product_image:
             adapted["productImage"] = product_image
+        routing_policy = _apply_replicate_routing_defaults(
+            payload=payload,
+            adapted=adapted,
+            use_case="try-on",
+            num_input_images=len(reference_images),
+            has_product_image=bool(product_image),
+            has_user_image=bool(user_image),
+            is_edit=True,
+        )
 
         pred = _generate_with_optional_optimized_request(adapted)
         images = normalize_output_urls(pred.get("output") if isinstance(pred, dict) else None)
@@ -342,10 +447,11 @@ def register(router: APIRouter, compat_router: APIRouter) -> None:
             "images": images,
             "predictionId": (pred.get("predictionId") or pred.get("id")) if isinstance(pred, dict) else None,
             "status": str(pred.get("status") or "") if isinstance(pred, dict) else "",
-            "provider": "replicate",
+            "provider": _provider_from_prediction(pred),
             "modelId": adapted["modelId"],
             "instanceId": instance_id,
             "useCase": "try-on",
+            "routingPolicy": routing_policy,
         }
 
     @compat_router.post("/generate/scene-placement")
@@ -361,19 +467,18 @@ def register(router: APIRouter, compat_router: APIRouter) -> None:
             return JSONResponse(status_code=HTTP_400_BAD_REQUEST, content={"ok": False, "error": "instanceId_required"})
         if not scene_image:
             return JSONResponse(status_code=HTTP_400_BAD_REQUEST, content={"ok": False, "error": "sceneImage_required"})
-        if not product_image:
-            return JSONResponse(status_code=HTTP_400_BAD_REQUEST, content={"ok": False, "error": "productImage_required"})
 
         refs_in = payload.get("referenceImages") or payload.get("reference_images") or []
         refs = [x for x in (refs_in if isinstance(refs_in, list) else []) if isinstance(x, str) and x.strip()]
-        reference_images = dedup_urls([scene_image, product_image, *refs])
+        seed_refs = [scene_image, *([product_image] if product_image else []), *refs]
+        reference_images = dedup_urls(seed_refs)
         adapted = to_next_steps_payload(instance_id=instance_id, body=payload)
         step_data = adapted.get("stepDataSoFar") if isinstance(adapted.get("stepDataSoFar"), dict) else {}
         if prompt:
             step_data = {**step_data, "step-promptInput": prompt}
         adapted["stepDataSoFar"] = step_data
         adapted["useCase"] = "scene-placement"
-        adapted["modelId"] = str(payload.get("modelId") or payload.get("model_id") or "google/nano-banana").strip()
+        adapted["modelId"] = str(payload.get("modelId") or payload.get("model_id") or "xai/grok-imagine-image").strip()
         adapted["numOutputs"] = int(payload.get("numOutputs") or payload.get("gallery_max_images") or 4)
         adapted["outputFormat"] = str(payload.get("outputFormat") or payload.get("output_format") or "url")
         adapted["negativePrompt"] = str(payload.get("negativePrompt") or payload.get("negative_prompt") or "").strip() or None
@@ -383,7 +488,17 @@ def register(router: APIRouter, compat_router: APIRouter) -> None:
         adapted["guidanceScale"] = float(payload.get("guidanceScale") or payload.get("guidance_scale") or 6.0)
         adapted["referenceImages"] = reference_images
         adapted["sceneImage"] = scene_image
-        adapted["productImage"] = product_image
+        if product_image:
+            adapted["productImage"] = product_image
+        routing_policy = _apply_replicate_routing_defaults(
+            payload=payload,
+            adapted=adapted,
+            use_case="scene-placement",
+            num_input_images=len(reference_images),
+            has_scene_image=bool(scene_image),
+            has_product_image=bool(product_image),
+            is_edit=True,
+        )
 
         pred = _generate_with_optional_optimized_request(adapted)
         images = normalize_output_urls(pred.get("output") if isinstance(pred, dict) else None)
@@ -393,10 +508,11 @@ def register(router: APIRouter, compat_router: APIRouter) -> None:
             "images": images,
             "predictionId": (pred.get("predictionId") or pred.get("id")) if isinstance(pred, dict) else None,
             "status": str(pred.get("status") or "") if isinstance(pred, dict) else "",
-            "provider": "replicate",
+            "provider": _provider_from_prediction(pred),
             "modelId": adapted["modelId"],
             "instanceId": instance_id,
             "useCase": "scene-placement",
+            "routingPolicy": routing_policy,
         }
 
     @compat_router.post("/generate/scene")
@@ -439,6 +555,14 @@ def register(router: APIRouter, compat_router: APIRouter) -> None:
         adapted["guidanceScale"] = float(payload.get("guidanceScale") or payload.get("guidance_scale") or (4.0 if is_edit else 6.0))
         adapted["referenceImages"] = [primary_image] if primary_image else []
         adapted["sceneImage"] = primary_image or None
+        routing_policy = _apply_replicate_routing_defaults(
+            payload=payload,
+            adapted=adapted,
+            use_case="scene",
+            num_input_images=len(adapted["referenceImages"]) if isinstance(adapted.get("referenceImages"), list) else 0,
+            has_scene_image=bool(primary_image),
+            is_edit=bool(is_edit),
+        )
 
         pred = _generate_with_optional_optimized_request(adapted)
         images = normalize_output_urls(pred.get("output") if isinstance(pred, dict) else None)
@@ -448,11 +572,12 @@ def register(router: APIRouter, compat_router: APIRouter) -> None:
             "images": images,
             "predictionId": (pred.get("predictionId") or pred.get("id")) if isinstance(pred, dict) else None,
             "status": str(pred.get("status") or "") if isinstance(pred, dict) else "",
-            "provider": "replicate",
+            "provider": _provider_from_prediction(pred),
             "modelId": adapted["modelId"],
             "instanceId": instance_id,
             "useCase": "scene",
             "isEdit": bool(is_edit),
+            "routingPolicy": routing_policy,
         }
 
     @compat_router.post("/generate/drilldown")
@@ -489,6 +614,14 @@ def register(router: APIRouter, compat_router: APIRouter) -> None:
         adapted["referenceImages"] = reference_images
         adapted["sceneImage"] = selected_image or (reference_images[0] if reference_images else None)
         adapted["selectedImage"] = selected_image
+        routing_policy = _apply_replicate_routing_defaults(
+            payload=payload,
+            adapted=adapted,
+            use_case="drilldown",
+            num_input_images=len(reference_images),
+            has_scene_image=bool(adapted.get("sceneImage")),
+            is_edit=True,
+        )
 
         pred = _generate_with_optional_optimized_request(adapted)
         images = normalize_output_urls(pred.get("output") if isinstance(pred, dict) else None)
@@ -498,9 +631,9 @@ def register(router: APIRouter, compat_router: APIRouter) -> None:
             "images": images,
             "predictionId": (pred.get("predictionId") or pred.get("id")) if isinstance(pred, dict) else None,
             "status": str(pred.get("status") or "") if isinstance(pred, dict) else "",
-            "provider": "replicate",
+            "provider": _provider_from_prediction(pred),
             "modelId": adapted["modelId"],
             "instanceId": instance_id,
             "useCase": "drilldown",
+            "routingPolicy": routing_policy,
         }
-

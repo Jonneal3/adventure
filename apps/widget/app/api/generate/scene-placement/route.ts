@@ -27,9 +27,9 @@ function resolveFormServiceBaseUrls(): string[] {
   return Array.from(new Set(urls)).filter(Boolean);
 }
 
-// Scene Placement using Google Nano Banana (multi-image)
-// Inputs: sceneImage + productImage + optional referenceImages[]
-// Goal: retain the scene mostly; insert/overlay product; allow multi-image references
+// Scene placement / inpaint refinement
+// Inputs: sceneImage (+ optional productImage) + optional referenceImages[]
+// Goal: preserve the scene anchor image while applying localized edits.
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -45,11 +45,7 @@ export async function POST(request: NextRequest) {
     if (!body.sceneImage) {
       return NextResponse.json({ error: 'sceneImage is required' }, { status: 400 });
     }
-    if (!body.productImage) {
-      return NextResponse.json({ error: 'productImage is required' }, { status: 400 });
-    }
-
-    const modelId = body.modelId || 'google/nano-banana';
+    const modelId = body.modelId || 'xai/grok-imagine-image';
 
     // Number of outputs
     const numOutputs =
@@ -154,7 +150,7 @@ export async function POST(request: NextRequest) {
       promptUpsampling,
       referenceImages: [targetImage, ...referenceImages].filter(Boolean),
       sceneImage: body.sceneImage || targetImage,
-      productImage: body.productImage || referenceImages[0],
+      productImage: body.productImage || undefined,
     };
 
     let upstream: any = null;
@@ -206,7 +202,7 @@ export async function POST(request: NextRequest) {
       useCase: 'scene-placement'
     });
   } catch (error) {
-    logger.error('💥 [SCENE-PLACEMENT (NANO) API] Unexpected error:', error);
-    return NextResponse.json({ error: 'Failed to generate scene placement images (nano-banana)' }, { status: 500 });
+    logger.error('💥 [SCENE-PLACEMENT API] Unexpected error:', error);
+    return NextResponse.json({ error: 'Failed to generate scene placement images' }, { status: 500 });
   }
 }

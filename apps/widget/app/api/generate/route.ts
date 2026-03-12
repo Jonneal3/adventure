@@ -143,7 +143,7 @@ function resolveModelDefaults(
 		};
 	}
 
-	if (useCase === 'tryon' || useCase === 'scene-placement') {
+	if (useCase === 'tryon') {
 		if (intent === "small_improvement" && hasInputImage) {
 			return {
 				modelId: body.modelId || 'google/nano-banana',
@@ -159,6 +159,27 @@ function resolveModelDefaults(
 			guidanceScale: body.guidanceScale ?? 6.0,
 			numInferenceSteps: body.numInferenceSteps ?? 18,
 			promptUpsampling: body.promptUpsampling ?? (hasInputImage ? false : undefined),
+			aspectRatio: body.aspectRatio || 'match_input_image',
+			outputFormat: body.outputFormat || 'jpg',
+		};
+	}
+
+	if (useCase === 'scene-placement') {
+		if (intent === "small_improvement" && hasInputImage) {
+			return {
+				modelId: body.modelId || 'xai/grok-imagine-image',
+				guidanceScale: body.guidanceScale ?? 5.5,
+				numInferenceSteps: body.numInferenceSteps ?? 14,
+				promptUpsampling: body.promptUpsampling ?? false,
+				aspectRatio: body.aspectRatio || 'match_input_image',
+				outputFormat: body.outputFormat || 'jpg',
+			};
+		}
+		return {
+			modelId: body.modelId || 'xai/grok-imagine-image',
+			guidanceScale: body.guidanceScale ?? 6.0,
+			numInferenceSteps: body.numInferenceSteps ?? 18,
+			promptUpsampling: body.promptUpsampling ?? false,
 			aspectRatio: body.aspectRatio || 'match_input_image',
 			outputFormat: body.outputFormat || 'jpg',
 		};
@@ -303,11 +324,6 @@ export async function POST(request: NextRequest) {
 			guidanceScale: defaults.guidanceScale,
 			numInferenceSteps: defaults.numInferenceSteps,
 		});
-		const baseUrls = resolveFormServiceBaseUrls();
-		if (baseUrls.length === 0) {
-			return NextResponse.json({ error: "DSPY service URL is not configured" }, { status: 500 });
-		}
-		const servicePath = mapUseCaseToServicePath(useCase);
 		const upstreamPayload = {
 			...body,
 			instanceId: body.instanceId,
@@ -323,12 +339,17 @@ export async function POST(request: NextRequest) {
 			referenceImages: hasInputImage ? [targetImage, ...referenceImages].filter(Boolean) : [],
 			userImage: body.userImage || (useCase === 'tryon' ? targetImage : undefined),
 			sceneImage: body.sceneImage || ((useCase === 'scene' || useCase === 'scene-placement') ? targetImage : undefined),
-			productImage: body.productImage || ((useCase === 'scene-placement' || useCase === 'tryon') ? referenceImages[0] : undefined),
+			productImage: body.productImage || (useCase === 'tryon' ? referenceImages[0] : undefined),
 			selectedImage: body.selectedImage || (useCase === 'drilldown' ? targetImage : undefined),
 			budgetRange: body.budgetRange,
 			generationIntent,
 		};
 
+		const baseUrls = resolveFormServiceBaseUrls();
+		if (baseUrls.length === 0) {
+			return NextResponse.json({ error: "DSPY service URL is not configured" }, { status: 500 });
+		}
+		const servicePath = mapUseCaseToServicePath(useCase);
 		let upstream: any = null;
 		let lastError: any = null;
 		for (const baseUrl of baseUrls) {
@@ -352,6 +373,7 @@ export async function POST(request: NextRequest) {
 				lastError = e instanceof Error ? e.message : String(e);
 			}
 		}
+
 		if (!upstream || upstream.ok === false) {
 			return NextResponse.json({ error: "Image generation failed", details: lastError || upstream }, { status: 502 });
 		}

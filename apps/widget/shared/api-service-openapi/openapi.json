@@ -1,7 +1,7 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "sif-ai-form-service consolidated API",
+    "title": "sif-api-service consolidated API",
     "version": "0.3.0",
     "description": "Consolidated OpenAPI contract used to keep frontend and backend JSON shapes in sync."
   },

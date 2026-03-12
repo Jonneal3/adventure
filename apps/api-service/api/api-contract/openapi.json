@@ -113,7 +113,7 @@
     }
   },
   "info": {
-    "title": "sif-ai-form-service",
+    "title": "sif-api-service",
     "version": "0.1.0"
   },
   "openapi": "3.1.0",

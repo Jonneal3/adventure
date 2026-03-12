@@ -38,14 +38,16 @@
     "prod:designer": "sh -c 'cd apps/designer && vercel --prod --yes'",
     "prod:widget": "sh -c 'cd apps/widget && vercel --prod --yes'",
     "prod:shopify": "sh -c 'cd apps/shopify && vercel --prod --yes'",
-    "prod:ai-form-service": "sh -c 'cd apps/ai-form-service && vercel --prod --yes'",
-    "prod": "sh -c 'npm run prod:designer & npm run prod:widget & npm run prod:shopify & npm run prod:ai-form-service & wait'",
+    "prod:api-service": "sh -c 'cd apps/api-service && vercel --prod --yes'",
+    "prod": "sh -c 'npm run prod:designer & npm run prod:widget & npm run prod:shopify & npm run prod:api-service & wait'",
     "deploy:designer": "npm run prod:designer",
     "deploy:widget": "npm run prod:widget",
     "deploy:shopify": "npm run prod:shopify",
-    "deploy:ai-form-service": "npm run prod:ai-form-service",
+    "deploy:api-service": "npm run prod:api-service",
     "deploy:apps": "npm run prod",
     "deploy": "npm run prod"
+  },
+  "dependencies": {
+    "switchboard": "^1.3.0"
   }
 }
-

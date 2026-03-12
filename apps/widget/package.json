@@ -7,7 +7,8 @@
     "npm": ">=9"
   },
   "scripts": {
-    "dev:raw": "set -a && . ../../env/.env.shared.local && set +a && NODE_OPTIONS=--require=./scripts/console-silence.cjs BROWSERSLIST_IGNORE_OLD_DATA=1 next dev -p 3001",
+    "predev": "node ./scripts/ensure-next-runtime.cjs",
+    "dev:raw": "set -a && . ../../env/.env.shared.local && set +a && BROWSERSLIST_IGNORE_OLD_DATA=1 node -r ./scripts/console-silence.cjs -r ./scripts/next-runtime-chunk-fix.cjs $(node -p \"require.resolve('next/dist/bin/next')\") dev -p 3001",
     "clean:next": "node -e \"const fs=require('fs');fs.rmSync('.next',{recursive:true,force:true});fs.rmSync('node_modules/.cache',{recursive:true,force:true});\"",
     "dev:clean": "npm run clean:next && npm run dev:raw",
     "dev:nocache": "npm run dev:clean",
@@ -105,6 +106,12 @@
     "sonner": "^1.2.4",
     "streamdown": "^1.6.10",
     "stripe": "^14.25.0",
+    "switchboard-ai": "^0.1.0",
+    "switchboard-ai-cli": "^0.1.0",
+    "switchboard-ai-core-spec": "^0.1.0",
+    "switchboard-ai-providers": "^0.1.0",
+    "switchboard-ai-registry": "^0.1.0",
+    "switchboard-ai-router-ts": "^0.1.0",
     "tailwind-merge": "^2.6.0",
     "tailwind-scrollbar": "^3.1.0",
     "tailwindcss": "^3.3.0",
