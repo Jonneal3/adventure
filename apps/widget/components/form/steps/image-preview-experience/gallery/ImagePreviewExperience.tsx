@@ -2346,18 +2346,18 @@ export function ImagePreviewExperience(props: {
 	                      </div>
 	                    ) : null}
 				                    {shouldShowPricingPill && formattedPricingRange ? (
-			                      <div
-			                        className="ml-auto shrink-0 w-[176px] sm:w-[194px] h-[64px] flex flex-col rounded-2xl overflow-visible shadow-lg shadow-black/25 backdrop-blur-md"
+				                      <div
+				                        className="ml-auto shrink-0 w-[176px] sm:w-[194px] flex flex-col rounded-2xl overflow-visible shadow-lg shadow-black/25 backdrop-blur-md"
 			                        style={{
 			                          backgroundColor: pillBg,
 			                          backdropFilter: 'blur(12px)',
 			                          WebkitBackdropFilter: 'blur(12px)',
 			                        }}
 			                      >
-			                          <PricingExperience
-			                            variant="pill"
-			                            className="w-full h-full border-0"
-			                            containerClassName="w-full h-full flex-1 min-h-0 p-1.5"
+				                          <PricingExperience
+				                            variant="pill"
+				                            className="w-full border-0"
+				                            containerClassName="w-full p-1.5"
                             transparentBackground
                             label={pillLabel}
                           termsHref="/terms"

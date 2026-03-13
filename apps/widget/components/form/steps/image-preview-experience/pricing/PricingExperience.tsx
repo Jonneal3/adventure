@@ -176,18 +176,20 @@ const PricingPill = React.forwardRef<HTMLButtonElement, PricingPillProps>(functi
         {...props}
       >
         {!revealed ? (
-          <div className="relative box-border w-full h-full flex flex-col items-center justify-start gap-[3%] px-[6%] pt-[6%] pb-[8%] text-center leading-tight">
+          <div className="relative box-border flex w-full flex-col items-center justify-center gap-[15%] pl-[12%] pr-[8%] py-[6%] text-center">
             <span
-              className="pointer-events-none absolute left-[5%] top-1/2 -translate-y-1/2 size-[6%] rounded-full bg-black/30 ring-1 ring-white/20"
+              className="pointer-events-none absolute left-[6%] top-1/2 -translate-y-1/2 w-[5.5%] aspect-square rounded-full bg-black/30 ring-1 ring-white/20"
               aria-hidden
             />
-            <div className="w-full text-center text-[12px] font-normal tracking-[0.1em] leading-none text-white uppercase">
+            <div className="w-full text-center ml-[6%] text-[clamp(0.8rem,1.8vw,1.2rem)] font-normal tracking-[0.06em] leading-none text-white uppercase">
               {pillLabel}
             </div>
-            <div className="box-border w-[78%] max-w-full px-[6%] py-[3.5%] rounded-[14%] bg-white/[0.07] border border-white/10 flex items-center justify-center font-mono text-[22px] font-medium tabular-nums text-white/95 select-none tracking-[0.02em] leading-none">
-              <span className="text-white/95">{lockedMask.prefix}</span>
-              <span className="inline-flex -ml-[1px] items-center">
-                <span className="inline-block px-[1px] blur-[6px] opacity-95">{lockedMask.masked}</span>
+            <div className="mt-[6%] ml-[6%] box-border w-[94%] max-w-[94%] min-w-0 p-[3%] rounded-xl bg-white/[0.07] border border-white/10 flex items-center justify-center overflow-hidden text-[clamp(1.02rem,2.45vw,1.62rem)] font-semibold tabular-nums text-white/95 select-none tracking-[0.02em] leading-[1] whitespace-nowrap [font-family:'Courier_Prime','IBM_Plex_Mono','Courier_New',monospace]">
+              <span className="inline-flex items-center leading-none px-[0.18em] py-[0.04em]">
+                <span className="text-white/95 leading-none">{lockedMask.prefix}</span>
+                <span className="inline-flex -ml-[1px] items-center leading-none">
+                  <span className="inline-block px-[0.04em] blur-[0.22em] opacity-90 leading-none">{lockedMask.masked}</span>
+                </span>
               </span>
             </div>
           </div>
