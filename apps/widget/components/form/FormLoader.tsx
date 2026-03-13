@@ -17,6 +17,9 @@ export interface FormLoaderProps {
   /** Optional extra content (e.g. countdown badge) */
   children?: React.ReactNode;
   className?: string;
+  /** Visual tone for pill overlays */
+  tone?: "default" | "overlay";
+  style?: React.CSSProperties;
 }
 
 export function FormLoader({
@@ -26,6 +29,8 @@ export function FormLoader({
   size = "md",
   children,
   className,
+  tone = "default",
+  style,
 }: FormLoaderProps) {
   const { theme } = useFormTheme();
   const primaryColor = theme.primaryColor || "#3b82f6";
@@ -34,28 +39,40 @@ export function FormLoader({
   const iconSize = size === "sm" ? "h-4 w-4" : "h-8 w-8";
 
   if (variant === "pill") {
+    const isOverlayTone = tone === "overlay";
+    const pillClass = isOverlayTone
+      ? "flex items-center gap-2 rounded-full px-3 py-2 shadow-sm backdrop-blur-md ring-1 ring-white/20"
+      : "flex items-center gap-2 rounded-full bg-white/85 px-3 py-2 shadow-sm ring-1 ring-black/5";
+    const spinnerColor = isOverlayTone ? "rgba(255, 255, 255, 0.92)" : primaryColor;
+    const primaryTextColor = isOverlayTone ? "rgba(255, 255, 255, 0.95)" : (textColor || "#111827");
+    const secondaryTextColor = isOverlayTone ? "rgba(255, 255, 255, 0.72)" : textColor;
+    const pillStyle = isOverlayTone
+      ? ({ backgroundColor: "var(--sif-overlay-bg, rgba(15, 23, 42, 0.78))", ...style } as React.CSSProperties)
+      : style;
+
     return (
       <div
         className={cn(
-          "flex items-center gap-2 rounded-full bg-white/85 px-3 py-2 shadow-sm ring-1 ring-black/5",
+          pillClass,
           className
         )}
+        style={pillStyle}
       >
         <Loader2
           className={cn(iconSize, "animate-spin shrink-0")}
-          style={{ color: primaryColor }}
+          style={{ color: spinnerColor }}
         />
         <div className="flex min-w-0 flex-1 flex-col gap-0.5">
           <span
             className="text-xs font-medium truncate"
-            style={{ fontFamily: theme.fontFamily, color: textColor || "#111827" }}
+            style={{ fontFamily: theme.fontFamily, color: primaryTextColor }}
           >
             {message}
           </span>
           {subMessage ? (
             <span
               className="text-[10px] opacity-75 truncate"
-              style={{ fontFamily: theme.fontFamily, color: textColor }}
+              style={{ fontFamily: theme.fontFamily, color: secondaryTextColor }}
             >
               {subMessage}
             </span>

@@ -5,7 +5,7 @@ import { ImagePreviewExperience } from "../../../image-preview-experience/ImageP
 import { cn } from "@/lib/utils";
 
 interface PreviewSectionProps {
-  adventureInputMode: "questions" | "prompt" | "budget";
+  adventureInputMode: "questions" | "prompt" | "budget" | "uploads";
   completedQuestionCount: number;
   config?: any;
   hasPreviewSubsections: boolean;
@@ -44,12 +44,13 @@ export function PreviewSection({
   sessionId,
   setPreviewHasImage,
   setPreviewVisible,
-  showQuestionPaneUnderPreview,
+  showQuestionPaneUnderPreview: _showQuestionPaneUnderPreview,
   stateStepData,
   useDesktopPreviewLayout,
   useMobilePreviewLayout,
   usePreviewDominantLayout,
 }: PreviewSectionProps) {
+  void _showQuestionPaneUnderPreview;
   return (
     <div
       className={cn(

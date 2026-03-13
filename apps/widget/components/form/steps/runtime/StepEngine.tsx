@@ -30,7 +30,6 @@ import {
   DETERMINISTIC_SCENE_IMAGE_ID,
   DETERMINISTIC_SERVICE_ID,
   DETERMINISTIC_USER_IMAGE_ID,
-  DEFAULT_IMAGE_PREVIEW_AT_FRACTION,
   FORM_STATE_SCHEMA_VERSION,
   PRICING_ESTIMATE_KEY,
 } from "./step-engine/constants";
@@ -178,7 +177,7 @@ export function StepEngine({
   const [, setPreviewAdvanceGateOpen] = useState(false);
   const pendingPreviewAdvanceRef = useRef<null | { stepId: string; data: any }>(null);
   const leadGateLocksQuestionAreaRef = useRef(false);
-  const [adventureInputMode, setAdventureInputMode] = useState<"questions" | "prompt" | "budget">("questions");
+  const [adventureInputMode, setAdventureInputMode] = useState<"questions" | "prompt" | "budget" | "uploads">("questions");
   const [promptDraft, setPromptDraft] = useState("");
   const [promptSubmitCount, setPromptSubmitCount] = useState(0);
   const [previewRefreshNonce, setPreviewRefreshNonce] = useState(0);
@@ -304,13 +303,18 @@ export function StepEngine({
   }, [config?.useCase]);
 
   const desiredDeterministicUploadSteps = useMemo(() => {
-    // TEMPORARILY DISABLED: Form-level upload step removed. Upload happens inside ImagePreviewExperience only.
-    return [];
-    // Original logic (restore when re-enabling):
-    // if (normalizedUseCase === "tryon") return [requiredUserImageStep, requiredProductImageStep];
-    // if (normalizedUseCase === "scene-placement") return [requiredSceneImageStep, requiredProductImageStep];
-    // return [optionalSceneImageStep];
-  }, []);
+    // Upload step(s) are a deterministic checkpoint before preview generation.
+    // This ensures users see/provide the anchor image before the first generate run.
+    if (normalizedUseCase === "tryon") return [requiredUserImageStep, requiredProductImageStep];
+    if (normalizedUseCase === "scene-placement") return [requiredSceneImageStep, requiredProductImageStep];
+    return [optionalSceneImageStep];
+  }, [
+    normalizedUseCase,
+    optionalSceneImageStep,
+    requiredProductImageStep,
+    requiredSceneImageStep,
+    requiredUserImageStep,
+  ]);
 
   const deterministicBudgetStep: StepDefinition = useMemo(() => {
     const cfg = (config as any)?.previewPricing;
@@ -1002,7 +1006,7 @@ export function StepEngine({
   // If the user has already progressed past the target index, inject immediately after the current step.
   // NOTE: "What's your name?" deterministic step temporarily disabled per request.
 
-  // Insert upload step(s) around ~30% into the question flow (deterministically) so the preview has an image to work with.
+  // Insert upload step(s) as the last checkpoint before preview generation.
   useEffect(() => {
     if (!flowPlan?.sessionId) return;
     if (!state?.steps || state.steps.length === 0) return;
@@ -1014,19 +1018,11 @@ export function StepEngine({
     const previewGateSteps = (state.steps || []).filter((s: any) => isPreviewGateQuestionStep(s));
     if (previewGateSteps.length === 0) return;
 
-    // "30% mark" semantics: if there are N preview-gate questions in the initial plan,
-    // insert after ceil(N * DEFAULT_IMAGE_PREVIEW_AT_FRACTION) (min 1).
-    const targetOrdinal = Math.min(
-      previewGateSteps.length,
-      Math.max(1, Math.ceil(previewGateSteps.length * DEFAULT_IMAGE_PREVIEW_AT_FRACTION))
-    );
+    // Place upload immediately after the final preview-gate question.
     let desiredInsertIndex = state.steps.length;
-    let seen = 0;
-    for (let i = 0; i < state.steps.length; i += 1) {
+    for (let i = state.steps.length - 1; i >= 0; i -= 1) {
       const s = state.steps[i];
-      if (!isPreviewGateQuestionStep(s)) continue;
-      seen += 1;
-      if (seen >= targetOrdinal) {
+      if (isPreviewGateQuestionStep(s)) {
         desiredInsertIndex = i + 1;
         break;
       }
@@ -2824,8 +2820,9 @@ export function StepEngine({
     (usePreviewDominantLayout || useDesktopPreviewLayout) &&
       (previewHasImage || previewVisible || !previewQuestionRevealReady)
   );
-  // Keep questions hidden only while preview is generating. Once image exists, show questions below.
-  const shouldHideQuestionPaneForLeadGate = false;
+  // In preview-pricing mode, keep the question pane hidden after first image generation
+  // so users focus on the preview + pricing actions only.
+  const shouldHideQuestionPaneForLeadGate = Boolean(previewEnabled && previewHasImage);
   const showQuestionPaneUnderPreview =
     !isPreviewGenerationStage &&
     previewQuestionRevealReady &&

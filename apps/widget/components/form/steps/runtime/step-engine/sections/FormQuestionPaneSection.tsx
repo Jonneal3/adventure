@@ -5,6 +5,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { hexToRgba } from "@/types/design";
 import { Button } from "@/components/ui/button";
+import { Slider as SliderPrimitive } from "@/components/ui/slider";
 import { FormLoader } from "@/components/form/FormLoader";
 import { ComponentRenderer } from "../../ComponentRenderer";
 import { EaseFeedbackPrompt, ReflectionFeedbackPrompt } from "../../../../dev-helpers/UserFeedbackPrompt";
@@ -29,8 +30,8 @@ interface FormQuestionSectionProps {
   leadCapturedForUI: boolean;
   leadGateLocksQuestionArea: boolean;
   loadingMessages: string[];
-  adventureInputMode: "questions" | "prompt" | "budget";
-  setAdventureInputMode: (mode: "questions" | "prompt" | "budget") => void;
+  adventureInputMode: "questions" | "prompt" | "budget" | "uploads";
+  setAdventureInputMode: (mode: "questions" | "prompt" | "budget" | "uploads") => void;
   budgetSliderConfig: { min: number; max: number; step: number; currency: string };
   budgetValue: number | null;
   onBudgetChange: (value: number) => void;
@@ -106,6 +107,7 @@ export function FormQuestionSection({
   usePreviewDominantLayout,
   guidedThumbnailMode,
 }: FormQuestionSectionProps) {
+  const uploadsInputRef = useRef<HTMLInputElement>(null);
   const showPromptControls = Boolean(previewEnabled && previewHasImage && !isRefinementUploadStep);
   const usePreviewPaneLayout = Boolean(previewEnabled && previewHasImage && usePreviewDominantLayout);
   const useBottomDockLayout = Boolean(usePreviewPaneLayout && showQuestionPaneUnderPreview && isMobileViewport);
@@ -124,13 +126,14 @@ export function FormQuestionSection({
     typeof budgetSliderConfig.currency === "string" && budgetSliderConfig.currency.trim()
       ? budgetSliderConfig.currency.trim().toUpperCase()
       : detectCurrencyFromLocale(pricingLocale);
-  const budgetLabels = useMemo(() => {
-    const { min, max } = budgetSliderConfig;
-    return [0, 0.5, 1].map((pct) => {
-      const val = pct === 0 ? min : pct === 1 ? max : Math.round(min + (max - min) * pct);
-      return formatCurrency(val, { locale: pricingLocale, currency: budgetCurrency, compact: true });
-    });
-  }, [budgetCurrency, budgetSliderConfig, pricingLocale]);
+  const budgetMinLabel = useMemo(
+    () => formatCurrency(budgetSliderConfig.min, { locale: pricingLocale, currency: budgetCurrency, compact: true }),
+    [budgetCurrency, budgetSliderConfig.min, pricingLocale]
+  );
+  const budgetMaxLabel = useMemo(
+    () => formatCurrency(budgetSliderConfig.max, { locale: pricingLocale, currency: budgetCurrency, compact: true }),
+    [budgetCurrency, budgetSliderConfig.max, pricingLocale]
+  );
   const defaultBudget = useMemo(() => {
     const { min, max, step } = budgetSliderConfig;
     const at20Pct = min + (max - min) * 0.2;
@@ -167,12 +170,12 @@ export function FormQuestionSection({
   }, [budgetDirty, canUseBudgetMode, onRegeneratePreview]);
 
   const handleBudgetInputChange = useCallback(
-    (nextRaw: string) => {
+    (nextRaw: number) => {
       if (!canUseBudgetMode) return;
       const n = Number(nextRaw);
       if (!Number.isFinite(n)) return;
       const { min, max, step } = budgetSliderConfig;
-      const snapped = Math.round(n / step) * step;
+      const snapped = Math.round((n - min) / step) * step + min;
       const clamped = Math.max(min, Math.min(max, snapped));
       setLocalBudget(clamped);
       onBudgetChange(clamped);
@@ -180,18 +183,38 @@ export function FormQuestionSection({
     },
     [budgetSliderConfig, canUseBudgetMode, onBudgetChange]
   );
-  const darkenHex = (hex: string, mixBlack: number): string => {
-    const h = String(hex || "").replace("#", "").trim();
-    const full = h.length === 3 ? h.split("").map((c) => c + c).join("") : h;
-    if (full.length !== 6) return hex;
-    const r = parseInt(full.slice(0, 2), 16);
-    const g = parseInt(full.slice(2, 4), 16);
-    const b = parseInt(full.slice(4, 6), 16);
-    if (![r, g, b].every((n) => Number.isFinite(n))) return hex;
-    const f = Math.max(0, Math.min(1, 1 - mixBlack));
-    return `rgb(${Math.round(r * f)}, ${Math.round(g * f)}, ${Math.round(b * f)})`;
-  };
-  const pillBg = darkenHex(primary, 0.5);
+
+  const handleUploadAndRegenerate = useCallback(
+    async (file?: File | null) => {
+      if (!file) return;
+      setRefinementUploading(true);
+      try {
+        const reader = new FileReader();
+        const dataUrl = await new Promise<string>((res, rej) => {
+          reader.onload = () => res(reader.result as string);
+          reader.onerror = rej;
+          reader.readAsDataURL(file);
+        });
+        const uploadRes = await fetch("/api/upload-reference-image", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ instanceId, image: dataUrl }),
+        });
+        const uploadedRaw = uploadRes.ok
+          ? ((await uploadRes.json().catch(() => ({}))) as any)?.url ?? dataUrl
+          : dataUrl;
+        const uploadedUrl =
+          typeof uploadedRaw === "string" && uploadedRaw.startsWith("/") && typeof window !== "undefined"
+            ? `${window.location.origin}${uploadedRaw}`
+            : uploadedRaw;
+        onRegeneratePreview(uploadedUrl);
+      } finally {
+        setRefinementUploading(false);
+      }
+    },
+    [instanceId, onRegeneratePreview, setRefinementUploading]
+  );
+
   const inputModeToggle = showPromptControls ? (
       <div className="inline-flex items-center gap-0.5 rounded-full border border-[color:var(--form-surface-border-color)] bg-[var(--form-surface-color)] p-0.5">
 	        <button
@@ -241,6 +264,21 @@ export function FormQuestionSection({
 	        >
 	          Budget
 	        </button>
+          <button
+            type="button"
+            onClick={() => setAdventureInputMode("uploads")}
+            className={cn(
+              "inline-flex h-6 items-center rounded-full px-2.5 text-xs font-medium transition-colors",
+              adventureInputMode === "uploads" ? "bg-primary/10 text-foreground" : ""
+            )}
+            style={
+              adventureInputMode !== "uploads"
+                ? { color: textMuted || "var(--form-text-color)" }
+                : undefined
+            }
+          >
+            Uploads
+          </button>
 	      </div>
 	  ) : undefined;
 
@@ -307,11 +345,11 @@ export function FormQuestionSection({
 	                        animate={{ opacity: 1, y: 0 }}
 	                        exit={{ opacity: 0, y: 8 }}
 	                        transition={{ duration: 0.2, ease: "easeOut" }}
-	                        className="w-full min-h-0 flex flex-col items-center justify-center gap-2 px-4 py-2"
+	                        className="w-full min-h-0 flex flex-col items-center justify-center gap-4 px-4 py-4 sm:py-5"
 	                      >
 	                        <p
-	                          className="text-center text-sm font-medium"
-	                          style={{ color: textMuted || theme.textColor || primary, fontFamily: theme.fontFamily }}
+	                          className="max-w-3xl text-center text-base sm:text-lg font-semibold leading-tight"
+	                          style={{ color: theme.textColor || primary, fontFamily: theme.fontFamily }}
 	                        >
 	                          Upload your own photo to see a more personalized result.
 	                        </p>
@@ -325,64 +363,46 @@ export function FormQuestionSection({
 	                            if (!e.target) return;
 	                            (e.target as HTMLInputElement).value = "";
 	                            if (!file) return;
-	                            setRefinementUploading(true);
 	                            try {
-	                              const reader = new FileReader();
-	                              const dataUrl = await new Promise<string>((res, rej) => {
-	                                reader.onload = () => res(reader.result as string);
-	                                reader.onerror = rej;
-	                                reader.readAsDataURL(file);
-	                              });
-	                              const uploadRes = await fetch("/api/upload-reference-image", {
-	                                method: "POST",
-	                                headers: { "Content-Type": "application/json" },
-	                                body: JSON.stringify({ instanceId, image: dataUrl }),
-	                              });
-	                              const uploadedRaw = uploadRes.ok
-	                                ? ((await uploadRes.json().catch(() => ({}))) as any)?.url ?? dataUrl
-	                                : dataUrl;
-	                              const uploadedUrl =
-	                                typeof uploadedRaw === "string" && uploadedRaw.startsWith("/") && typeof window !== "undefined"
-	                                  ? `${window.location.origin}${uploadedRaw}`
-	                                  : uploadedRaw;
-	                              handleStepComplete(uploadedUrl);
-	                              onRegeneratePreview(uploadedUrl);
-	                            } catch {
-	                              handleStepComplete(null);
-	                            } finally {
-	                              setRefinementUploading(false);
-	                            }
+                                await handleUploadAndRegenerate(file);
+                                handleStepComplete("__skip__");
+                              } catch {
+                                handleStepComplete(null);
+                              }
 	                          }}
 	                        />
 	                        <div className="flex w-full max-w-md flex-row flex-wrap items-center justify-center gap-2.5">
-	                          <button
+	                          <Button
 	                            type="button"
 	                            disabled={refinementUploading}
 	                            onClick={() => refinementUploadInputRef.current?.click()}
 	                            aria-busy={refinementUploading}
-	                            className={cn(
-	                              "group inline-flex h-11 items-center justify-center gap-2 rounded-full border px-5 text-sm font-semibold shadow-sm transition-colors hover:bg-primary/5",
-	                              refinementUploading && "cursor-wait opacity-80"
-	                            )}
+	                            className="h-9 min-w-[120px] px-4 text-xs font-medium"
 	                            style={{
-	                              backgroundColor: "#ffffff",
-	                              borderColor: hexToRgba(primary, 0.35) || primary,
-	                              color: primary,
+	                              backgroundColor: theme.buttonStyle?.backgroundColor || theme.primaryColor || primary,
+	                              color: theme.buttonStyle?.textColor || "#ffffff",
 	                              fontFamily: theme.fontFamily,
+	                              borderRadius: `${theme.borderRadius ?? 12}px`,
 	                            }}
 	                          >
-	                            <ImagePlus className="h-5 w-5 shrink-0" style={{ color: primary }} aria-hidden />
+	                            <ImagePlus className="h-4 w-4 shrink-0" aria-hidden />
 	                            <span>{refinementUploading ? "Uploading..." : "Upload photo"}</span>
-	                          </button>
-	                          <button
+	                          </Button>
+	                          <Button
 	                            type="button"
+	                            variant="outline"
 	                            disabled={refinementUploading}
 	                            onClick={() => handleStepComplete("__skip__")}
-	                            className="shrink-0 text-sm font-medium transition-colors hover:opacity-80"
-	                            style={{ fontFamily: theme.fontFamily, color: textMuted || theme.textColor }}
+	                            className="h-9 min-w-[96px] px-3 text-xs font-medium"
+	                            style={{
+	                              borderColor: theme.primaryColor || primary,
+	                              color: theme.primaryColor || primary,
+	                              fontFamily: theme.fontFamily,
+	                              borderRadius: `${theme.borderRadius ?? 12}px`,
+	                            }}
 	                          >
 	                            Skip for now
-	                          </button>
+	                          </Button>
 	                        </div>
 	                      </motion.div>
 	                    ) : showStepTransitionSkeleton ? (
@@ -510,7 +530,7 @@ export function FormQuestionSection({
                                     type="button"
                                     onClick={handleBack}
                                     variant="outline"
-                                    className="h-9 min-w-[88px] px-3 text-xs font-semibold shrink-0"
+                                    className="h-9 min-w-[88px] px-3 text-xs font-medium shrink-0"
                                     style={{
                                       borderColor: theme.primaryColor || "var(--form-primary-color, #3b82f6)",
                                       color: theme.primaryColor || "var(--form-primary-color, #3b82f6)",
@@ -524,7 +544,7 @@ export function FormQuestionSection({
                                 <Button
                                   type="button"
                                   onClick={() => setAdventureInputMode("questions")}
-                                  className="h-9 min-w-[96px] px-3 text-xs font-semibold shrink-0"
+                                  className="h-9 min-w-[96px] px-3 text-xs font-medium shrink-0"
                                   style={{
                                     backgroundColor: theme.primaryColor || "var(--form-primary-color, #3b82f6)",
                                     color: "#fff",
@@ -571,47 +591,33 @@ export function FormQuestionSection({
 	                                <div className="h-8 w-10 shrink-0" aria-hidden="true" />
 	                              )}
 	                              <div className="flex-1 min-w-0">
-	                                <div
-	                                  className="rounded-lg border p-2"
-	                                  style={{
-	                                    backgroundColor: "var(--form-surface-color, rgba(255,255,255,0.70))",
-	                                    borderColor: "var(--form-surface-border-color, rgba(0,0,0,0.10))",
-	                                    borderRadius: `${theme.borderRadius ?? 8}px`,
-	                                  }}
-	                                >
-	                                  <div className="flex items-center justify-between px-2 py-0.5 text-xs font-medium">
-	                                    <span style={{ color: textMuted || theme.textColor, fontFamily: theme.fontFamily }}>
-	                                      Target budget
-	                                    </span>
-	                                    <span
-	                                      className="tabular-nums"
-	                                      style={{ color: primary, fontFamily: theme.fontFamily }}
-	                                    >
-	                                      {formatCurrency(localBudget, { locale: pricingLocale, currency: budgetCurrency, compact: true })}
-	                                    </span>
-	                                  </div>
-	                                  <input
-	                                    type="range"
-	                                    min={budgetSliderConfig.min}
-	                                    max={budgetSliderConfig.max}
-	                                    step={budgetSliderConfig.step}
-	                                    value={localBudget}
-	                                    onChange={(e) => handleBudgetInputChange(e.target.value)}
-	                                    className="mt-1 w-full h-1 rounded-full [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:shadow [&::-webkit-slider-thumb]:cursor-pointer [&::-moz-range-thumb]:appearance-none [&::-moz-range-thumb]:w-3.5 [&::-moz-range-thumb]:h-3.5 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-white [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:cursor-pointer"
-	                                    style={{
-	                                      accentColor: primary,
-	                                      ['--slider-accent' as string]: primary,
-	                                    } as React.CSSProperties}
-	                                    aria-label="Adjust budget and regenerate preview"
-	                                    disabled={!canUseBudgetMode}
-	                                  />
-	                                  <div className="mt-1 flex items-center justify-between text-[11px] font-medium text-muted-foreground">
-	                                    {budgetLabels.map((label, i) => (
-	                                      <span key={i}>{label}</span>
-	                                    ))}
-	                                  </div>
-	                                </div>
-	                              </div>
+	                                <div className="px-1">
+                                  <div
+                                    className="pb-0.5 text-center text-xl font-black leading-tight tabular-nums"
+                                    style={{ color: primary, fontFamily: theme.fontFamily }}
+                                  >
+                                    {formatCurrency(localBudget, { locale: pricingLocale, currency: budgetCurrency, compact: true })}
+                                  </div>
+                                  <SliderPrimitive
+                                    min={budgetSliderConfig.min}
+                                    max={budgetSliderConfig.max}
+                                    step={budgetSliderConfig.step}
+                                    value={[localBudget]}
+                                    onValueChange={(v) => handleBudgetInputChange(v[0] ?? localBudget)}
+                                    className="w-full"
+                                    aria-label="Adjust budget and regenerate preview"
+                                    disabled={!canUseBudgetMode}
+                                  />
+                                  <div className="mt-1 flex items-center justify-between px-1 text-[11px] font-medium">
+                                    <span style={{ color: textMuted || theme.textColor, fontFamily: theme.fontFamily }}>
+                                      {budgetMinLabel}
+                                    </span>
+                                    <span style={{ color: textMuted || theme.textColor, fontFamily: theme.fontFamily }}>
+                                      {budgetMaxLabel}
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
 	                              <Button
 	                                type="button"
 	                                onClick={() => setAdventureInputMode("questions")}
@@ -628,48 +634,31 @@ export function FormQuestionSection({
 	                            </div>
 	                          ) : (
 	                            <>
-	                              <div
-	                                className="rounded-lg border p-3"
-	                                style={{
-	                                  backgroundColor: "var(--form-surface-color, rgba(255,255,255,0.70))",
-	                                  borderColor: "var(--form-surface-border-color, rgba(0,0,0,0.10))",
-	                                  borderRadius: `${theme.borderRadius ?? 8}px`,
-	                                }}
-	                              >
-	                                <div className="flex items-center justify-between text-xs font-medium">
-	                                  <span style={{ color: textMuted || theme.textColor, fontFamily: theme.fontFamily }}>
-	                                    Target budget
-	                                  </span>
-	                                  <span
-	                                    className="tabular-nums"
-	                                    style={{ color: primary, fontFamily: theme.fontFamily }}
-	                                  >
-	                                    {formatCurrency(localBudget, { locale: pricingLocale, currency: budgetCurrency, compact: true })}
-	                                  </span>
-	                                </div>
-	                                <input
-	                                  type="range"
-	                                  min={budgetSliderConfig.min}
-	                                  max={budgetSliderConfig.max}
-	                                  step={budgetSliderConfig.step}
-	                                  value={localBudget}
-	                                  onChange={(e) => handleBudgetInputChange(e.target.value)}
-	                                  className="mt-2 w-full h-1 rounded-full [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:shadow [&::-webkit-slider-thumb]:cursor-pointer [&::-moz-range-thumb]:appearance-none [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-white [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:cursor-pointer"
-	                                  style={{
-	                                    accentColor: primary,
-	                                    ['--slider-accent' as string]: primary,
-	                                  } as React.CSSProperties}
-	                                  aria-label="Adjust budget and regenerate preview"
-	                                  disabled={!canUseBudgetMode}
-	                                />
-	                                <div className="mt-1 flex items-center justify-between text-[11px] font-medium text-muted-foreground">
-	                                  {budgetLabels.map((label, i) => (
-	                                    <span key={i}>{label}</span>
-	                                  ))}
-	                                </div>
-	                                <div className="mt-2 text-[11px] text-muted-foreground">
-	                                  Adjust budget to preview cheaper vs higher-end options. Regenerates automatically.
-	                                </div>
+	                              <div className="px-1 py-1">
+                                <div
+                                  className="pb-0.5 pt-0.5 text-center text-2xl font-black leading-tight tabular-nums"
+                                  style={{ color: primary, fontFamily: theme.fontFamily }}
+                                >
+                                  {formatCurrency(localBudget, { locale: pricingLocale, currency: budgetCurrency, compact: true })}
+                                </div>
+                                <SliderPrimitive
+                                  min={budgetSliderConfig.min}
+                                  max={budgetSliderConfig.max}
+                                  step={budgetSliderConfig.step}
+                                  value={[localBudget]}
+                                  onValueChange={(v) => handleBudgetInputChange(v[0] ?? localBudget)}
+                                  className="w-full"
+                                  aria-label="Adjust budget and regenerate preview"
+                                  disabled={!canUseBudgetMode}
+                                />
+                                <div className="mt-1 flex items-center justify-between px-1 text-[11px] font-medium">
+                                  <span style={{ color: textMuted || theme.textColor, fontFamily: theme.fontFamily }}>
+                                    {budgetMinLabel}
+                                  </span>
+                                  <span style={{ color: textMuted || theme.textColor, fontFamily: theme.fontFamily }}>
+                                    {budgetMaxLabel}
+                                  </span>
+                                </div>
 	                              </div>
 	                              <div className="flex min-w-0 justify-center gap-2 pt-2.5">
 	                                {canGoBack ? (
@@ -677,7 +666,7 @@ export function FormQuestionSection({
 	                                    type="button"
 	                                    onClick={handleBack}
 	                                    variant="outline"
-	                                    className="h-9 min-w-[88px] px-3 text-xs font-semibold shrink-0"
+	                                    className="h-9 min-w-[88px] px-3 text-xs font-medium shrink-0"
 	                                    style={{
 	                                      borderColor: theme.primaryColor || "var(--form-primary-color, #3b82f6)",
 	                                      color: theme.primaryColor || "var(--form-primary-color, #3b82f6)",
@@ -691,7 +680,7 @@ export function FormQuestionSection({
 	                                <Button
 	                                  type="button"
 	                                  onClick={() => setAdventureInputMode("questions")}
-	                                  className="h-9 min-w-[96px] px-3 text-xs font-semibold shrink-0"
+	                                  className="h-9 min-w-[96px] px-3 text-xs font-medium shrink-0"
 	                                  style={{
 	                                    backgroundColor: theme.primaryColor || "var(--form-primary-color, #3b82f6)",
 	                                    color: "#fff",
@@ -706,7 +695,59 @@ export function FormQuestionSection({
 	                          )}
 	                        </div>
 	                      </motion.div>
-	                    ) : (
+	                    ) : adventureInputMode === "uploads" && showPromptControls ? (
+                        <motion.div
+                          key="uploads-input-mode"
+                          initial={{ opacity: 0, x: 16 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          exit={{ opacity: 0, x: -16 }}
+                          transition={{ duration: 0.18, ease: "easeOut" }}
+                          className="w-full min-h-0 flex flex-col"
+                        >
+                          <input
+                            ref={uploadsInputRef}
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={async (e) => {
+                              const file = e.target.files?.[0];
+                              if (!e.target) return;
+                              (e.target as HTMLInputElement).value = "";
+                              await handleUploadAndRegenerate(file);
+                            }}
+                          />
+                          <div className="w-full max-w-[68rem] mx-auto px-2.5 py-2 sm:px-3 sm:py-2.5">
+                            {inputModeToggle ? <div className="mb-2 flex justify-center">{inputModeToggle}</div> : null}
+                            <div className="mx-auto w-full max-w-xl rounded-2xl border border-[color:var(--form-surface-border-color)] bg-[var(--form-surface-color)] p-4">
+                              <div className="text-center">
+                                <div className="text-sm font-semibold" style={{ fontFamily: theme.fontFamily, color: theme.textColor }}>
+                                  Update your reference image
+                                </div>
+                                <div className="mt-1 text-xs" style={{ fontFamily: theme.fontFamily, color: textMuted || theme.textColor }}>
+                                  Upload a new photo and we will regenerate the preview.
+                                </div>
+                              </div>
+                              <div className="mt-3 flex justify-center">
+                                <Button
+                                  type="button"
+                                  disabled={refinementUploading}
+                                  onClick={() => uploadsInputRef.current?.click()}
+                                  className="h-9 px-4 text-xs font-medium"
+                                  style={{
+                                    backgroundColor: theme.buttonStyle?.backgroundColor || theme.primaryColor || primary,
+                                    color: theme.buttonStyle?.textColor || "#ffffff",
+                                    fontFamily: theme.fontFamily,
+                                    borderRadius: `${theme.borderRadius ?? 12}px`,
+                                  }}
+                                >
+                                  <ImagePlus className="mr-1.5 h-4 w-4 shrink-0" aria-hidden />
+                                  {refinementUploading ? "Uploading..." : "Choose image"}
+                                </Button>
+                              </div>
+                            </div>
+                          </div>
+                        </motion.div>
+                      ) : (
 	                      <motion.div
 	                        key={(effectiveCurrentStep as any).id}
 	                        initial={{ opacity: 0, x: 20 }}

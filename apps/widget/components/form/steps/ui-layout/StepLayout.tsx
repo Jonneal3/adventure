@@ -65,8 +65,11 @@ export function StepLayout({
   const subtext = getSubtext(step);
   const resolvedContinueLabel = continueLabel || step?.blueprint?.presentation?.continue_label || "Continue";
   const disableContinue = Boolean(isLoading || !canContinue);
-  const actionButtonClass = "h-9 min-w-[88px] px-3 text-xs font-semibold shrink-0";
+  const actionButtonClass = "h-9 min-w-[88px] px-3 text-xs font-medium shrink-0";
   const iconButtonClass = "h-8 w-10 p-0 rounded-full";
+  const sideNavButtonClass = useCompactPane
+    ? "h-[52%] min-h-[68px] max-h-[120px] w-12 sm:w-14 rounded-xl p-0"
+    : "h-[50%] min-h-[56px] max-h-[100px] w-11 sm:w-12 rounded-lg p-0";
   const compactActionButtonClass = "h-8 min-w-[80px] px-2.5 text-[11px]";
   const compactHeaderLayoutClass = useCompactPane
     ? "flex flex-col items-center gap-1.5 text-center"
@@ -95,7 +98,7 @@ export function StepLayout({
         <div
           className={cn(
             "grid h-full min-h-0",
-            useCompactPane ? "grid-cols-[auto,minmax(0,1fr),auto] items-end gap-2" : "grid-cols-[auto,minmax(0,1fr),auto] items-stretch gap-3"
+            useCompactPane ? "grid-cols-[auto,minmax(0,1fr),auto] items-stretch gap-2.5" : "grid-cols-[auto,minmax(0,1fr),auto] items-stretch gap-3"
           )}
         >
           {canGoBack && onBack ? (
@@ -103,7 +106,7 @@ export function StepLayout({
               type="button"
               onClick={onBack}
               variant="outline"
-              className={cn(iconButtonClass, "shrink-0 self-end")}
+              className={cn(iconButtonClass, sideNavButtonClass, "shrink-0 self-center")}
               style={{
                 borderColor: "var(--form-surface-border-color, rgba(0,0,0,0.14))",
                 color: theme.textColor,
@@ -111,10 +114,10 @@ export function StepLayout({
               }}
               aria-label="Go back"
             >
-              <ArrowLeft className="h-3.5 w-3.5" />
+              <ArrowLeft className={cn(useCompactPane ? "h-4 w-4" : "h-3.5 w-3.5")} />
             </Button>
           ) : (
-            <div className="h-8 w-10 shrink-0" aria-hidden="true" />
+            <div className={cn(sideNavButtonClass, "shrink-0 self-center")} aria-hidden="true" />
           )}
           <div
             className={cn(
@@ -169,15 +172,16 @@ export function StepLayout({
             type="button"
             onClick={onComplete}
             disabled={disableContinue}
-            className={cn(iconButtonClass, "shrink-0 self-end")}
+            variant="outline"
+            className={cn(iconButtonClass, sideNavButtonClass, "shrink-0 self-center")}
             style={{
-              backgroundColor: theme.buttonStyle?.backgroundColor || theme.primaryColor,
-              color: theme.buttonStyle?.textColor || "#ffffff",
+              borderColor: "var(--form-surface-border-color, rgba(0,0,0,0.14))",
+              color: theme.textColor,
               fontFamily: theme.fontFamily,
             }}
             aria-label={isLoading ? "Loading" : resolvedContinueLabel}
           >
-            <ArrowRight className="h-3.5 w-3.5" />
+            <ArrowRight className={cn(useCompactPane ? "h-4 w-4" : "h-3.5 w-3.5")} />
           </Button>
         </div>
       ) : (

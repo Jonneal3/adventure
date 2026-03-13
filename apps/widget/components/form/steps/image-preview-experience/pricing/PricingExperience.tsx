@@ -140,14 +140,14 @@ const PricingPill = React.forwardRef<HTMLButtonElement, PricingPillProps>(functi
   const pillLabel = (label && String(label).trim()) ? String(label).trim() : 'Show pricing';
   const base = accent || '#0f172a';
   const tagBg = withAlpha(accent || base, 1);
-  const pillInnerPadding = 'px-[6%] py-[8%]';
-  // When transparentBackground, parent provides the bg — stay fully transparent to avoid double-layer/halo
+  const railWidthClass = "w-[10.75rem] max-w-[calc(100vw-5rem)]";
+  // When transparentBackground, parent provides the bg - stay fully transparent to avoid double-layer/halo
   const outerBg = transparentBackground ? 'transparent' : tagBg;
 
   return (
     <div
       className={cn(
-        "w-full h-full overflow-hidden",
+        "w-auto h-full overflow-hidden",
         transparentBackground ? "border-0" : "rounded-[12%] border border-white/10",
         containerClassName
       )}
@@ -155,6 +155,9 @@ const PricingPill = React.forwardRef<HTMLButtonElement, PricingPillProps>(functi
         backgroundColor: outerBg,
         backdropFilter: 'none',
         WebkitBackdropFilter: 'none',
+        width: 'fit-content',
+        minWidth: 'unset',
+        maxWidth: 'calc(100vw - 2rem)',
       }}
     >
       <button
@@ -176,34 +179,42 @@ const PricingPill = React.forwardRef<HTMLButtonElement, PricingPillProps>(functi
         {...props}
       >
         {!revealed ? (
-          <div className="relative box-border flex w-full flex-col items-center justify-center gap-[15%] pl-[12%] pr-[8%] py-[6%] text-center">
+          <div className="relative box-border flex w-auto flex-col items-center justify-center gap-1.5 px-3 py-2.5 text-center">
             <span
-              className="pointer-events-none absolute left-[6%] top-1/2 -translate-y-1/2 w-[5.5%] aspect-square rounded-full bg-black/30 ring-1 ring-white/20"
+              className="pointer-events-none absolute left-2.5 top-2.5 h-3 w-3 rounded-full bg-black/30 ring-1 ring-white/20"
               aria-hidden
             />
-            <div className="w-full text-center ml-[6%] text-[clamp(0.8rem,1.8vw,1.2rem)] font-normal tracking-[0.06em] leading-none text-white uppercase">
-              {pillLabel}
-            </div>
-            <div className="mt-[6%] ml-[6%] box-border w-[94%] max-w-[94%] min-w-0 p-[3%] rounded-xl bg-white/[0.07] border border-white/10 flex items-center justify-center overflow-hidden text-[clamp(1.02rem,2.45vw,1.62rem)] font-semibold tabular-nums text-white/95 select-none tracking-[0.02em] leading-[1] whitespace-nowrap [font-family:'Courier_Prime','IBM_Plex_Mono','Courier_New',monospace]">
-              <span className="inline-flex items-center leading-none px-[0.18em] py-[0.04em]">
-                <span className="text-white/95 leading-none">{lockedMask.prefix}</span>
-                <span className="inline-flex -ml-[1px] items-center leading-none">
-                  <span className="inline-block px-[0.04em] blur-[0.22em] opacity-90 leading-none">{lockedMask.masked}</span>
+            <div className="flex flex-col items-center gap-1.5">
+              <div className={cn(railWidthClass, "pl-4 pr-1 text-center whitespace-nowrap text-[clamp(0.72rem,1.35vw,0.92rem)] font-normal tracking-[0.04em] leading-none text-white uppercase")}>
+                {pillLabel}
+              </div>
+              <div className={cn(railWidthClass, "box-border rounded-xl bg-white/[0.07] border border-white/10 inline-flex items-center justify-center px-3 py-1.5 sm:px-3.5 text-[clamp(0.88rem,1.8vw,1.18rem)] font-semibold tabular-nums text-white/95 select-none tracking-[0.01em] leading-[1.05] whitespace-nowrap [font-family:'Courier_Prime','IBM_Plex_Mono','Courier_New',monospace]")}>
+                <span className="inline-flex items-center leading-none px-[0.24em] py-[0.05em]">
+                  <span className="text-white/95 leading-none">{lockedMask.prefix}</span>
+                  <span className="inline-flex items-center leading-none">
+                    <span className="inline-block px-[0.12em] blur-[0.22em] opacity-90 leading-none">{lockedMask.masked}</span>
+                  </span>
                 </span>
-              </span>
+              </div>
             </div>
           </div>
         ) : (
-          <div className={cn("w-full h-full flex items-center justify-between gap-3", pillInnerPadding)}>
-            <div className="truncate text-[12px] font-semibold tracking-[0.08em] text-white/92 uppercase">
-              {pillLabel}
-            </div>
-            <div className="shrink-0 font-mono text-[16px] font-medium tabular-nums tracking-[0.02em] text-white/95">
-              {loading ? (
-                <span className="text-white/90">Calculating…</span>
-              ) : (
-                price
-              )}
+          <div className="relative box-border flex w-auto flex-col items-center justify-center gap-1.5 px-3 py-2.5 text-center">
+            <span
+              className="pointer-events-none absolute left-2.5 top-2.5 h-3 w-3 rounded-full bg-black/30 ring-1 ring-white/20"
+              aria-hidden
+            />
+            <div className="flex flex-col items-center gap-1.5">
+              <div className={cn(railWidthClass, "pl-4 pr-1 text-center whitespace-nowrap text-[clamp(0.72rem,1.35vw,0.92rem)] font-normal tracking-[0.04em] leading-none text-white uppercase")}>
+                {pillLabel}
+              </div>
+              <div className={cn(railWidthClass, "box-border rounded-xl bg-white/[0.07] border border-white/10 inline-flex items-center justify-center px-3 py-1.5 sm:px-3.5 text-[clamp(0.88rem,1.8vw,1.18rem)] font-semibold tabular-nums text-white/95 select-none tracking-[0.01em] leading-[1.05] whitespace-nowrap [font-family:'Courier_Prime','IBM_Plex_Mono','Courier_New',monospace]")}>
+                {loading ? (
+                  <span className="text-white/90">Calculating…</span>
+                ) : (
+                  price
+                )}
+              </div>
             </div>
           </div>
         )}
@@ -327,7 +338,7 @@ function PricingExperiencePanel(props: PricingExperiencePanelProps) {
   const formattedRangeMax = rangeMax !== null ? formatCurrency(rangeMax, { locale, currency }) : null;
   const formattedRange =
     rangeMin !== null && rangeMax !== null
-      ? `${formattedRangeMin} – ${formattedRangeMax}`
+      ? `${formattedRangeMin}-${formattedRangeMax}`
       : null;
 
   const isLocked = Boolean(blurred && !leadCaptured);
@@ -361,7 +372,7 @@ function PricingExperiencePanel(props: PricingExperiencePanelProps) {
               </span>
               <div className="flex items-center gap-2">
                 <div
-                  className="font-mono text-[36px] font-medium whitespace-nowrap tabular-nums tracking-[0.01em] leading-none text-white/95"
+                  className="text-[36px] font-medium whitespace-nowrap tabular-nums tracking-[0.01em] leading-none text-white/95"
                   style={{ color: theme.primaryColor, fontFamily: theme.fontFamily }}
                 >
                   {formattedRangeMin && formattedRangeMax ? (

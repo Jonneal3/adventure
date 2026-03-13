@@ -253,6 +253,61 @@ def _clamp_range(lo: int, hi: int) -> Tuple[int, int]:
     return lo_i, hi_i
 
 
+def _align_vlm_image_range_to_budget(
+    *,
+    image_low: int,
+    image_high: int,
+    service_low: int,
+    service_high: int,
+    budget_low: Optional[int],
+    budget_high: Optional[int],
+) -> Tuple[int, int]:
+    """
+    Align VLM image range with explicit budget hints from answers.
+
+    We keep a realistic window width, but center around the selected budget so the
+    returned range tracks the user's chosen target.
+    """
+    if not (isinstance(budget_low, int) and isinstance(budget_high, int)):
+        return _clamp_range(image_low, image_high)
+    if budget_low <= 0 or budget_high <= 0:
+        return _clamp_range(image_low, image_high)
+
+    lo, hi = _clamp_range(image_low, image_high)
+    budget_mid = int(round((budget_low + budget_high) / 2.0))
+    if budget_mid <= 0:
+        return lo, hi
+
+    # Keep a useful pricing window width: neither too tiny nor absurdly wide.
+    current_width = max(1500, hi - lo)
+    if isinstance(service_low, int) and isinstance(service_high, int) and service_high > service_low > 0:
+        service_span = max(2000, service_high - service_low)
+        target_width = int(max(3000, min(20000, service_span * 0.12)))
+        width = max(3000, min(max(current_width, target_width), int(max(5000, service_span * 0.2))))
+        budget_mid = max(service_low, min(service_high, budget_mid))
+    else:
+        target_width = int(max(3000, min(20000, max(current_width, budget_mid * 0.35))))
+        width = target_width
+
+    aligned_low = int(round(budget_mid - width / 2.0))
+    aligned_high = int(round(budget_mid + width / 2.0))
+
+    if isinstance(service_low, int) and isinstance(service_high, int) and service_high > service_low > 0:
+        if aligned_low < service_low:
+            shift = service_low - aligned_low
+            aligned_low += shift
+            aligned_high += shift
+        if aligned_high > service_high:
+            shift = aligned_high - service_high
+            aligned_low -= shift
+            aligned_high -= shift
+
+    if aligned_high <= aligned_low:
+        aligned_high = aligned_low + 1500
+
+    return _clamp_range(aligned_low, aligned_high)
+
+
 def estimate_pricing(payload: Dict[str, Any]) -> Dict[str, Any]:
     """
     Estimate a rough pricing range.
@@ -306,6 +361,22 @@ def estimate_pricing(payload: Dict[str, Any]) -> Dict[str, Any]:
                         range_high = min(svc_hi or 0, range_low + 1_000)
                     range_high = max(range_low, range_high)
 
+            step_data_raw = payload.get("stepDataSoFar") or payload.get("step_data_so_far") or {}
+            step_data = step_data_raw if isinstance(step_data_raw, dict) else {}
+            budget_lo, budget_hi = _extract_budget_hint(step_data)
+            range_low, range_high = _align_vlm_image_range_to_budget(
+                image_low=range_low,
+                image_high=range_high,
+                service_low=svc_lo,
+                service_high=svc_hi,
+                budget_low=budget_lo,
+                budget_high=budget_hi,
+            )
+
+            notes: List[str] = ["AI estimate from image analysis."]
+            if isinstance(budget_lo, int) and isinstance(budget_hi, int) and budget_lo > 0 and budget_hi > 0:
+                notes.append("Anchored to selected budget from answers.")
+
             return {
                 "ok": True,
                 "requestId": request_id,
@@ -315,7 +386,7 @@ def estimate_pricing(payload: Dict[str, Any]) -> Dict[str, Any]:
                 "servicePriceRange": vlm_result.get("servicePriceRange"),
                 "confidence": vlm_result.get("confidence", "medium"),
                 "basis": vlm_result.get("basis", "ai_v1"),
-                "notes": ["AI estimate from image analysis."],
+                "notes": notes,
             }
         except Exception:
             # Fall back to heuristic on VLM failure

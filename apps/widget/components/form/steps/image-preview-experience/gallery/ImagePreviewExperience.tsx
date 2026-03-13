@@ -650,6 +650,7 @@ export function ImagePreviewExperience(props: {
       })();
 
       const hasExistingPreview = Boolean(baseReferenceImage);
+      const isBudgetDrivenRegeneration = Boolean(pendingBudgetRefineRef.current);
       const generationSignatureAtStart = safeJsonStringify({
         contextSignature: signatureAtStart,
         uploads: storedUploads,
@@ -657,15 +658,22 @@ export function ImagePreviewExperience(props: {
       });
       // Explicit scene uploads always become the active anchor from this point on.
       const activeAnchorImage = (stepSceneUpload || baseReferenceImage || storedUploads?.[0] || null) as string | null;
+      // For budget-driven regeneration, prefer the user's originally uploaded scene anchor
+      // instead of the latest generated preview image.
+      const originalUploadedAnchorImage = (stepSceneUpload || stepUserUpload || storedUploads?.[0] || null) as string | null;
+      const runAnchorImage =
+        isBudgetDrivenRegeneration
+          ? (originalUploadedAnchorImage || activeAnchorImage)
+          : activeAnchorImage;
       // First preview uses uploaded anchors. After the first generated preview exists,
       // treat prompt/guided edits as refinements anchored to the active anchor image.
-      const primaryReferenceImage = activeAnchorImage;
+      const primaryReferenceImage = runAnchorImage;
       const referenceImagesForRequest = (
         hasExistingPreview
           ? [
-              ...(activeAnchorImage ? [activeAnchorImage] : []),
-              ...storedUploads.filter((u) => u && u !== activeAnchorImage),
-              ...selectedOptionReferenceImages.filter((u) => u && u !== activeAnchorImage),
+              ...(runAnchorImage ? [runAnchorImage] : []),
+              ...storedUploads.filter((u) => u && u !== runAnchorImage),
+              ...selectedOptionReferenceImages.filter((u) => u && u !== runAnchorImage),
             ]
           : [
               ...(primaryReferenceImage ? [primaryReferenceImage] : []),
@@ -681,18 +689,18 @@ export function ImagePreviewExperience(props: {
       const canUseScenePlacementForRefinement =
         hasExistingPreview &&
         (useCase === "scene" || useCase === "scene-placement") &&
-        (activeAnchorImage || stepSceneUpload || primaryReferenceImage);
+        (runAnchorImage || stepSceneUpload || primaryReferenceImage);
       const effectiveUseCase = canUseScenePlacementForRefinement ? "scene-placement" : useCase;
       // For refinements: use latest image as base. scene-placement + hasExistingPreview = drilldown edit.
       const sceneImageForRequest =
-        useCase === "scene" && activeAnchorImage
-          ? activeAnchorImage
+        useCase === "scene" && runAnchorImage
+          ? runAnchorImage
           : useCase === "scene" && stepSceneUpload
             ? stepSceneUpload
             : useCase === "scene" && primaryReferenceImage
               ? primaryReferenceImage
-              : (useCase === "scene-placement" && activeAnchorImage)
-                ? activeAnchorImage
+              : (useCase === "scene-placement" && runAnchorImage)
+                ? runAnchorImage
                 : useCase === "scene-placement" && stepSceneUpload
                   ? stepSceneUpload
                   : useCase === "scene-placement" && primaryReferenceImage
@@ -890,12 +898,16 @@ export function ImagePreviewExperience(props: {
 
 		        const endpoint = "/api/generate";
 		        const budgetForRequest = extractBudgetValue(effectiveStepDataSoFar || {});
+            const promptWithBudgetConstraint =
+              budgetForRequest !== null && isBudgetDrivenRegeneration
+                ? `${prompt}\n\nBudget target: about $${Math.round(budgetForRequest).toLocaleString()}. Keep the same overall style and layout, but visibly adjust materials, finishes, fixtures, and scope to fit this budget level.`
+                : prompt;
 		        const requestBody: any = {
-		          prompt,
+		          prompt: promptWithBudgetConstraint,
 		          instanceId,
 		          numOutputs: 1,
 		          useCase: normalizedUseCase,
-              generationIntent: hasExistingPreview ? "small_improvement" : "initial",
+              generationIntent: isBudgetDrivenRegeneration ? "regenerate" : hasExistingPreview ? "small_improvement" : "initial",
 		        };
 		        if (budgetForRequest !== null) requestBody.budgetRange = budgetForRequest;
 		        if (negativePrompt) requestBody.negativePrompt = negativePrompt;
@@ -1705,7 +1717,7 @@ export function ImagePreviewExperience(props: {
     ["--sif-lead-gen-ring" as any]: leadGenRing,
   } as React.CSSProperties;
   const overlayButtonClass =
-    "h-8 sm:h-7 inline-flex items-center gap-1.5 rounded-xl px-3 text-[11px] leading-none text-white/95 shadow-sm backdrop-blur-md bg-[var(--sif-overlay-bg)] hover:bg-[var(--sif-overlay-hover-bg)] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50 disabled:opacity-60 disabled:cursor-not-allowed";
+    "h-8 sm:h-7 inline-flex items-center gap-1.5 rounded-xl px-3 text-[11px] font-medium leading-none text-white/95 shadow-sm backdrop-blur-md bg-[var(--sif-overlay-bg)] hover:bg-[var(--sif-overlay-hover-bg)] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50 disabled:opacity-60 disabled:cursor-not-allowed";
   const overlayIconButtonClass =
     "h-8 w-8 sm:h-7 sm:w-7 inline-flex items-center justify-center rounded-full text-white/85 bg-white/0 hover:bg-white/15 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50 disabled:opacity-60 disabled:cursor-not-allowed transition-colors";
 
@@ -1731,7 +1743,7 @@ export function ImagePreviewExperience(props: {
   // the pill is the only UI besides the image — user explicitly wants it visible at that stage.
   const shouldShowPricingPill = Boolean(hero && variant === "hero" && previewPricing);
   const formattedPricingRange = previewPricing
-    ? `${formatCurrency(previewPricing.totalMin, { locale: pricingLocale, currency: pricingCurrency })} – ${formatCurrency(
+    ? `${formatCurrency(previewPricing.totalMin, { locale: pricingLocale, currency: pricingCurrency })}-${formatCurrency(
         previewPricing.totalMax,
         { locale: pricingLocale, currency: pricingCurrency }
       )}`
@@ -1749,7 +1761,7 @@ export function ImagePreviewExperience(props: {
     // Prefer imagePriceRange (raw AI estimate) for the pill so we always show the actual range
     const low = accuratePricing.imagePriceRange?.low ?? accuratePricing.totalMin;
     const high = accuratePricing.imagePriceRange?.high ?? accuratePricing.totalMax;
-    return `${formatCurrency(low, { locale: pricingLocale, currency: c })} – ${formatCurrency(high, {
+    return `${formatCurrency(low, { locale: pricingLocale, currency: c })}-${formatCurrency(high, {
       locale: pricingLocale,
       currency: c,
     })}`;
@@ -1760,10 +1772,10 @@ export function ImagePreviewExperience(props: {
   const pillPrice = formattedAccuratePricingRange
     ? formattedAccuratePricingRange
     : accuratePricingStatus === "error"
-      ? formattedPricingRange || "$••• – $•••"
+      ? formattedPricingRange || "$•••-$•••"
       : leadGateEnabled && leadCaptured
-        ? "$••• – $•••"
-        : formattedPricingRange || "$••• – $•••";
+        ? "$•••-$•••"
+        : formattedPricingRange || "$•••-$•••";
   const pillLoading = Boolean(leadGateEnabled && leadCaptured && accuratePricingStatus === "running");
   const uploadControlPositionClass =
     hero && !busy
@@ -1948,7 +1960,7 @@ export function ImagePreviewExperience(props: {
                             style={{ fontFamily: theme.fontFamily, ...overlayVars }}
                           >
                             <span className="opacity-65">Not what you want?</span>
-                            <span className="font-semibold">Try again</span>
+                            <span className="font-medium">Try again</span>
                           </button>
                         </LeadGenPopover>
                       ) : (
@@ -1961,7 +1973,7 @@ export function ImagePreviewExperience(props: {
                           style={{ fontFamily: theme.fontFamily, ...overlayVars }}
                         >
                           <span className="opacity-65">Not what you want?</span>
-                          <span className="font-semibold">Try again</span>
+                          <span className="font-medium">Try again</span>
                         </button>
                       )
                     ) : null}
@@ -2104,6 +2116,8 @@ export function ImagePreviewExperience(props: {
               className={cn(
                 "absolute left-3 z-20 flex items-center gap-2",
                 uploadControlPositionClass,
+                "!hidden",
+                hero ? "hidden" : null,
                 !formStepUploadThumbnail && (suppressUploadOverlay || showLoader || busy) ? "hidden" : null
               )}
             >
@@ -2250,10 +2264,13 @@ export function ImagePreviewExperience(props: {
                 <FormLoader
                   variant="pill"
                   size="sm"
+                  tone="overlay"
+                  className="bg-slate-900/75"
+                  style={{ ...overlayVars }}
                   message={cache?.message || (hero ? "Refreshing your design + pricing…" : "Generating your design + pricing for you…")}
                 >
                   <div
-                    className="rounded-full bg-black/10 px-2 py-0.5 text-[10px] font-semibold tracking-wide text-black/70 shrink-0"
+                    className="rounded-full bg-white/15 px-2 py-0.5 text-[10px] font-medium tracking-wide text-white/80 shrink-0 ring-1 ring-white/15"
                     style={{ fontFamily: theme.fontFamily }}
                   >
                     {formattedLoaderCountdown} left
@@ -2268,7 +2285,7 @@ export function ImagePreviewExperience(props: {
                     <div className="text-xs font-medium text-white">Having trouble updating the preview image.</div>
                     <div className="mt-1 text-xs text-white/90">{cache.error}</div>
                     {cache.errorDetails ? (
-                      <div className="mt-1 text-[11px] text-white/70 break-words font-mono">{cache.errorDetails}</div>
+                      <div className="mt-1 text-[11px] text-white/70 break-words">{cache.errorDetails}</div>
                     ) : null}
                     <div className="mt-2 flex items-center gap-2">
                       <Button
@@ -2347,8 +2364,10 @@ export function ImagePreviewExperience(props: {
 	                    ) : null}
 				                    {shouldShowPricingPill && formattedPricingRange ? (
 				                      <div
-				                        className="ml-auto shrink-0 w-[176px] sm:w-[194px] flex flex-col rounded-2xl overflow-visible shadow-lg shadow-black/25 backdrop-blur-md"
+				                        className="ml-auto shrink-0 w-auto flex flex-col rounded-2xl overflow-visible shadow-lg shadow-black/25 backdrop-blur-md"
 			                        style={{
+                                width: "fit-content",
+                                maxWidth: "calc(100vw - 2rem)",
 			                          backgroundColor: pillBg,
 			                          backdropFilter: 'blur(12px)',
 			                          WebkitBackdropFilter: 'blur(12px)',
@@ -2356,8 +2375,8 @@ export function ImagePreviewExperience(props: {
 			                      >
 				                          <PricingExperience
 				                            variant="pill"
-				                            className="w-full border-0"
-				                            containerClassName="w-full p-1.5"
+				                            className="w-auto border-0"
+				                            containerClassName="w-auto p-1.5"
                             transparentBackground
                             label={pillLabel}
                           termsHref="/terms"
@@ -2425,7 +2444,7 @@ export function ImagePreviewExperience(props: {
 
               {/* Upload section below image — folds in smoothly once image is ready (no jarring layout push) */}
               <AnimatePresence initial={false}>
-                {hero && !busy && isDominantLayout ? (
+                {hero && !busy && isDominantLayout && (!leadGateEnabled || leadCaptured) ? (
                   <motion.div
                     key="upload-section"
                     initial={{ opacity: 0 }}
@@ -2435,69 +2454,18 @@ export function ImagePreviewExperience(props: {
                   >
                       <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-center">
                         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
-                    {leadGateEnabled ? (
-                      <LeadGenPopover
-                        open={showUploadGate}
-                        onOpenChange={(v) => {
-                          if (!v) {
-                            pendingActionRef.current = null;
-                            setShowUploadGate(false);
-                          }
-                        }}
-                        instanceId={instanceId}
-                        sessionId={sessionId}
-                        gateContext="upload_reference"
-                        surface="overlay"
-                        contentStyle={overlayVars}
-                        title="Where should we send the pricing to?"
-                        description="Before uploading your image, we'll email you pricing."
-                        finePrint="Upload right after sending."
-                        ctaLabel="Send pricing"
-                        phoneTitle="Best phone number?"
-                        phoneDescription="We can text updates too."
-                        side="top"
-                        align="center"
-                        sideOffset={8}
-                        requirePhone
-                        submitOnEmail={false}
-                        submissionData={{ surface: "preview_upload_below" }}
-                        onSubmitted={() => {
-                          setLeadCaptured(true);
-                          const action = pendingActionRef.current;
-                          pendingActionRef.current = null;
-                          if (action === "upload") uploadInputRef.current?.click();
-                        }}
-                      >
-                        <button
-                          type="button"
-                          disabled={isUploadingOwnImages}
-                          onClick={() => {
-                            pendingActionRef.current = "upload";
-                            handleUploadClick();
-                          }}
-                          className="inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold transition-colors hover:bg-primary/10"
-                          style={{
-                            fontFamily: theme.fontFamily,
-                            color: theme.primaryColor || "#3b82f6",
-                          }}
-                        >
-                          {isUploadingOwnImages ? "Uploading…" : "Upload your own image!"}
-                        </button>
-                      </LeadGenPopover>
-                    ) : (
-                      <button
-                        type="button"
-                        disabled={isUploadingOwnImages}
-                        onClick={handleUploadClick}
-                        className="inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold transition-colors hover:bg-primary/10"
-                        style={{
-                          fontFamily: theme.fontFamily,
-                          color: theme.primaryColor || "#3b82f6",
-                        }}
-                      >
-                        {isUploadingOwnImages ? "Uploading…" : "Upload your own image!"}
-                      </button>
-                    )}
+                    <button
+                      type="button"
+                      disabled={isUploadingOwnImages}
+                      onClick={handleUploadClick}
+                      className="inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-medium transition-colors hover:bg-primary/10"
+                      style={{
+                        fontFamily: theme.fontFamily,
+                        color: theme.primaryColor || "#3b82f6",
+                      }}
+                    >
+                      {isUploadingOwnImages ? "Uploading…" : "Upload your own image!"}
+                    </button>
                     <button
                       type="button"
                       onClick={handleSkipContinue}
@@ -2545,7 +2513,7 @@ export function ImagePreviewExperience(props: {
             >
               <div className="absolute inset-x-0 top-0 z-20 flex items-center justify-between bg-gradient-to-b from-black/70 via-black/35 to-transparent px-3 py-3 sm:px-4">
                 <div className="min-w-0">
-                  <div className="text-xs font-semibold text-white/95">Expanded preview</div>
+                  <div className="text-xs font-medium text-white/95">Expanded preview</div>
                   <div className="text-[11px] text-white/75">Press Esc or click outside to close</div>
                 </div>
                 <div className="flex items-center gap-2">
