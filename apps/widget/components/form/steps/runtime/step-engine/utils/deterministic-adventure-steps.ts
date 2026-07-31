@@ -127,8 +127,8 @@ export function buildDeterministicBudgetStep(params: {
       format: "currency",
     },
     copy: {
-      headline: "What investment level should we design around?",
-      subtext: "Choose a comfortable target. You can adjust it later.",
+      headline: "What budget level should we design around?",
+      subtext: "We’ll use this to shape the materials and details in your concepts. You can adjust it later.",
     },
     blueprint: {
       presentation: {

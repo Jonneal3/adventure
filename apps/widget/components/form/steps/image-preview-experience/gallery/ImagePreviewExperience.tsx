@@ -64,6 +64,31 @@ function darkenHex(hex: string, mixBlack: number): string {
   return `rgb(${Math.round(r * f)}, ${Math.round(g * f)}, ${Math.round(b * f)})`;
 }
 
+function SharpConceptCanvas({ src, alt }: { src: string; alt: string }) {
+  return (
+    <>
+      {/* A subdued full-bleed backdrop prevents portrait/square images from
+          producing large blank columns. The foreground image remains fully
+          visible, sharp, and uncropped. */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={src}
+        alt=""
+        aria-hidden
+        className="pointer-events-none absolute inset-0 h-full w-full scale-110 object-cover opacity-40 blur-2xl saturate-75"
+      />
+      <div className="pointer-events-none absolute inset-0 bg-black/25" aria-hidden />
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={src}
+        alt={alt}
+        className="absolute inset-0 h-full w-full select-none object-contain opacity-100 blur-none saturate-100"
+        draggable={false}
+      />
+    </>
+  );
+}
+
 function isValidEmail(value: string): boolean {
   const s = value.trim();
   if (!s || s.length < 5) return false;
@@ -112,6 +137,60 @@ function suggestionTokens(value: unknown): Set<string> {
     )
     .filter((token) => token.length > 2 && !SUGGESTION_CONTEXT_STOP_WORDS.has(token));
   return new Set(tokens);
+}
+
+type ProjectSuggestionDomain = "bathroom" | "kitchen" | "outdoor" | "interior";
+
+const PROJECT_DOMAIN_PATTERNS: Record<ProjectSuggestionDomain, RegExp> = {
+  bathroom: /\b(bath|bathroom|shower|tub|vanity|toilet|mirror|tile)\b/i,
+  kitchen: /\b(kitchen|cabinet|countertop|backsplash|island|pantry|appliance)\b/i,
+  outdoor: /\b(landscap|outdoor|yard|patio|deck|pergola|paver|bollard|pool|garden|lawn|firepit)\b/i,
+  interior: /\b(interior|living room|bedroom|office|basement|flooring|built-in)\b/i,
+};
+
+function inferProjectSuggestionDomain(value: unknown): ProjectSuggestionDomain | null {
+  const text = Array.isArray(value) ? value.join(" ") : String(value || "");
+  return (Object.entries(PROJECT_DOMAIN_PATTERNS).find(([, pattern]) => pattern.test(text))?.[0] as ProjectSuggestionDomain) || null;
+}
+
+const FALLBACK_REFINEMENTS: Record<ProjectSuggestionDomain, Suggestion[]> = {
+  bathroom: [
+    { text: "Use warmer tile", prompt: "Use warmer, more inviting tile while preserving the current bathroom layout." },
+    { text: "Upgrade the vanity", prompt: "Upgrade the bathroom vanity, mirror, and hardware while preserving the current layout." },
+    { text: "Improve the lighting", prompt: "Improve the bathroom lighting with flattering layered sconces and ceiling light." },
+  ],
+  kitchen: [
+    { text: "Warm up the cabinets", prompt: "Use warmer cabinet finishes while preserving the current kitchen layout." },
+    { text: "Upgrade the counters", prompt: "Upgrade the kitchen countertops and backsplash with coordinated materials." },
+    { text: "Improve the lighting", prompt: "Add practical, layered kitchen lighting while preserving the current design." },
+  ],
+  outdoor: [
+    { text: "Use warmer materials", prompt: "Use warmer outdoor materials while preserving the current overall layout." },
+    { text: "Add layered lighting", prompt: "Add subtle layered landscape and architectural lighting." },
+    { text: "Simplify the planting", prompt: "Simplify and refine the planting palette while keeping the main outdoor features." },
+  ],
+  interior: [
+    { text: "Use warmer materials", prompt: "Use warmer materials and finishes while preserving the current room layout." },
+    { text: "Improve the lighting", prompt: "Improve the room with warmer, layered lighting." },
+    { text: "Make it more modern", prompt: "Make the design feel cleaner and more modern without changing the main layout." },
+  ],
+};
+
+const STRUCTURAL_REFINEMENT_PATTERN =
+  /\b(layout|floor plan|wall|window|door|roof|ceiling|stairs?|move|relocate|expand|extension|addition|demolish|remove the room|change the footprint|reconfigure|multi[- ]?room)\b/i;
+
+function chooseInteractiveRefinementModel(params: {
+  note?: string;
+  hasProjectPhoto: boolean;
+  referenceCount: number;
+}): { modelId: string; editComplexity: "fast_preview" | "structural" } {
+  const needsStructuralPreservation =
+    params.hasProjectPhoto ||
+    params.referenceCount > 1 ||
+    STRUCTURAL_REFINEMENT_PATTERN.test(params.note || "");
+  return needsStructuralPreservation
+    ? { modelId: "black-forest-labs/flux-kontext-pro", editComplexity: "structural" }
+    : { modelId: "prunaai/p-image-edit", editComplexity: "fast_preview" };
 }
 
 type PreviewCacheV2 = {
@@ -196,12 +275,6 @@ const GALLERY_LOADING_MESSAGES = [
   "Pulling together the best options…",
   "Almost there…",
 ] as const;
-const CONCEPT_SLOT_LOADING_MESSAGES = [
-  "Exploring layout, tone, and materials…",
-  "Trying a distinct layout and atmosphere…",
-  "Balancing your project choices…",
-  "Refining the finishing details…",
-] as const;
 const CONCEPT_PRESENTATION_FALLBACKS: readonly ConceptPresentation[] = [
   {
     id: "signature_direction",
@@ -271,6 +344,12 @@ type PreviewCacheV3 = {
   selectedConceptIndex?: number | null;
   /** "gallery" = grid of 4 concepts; "single" = hero view with back-to-gallery toggle */
   viewMode?: PreviewViewMode | null;
+  /** The original multi-concept run/index selected before isolated refinements began. */
+  sourceConceptRunId?: string | null;
+  sourceConceptIndex?: number | null;
+  /** The last isolated design state, restored when returning from Concepts to Refine & Estimate. */
+  isolatedRunId?: string | null;
+  isolatedConceptIndex?: number | null;
   message?: string | null;
   error?: string | null;
   errorDetails?: string | null;
@@ -332,7 +411,7 @@ function storageKeyV2(instanceId: string, sessionId: string) {
 }
 
 function storageKeyV3(instanceId: string, sessionId: string) {
-  return `ai_form_image_preview:v3:${instanceId}:${sessionId}`;
+  return `ai_form_image_preview:v3a3:${instanceId}:${sessionId}`;
 }
 
 function storageKeyUploads(instanceId: string, sessionId: string) {
@@ -712,6 +791,18 @@ function loadCache(instanceId: string, sessionId: string): PreviewCacheV3 | null
           (base as any).viewMode === "gallery" || (base as any).viewMode === "single"
             ? (base as any).viewMode
             : null,
+        sourceConceptRunId:
+          typeof (base as any).sourceConceptRunId === "string" ? (base as any).sourceConceptRunId : null,
+        sourceConceptIndex:
+          typeof (base as any).sourceConceptIndex === "number" && Number.isFinite((base as any).sourceConceptIndex)
+            ? Math.max(0, Math.floor((base as any).sourceConceptIndex))
+            : null,
+        isolatedRunId:
+          typeof (base as any).isolatedRunId === "string" ? (base as any).isolatedRunId : null,
+        isolatedConceptIndex:
+          typeof (base as any).isolatedConceptIndex === "number" && Number.isFinite((base as any).isolatedConceptIndex)
+            ? Math.max(0, Math.floor((base as any).isolatedConceptIndex))
+            : null,
         message: typeof base.message === "string" ? base.message : null,
         error: typeof base.error === "string" ? base.error : null,
         errorDetails: typeof (base as any).errorDetails === "string" ? (base as any).errorDetails : null,
@@ -754,6 +845,10 @@ function loadCache(instanceId: string, sessionId: string): PreviewCacheV3 | null
         activeRunId: run ? run.id : null,
         selectedConceptIndex: null,
         viewMode: null,
+        sourceConceptRunId: null,
+        sourceConceptIndex: null,
+        isolatedRunId: null,
+        isolatedConceptIndex: null,
         message: typeof v2.message === "string" ? v2.message : null,
         error: typeof v2.error === "string" ? v2.error : null,
         errorDetails: null,
@@ -778,6 +873,10 @@ function loadCache(instanceId: string, sessionId: string): PreviewCacheV3 | null
         activeRunId: null,
         selectedConceptIndex: null,
         viewMode: null,
+        sourceConceptRunId: null,
+        sourceConceptIndex: null,
+        isolatedRunId: null,
+        isolatedConceptIndex: null,
         message: null,
         error: null,
         errorDetails: null,
@@ -1043,14 +1142,46 @@ export function ImagePreviewExperience(props: {
   const [galleryLoadingMessageIndex, setGalleryLoadingMessageIndex] = useState(0);
   const [studioRefinementDraft, setStudioRefinementDraft] = useState("");
   const [studioSuggestionOffset, setStudioSuggestionOffset] = useState(0);
-  const { suggestions: studioSuggestions, loading: studioSuggestionsLoading } = usePreviewSuggestions();
+  const [conceptSlideDirection, setConceptSlideDirection] = useState<1 | -1>(1);
+  const [aiConceptSuggestions, setAiConceptSuggestions] = useState<Record<string, Suggestion[]>>({});
+  const [aiConceptSuggestionsLoadingKey, setAiConceptSuggestionsLoadingKey] = useState<string | null>(null);
+  const aiConceptSuggestionsRequestedRef = useRef<Set<string>>(new Set());
+  const { suggestions: studioSuggestions } = usePreviewSuggestions();
+  const studioSuggestionDomain = useMemo(() => {
+    const serviceRaw =
+      (stepDataSoFar as any)?.["step-service-primary"] ??
+      (stepDataSoFar as any)?.["step-service"] ??
+      (stepDataSoFar as any)?.["step_service_primary"] ??
+      (stepDataSoFar as any)?.["step_service"];
+    const serviceId = Array.isArray(serviceRaw) ? String(serviceRaw[0] || "") : String(serviceRaw || "");
+    const catalogMeta = serviceId ? loadServiceCatalog(sessionId)?.byServiceId?.[serviceId] : null;
+    const serviceContext = [
+      (catalogMeta as any)?.serviceName,
+      (catalogMeta as any)?.serviceSummary,
+      ...Object.entries(stepDataSoFar || {})
+        .filter(([stepId]) => /^step-(style-direction|project-|service)/.test(stepId))
+        .map(([, answer]) => answer),
+    ];
+    return inferProjectSuggestionDomain(serviceContext);
+  }, [sessionId, stepDataSoFar]);
   const rankedStudioSuggestions = useMemo(() => {
     const contextTokens = new Set<string>();
     Object.entries(stepDataSoFar || {}).forEach(([stepId, answer]) => {
       if (!/^step-(style-direction|project-|service)/.test(stepId)) return;
       suggestionTokens(answer).forEach((token) => contextTokens.add(token));
     });
-    return studioSuggestions
+    const compatibleSuggestions = studioSuggestions.filter((suggestion) => {
+      if (!studioSuggestionDomain) return true;
+      const suggestionDomain = inferProjectSuggestionDomain([
+        suggestion.suggestionLabel,
+        suggestion.text,
+        suggestion.category,
+        suggestion.subcategory,
+        suggestion.prompt,
+      ]);
+      return suggestionDomain === studioSuggestionDomain;
+    });
+    const ranked = compatibleSuggestions
       .map((suggestion, index) => {
         const tokens = suggestionTokens([
           suggestion.suggestionLabel,
@@ -1067,7 +1198,13 @@ export function ImagePreviewExperience(props: {
       })
       .sort((a, b) => b.score - a.score || a.index - b.index)
       .map(({ suggestion }) => suggestion);
-  }, [stepDataSoFar, studioSuggestions]);
+    if (!studioSuggestionDomain) return ranked;
+    const seen = new Set(ranked.map((suggestion) => String(suggestion.suggestionLabel || suggestion.text).trim().toLowerCase()));
+    const fallbacks = FALLBACK_REFINEMENTS[studioSuggestionDomain].filter(
+      (suggestion) => !seen.has(suggestion.text.trim().toLowerCase()),
+    );
+    return [...ranked, ...fallbacks].slice(0, Math.max(3, ranked.length));
+  }, [stepDataSoFar, studioSuggestionDomain, studioSuggestions]);
   const visibleStudioSuggestions = useMemo(() => {
     if (rankedStudioSuggestions.length <= 3) return rankedStudioSuggestions;
     return Array.from(
@@ -1094,6 +1231,8 @@ export function ImagePreviewExperience(props: {
   const pendingManualGenerateRef = useRef(false);
   /** One-shot refinement from preview suggestion chips (not persisted to step-promptInput). */
   const pendingRefinementNotesRef = useRef<string | null>(null);
+  /** Exact visible image that a suggestion was invoked against. Avoids slideshow/cache races. */
+  const pendingRefinementAnchorRef = useRef<string | null>(null);
   const pendingBudgetRefineRef = useRef(false);
   const pendingBudgetTierShiftRef = useRef(false);
   const prevBudgetForPricingRef = useRef<number | null>(null);
@@ -1201,8 +1340,76 @@ export function ImagePreviewExperience(props: {
       setCenteredPricingError("Please enter a valid email address.");
       return;
     }
-    setCenteredPricingStep("name");
-  }, [centeredPricingEmail]);
+    const isPreviewActionLead = showCenteredPreviewActionLeadModal;
+    const isIdeasToolbarLead = showCenteredIdeasToolbarLeadModal;
+    const actionPending = pendingActionRef.current;
+    const gateCtx = isPreviewActionLead
+      ? gateContextRef.current || "regenerate_manual"
+      : "design_and_estimate";
+    const actionSurface =
+      actionPending === "download"
+        ? "preview_download"
+        : actionPending === "upload"
+          ? formStepUploadThumbnail
+            ? "preview_change_reference"
+            : "preview_upload_reference"
+          : "preview_generate";
+    const result = await submitCenteredPricingLead({
+      email,
+      isPartial: true,
+      submissionData: isPreviewActionLead
+        ? { gateContext: gateCtx, surface: actionSurface, step: "email" }
+        : {
+            gateContext: "design_and_estimate",
+            surface: isIdeasToolbarLead ? "ideas_toolbar" : "inline_pricing",
+            step: "email",
+          },
+    });
+    if (!result.success) {
+      setCenteredPricingError(result.message || "Couldn’t submit. Try again.");
+      return;
+    }
+
+    upsertLeadState(sessionId, {
+      leadCaptured: true,
+      leadEmail: email,
+      leadCapturedAt: Date.now(),
+    });
+    upsertLeadGate(sessionId, gateCtx, { completedAt: Date.now() });
+    setLeadCaptured(true);
+    setShowCenteredPricingForm(false);
+    setShowCenteredPreviewActionLeadModal(false);
+    setShowCenteredIdeasToolbarLeadModal(false);
+    setCenteredPricingStep("email");
+
+    if (isPreviewActionLead) {
+      const action = pendingActionRef.current;
+      const mode = pendingGenerateModeRef.current;
+      pendingActionRef.current = null;
+      pendingGenerateModeRef.current = "manual";
+      const { runGenerate: runGen, downloadActiveImage: dl } = postLeadUnlockActionRef.current;
+      if (action === "refresh") void runGen(mode);
+      else if (action === "download") void dl();
+      else if (action === "upload") uploadInputRef.current?.click();
+      return;
+    }
+
+    if (pendingRefinementNotesRef.current) {
+      setStudioRefinementDraft("");
+      void postLeadUnlockActionRef.current.runGenerate("manual");
+    } else {
+      setPendingExactPricingReveal(true);
+      setAccuratePricingStatus("running");
+      void fetchAccuratePricingRef.current?.();
+    }
+  }, [
+    centeredPricingEmail,
+    formStepUploadThumbnail,
+    sessionId,
+    showCenteredIdeasToolbarLeadModal,
+    showCenteredPreviewActionLeadModal,
+    submitCenteredPricingLead,
+  ]);
 
   const handleCenteredPricingNameSubmit = useCallback(async () => {
     setCenteredPricingError(null);
@@ -1460,7 +1667,6 @@ export function ImagePreviewExperience(props: {
   }, [activeRunId, runs]);
 
   const [stagedConceptIndex, setStagedConceptIndex] = useState(0);
-  const [conceptSlideDirection, setConceptSlideDirection] = useState<1 | -1>(1);
 
   useEffect(() => {
     const images = activeRun?.images ?? [];
@@ -1496,6 +1702,22 @@ export function ImagePreviewExperience(props: {
     (Boolean(activeRun) || pendingInitialConceptGrid) &&
     activeRunExpectedImageCount > 1;
   const showConceptPicker = showGalleryGrid;
+
+  useEffect(() => {
+    if (!showConceptPicker || !activeRun?.id) return;
+    if (cache?.sourceConceptRunId !== activeRun.id) return;
+    const sourceIndex = cache?.sourceConceptIndex;
+    if (typeof sourceIndex !== "number" || !Number.isFinite(sourceIndex)) return;
+    const boundedIndex = Math.max(0, Math.min(activeRun.images.length - 1, Math.floor(sourceIndex)));
+    if (!activeRun.images[boundedIndex]) return;
+    setStagedConceptIndex(boundedIndex);
+  }, [
+    activeRun?.id,
+    activeRun?.images,
+    cache?.sourceConceptIndex,
+    cache?.sourceConceptRunId,
+    showConceptPicker,
+  ]);
 
   const canRegenerateInGallery =
     !showConceptPicker ||
@@ -1701,7 +1923,8 @@ export function ImagePreviewExperience(props: {
 
       const signatureAtStart = computeContextSignature(effectiveStepDataSoFar || {});
       const latestRun = runs.length ? runs.at(-1) ?? null : null;
-      const baseReferenceImage = hero || latestRun?.images?.[0] || null;
+      const queuedRefinementAnchor = pendingRefinementAnchorRef.current;
+      const baseReferenceImage = queuedRefinementAnchor || hero || latestRun?.images?.[0] || null;
       const normalizeUploadToStrings = (raw: any): string[] => {
         if (!raw) return [];
         if (Array.isArray(raw)) return raw.filter((x) => typeof x === "string");
@@ -1758,7 +1981,15 @@ export function ImagePreviewExperience(props: {
         }
       })();
 
-      const hasExistingPreview = Boolean(baseReferenceImage);
+      const queuedRefinementText =
+        typeof pendingRefinementNotesRef.current === "string" && pendingRefinementNotesRef.current.trim()
+          ? pendingRefinementNotesRef.current.trim()
+          : typeof (effectiveStepDataSoFar as any)?.["step-promptInput"] === "string"
+            ? String((effectiveStepDataSoFar as any)["step-promptInput"]).trim()
+            : "";
+      const selectedStarterAnchor = selectedOptionReferenceImages[0] || null;
+      const starterRefinementAnchor = queuedRefinementText && selectedStarterAnchor ? selectedStarterAnchor : null;
+      const hasExistingPreview = Boolean(baseReferenceImage || starterRefinementAnchor);
       const useCase = normalizeUseCase((config as any)?.useCase);
       const isBudgetDrivenRegeneration = Boolean(pendingBudgetRefineRef.current);
       const isBudgetTierShift = Boolean(pendingBudgetTierShiftRef.current);
@@ -1767,8 +1998,17 @@ export function ImagePreviewExperience(props: {
         uploads: storedUploads,
         selectionRefs: selectedOptionReferenceImages,
       });
-      // After concepts exist, use the currently selected/generated hero as the anchor.
-      const activeAnchorImage = (baseReferenceImage || stepSceneUpload || storedUploads?.[0] || null) as string | null;
+      // The selected starter is an actual visual anchor for the first variation
+      // set—not merely a loose style hint. Preserve its composition and design
+      // family while varying finish level, materials, and details.
+      const activeAnchorImage = (
+        baseReferenceImage ||
+        starterRefinementAnchor ||
+        selectedStarterAnchor ||
+        stepSceneUpload ||
+        storedUploads?.[0] ||
+        null
+      ) as string | null;
       // For budget-driven regeneration, prefer the user's originally uploaded scene anchor
       // instead of the latest generated preview image.
       const originalUploadedAnchorImage = (stepSceneUpload || stepUserUpload || storedUploads?.[0] || null) as string | null;
@@ -1777,8 +2017,6 @@ export function ImagePreviewExperience(props: {
           ? (originalUploadedAnchorImage || activeAnchorImage)
           : activeAnchorImage;
       // The selected starter is the visual foundation for the first concept run.
-      // Initial scene generations treat option-card images as guide-only references,
-      // so they influence the direction without being mistaken for the user's property.
       const shouldUseOptionCardImagesAsGenerationRefs =
         selectedOptionReferenceImages.length > 0;
       const generationIntent: "initial" | "small_improvement" | "regenerate" | "budget_tier_shift" = isBudgetDrivenRegeneration
@@ -1839,7 +2077,8 @@ export function ImagePreviewExperience(props: {
         useCase === "scene" &&
         generationIntent === "initial" &&
         !hasExistingPreview &&
-        referenceImagesForRequest.length > 0;
+        referenceImagesForRequest.length > 0 &&
+        !selectedStarterAnchor;
       // For refinements: use latest image as base. scene-placement + hasExistingPreview = drilldown edit.
       // Do not clear this for guide_only: that mode only marks style refs as non-anchors; the user's room
       // upload must still be the edit target when present.
@@ -1970,6 +2209,7 @@ export function ImagePreviewExperience(props: {
 		        const budgetForRequest = extractBudgetValue(effectiveStepDataSoFar || {});
 		        const pendingRefinement = pendingRefinementNotesRef.current;
 		        pendingRefinementNotesRef.current = null;
+		        pendingRefinementAnchorRef.current = null;
 		        const refinementNotesRaw =
 		          pendingRefinement !== null ? pendingRefinement : (effectiveStepDataSoFar as any)?.["step-promptInput"];
 		        const refinementNotes =
@@ -1992,17 +2232,28 @@ export function ImagePreviewExperience(props: {
                 : isBudgetTierShift
                   ? "Reworking your design for the new budget tier…"
                   : "Refreshing your design…";
-            const requestBodyBase: any = {
+		        const requestBodyBase: any = {
 		          instanceId,
 		          sessionId,
 		          useCase: normalizedUseCase,
 		          generationIntent,
-              ...(useStructuredConceptGeneration ? { aspectRatio: "4:3" } : {}),
+              ...(useStructuredConceptGeneration
+                ? { aspectRatio: "4:3" }
+                : {}),
               stepDataSoFar: effectiveStepDataSoFar ?? {},
 		          answeredQA,
               askedStepIds,
 		          instanceContext: { ...instanceContext },
 		        };
+            if (generationIntent === "small_improvement" && sceneImage) {
+              const routing = chooseInteractiveRefinementModel({
+                note: refinementNotes,
+                hasProjectPhoto: Boolean(stepSceneUpload || stepUserUpload),
+                referenceCount: uniqueRefs.length,
+              });
+              requestBodyBase.modelId = routing.modelId;
+              requestBodyBase.editComplexity = routing.editComplexity;
+            }
 		        if (guideOnlyInitialSceneRun && !sceneImage) requestBodyBase.referenceMode = "guide_only";
 		        if (refinementNotes) requestBodyBase.refinementNotes = refinementNotes;
 		        if (originalReferenceImage) requestBodyBase.originalReferenceImage = originalReferenceImage;
@@ -2077,19 +2328,29 @@ export function ImagePreviewExperience(props: {
                   base.activeRunId !== runId
                     ? nextRuns.find((r) => r.id === base.activeRunId)
                     : null;
+                const carryoverImageIndex =
+                  priorActiveRun && baseReferenceImage
+                    ? priorActiveRun.images.indexOf(baseReferenceImage)
+                    : -1;
                 const carryoverImages =
                   priorActiveRun && Array.isArray(priorActiveRun.images) && priorActiveRun.images.length > 0
-                    ? [...priorActiveRun.images]
+                    ? numOutputs === 1 && baseReferenceImage
+                      ? [baseReferenceImage]
+                      : [...priorActiveRun.images]
                     : [];
                 const carryoverPricing =
                   carryoverImages.length > 0 && Array.isArray(priorActiveRun?.imagePricing) && priorActiveRun.imagePricing.length > 0
-                    ? [...priorActiveRun.imagePricing]
+                    ? numOutputs === 1 && carryoverImageIndex >= 0
+                      ? [priorActiveRun.imagePricing[carryoverImageIndex]]
+                      : [...priorActiveRun.imagePricing]
                     : ([] as (CachedPricing | undefined)[]);
                 const carryoverConceptPresentations =
                   carryoverImages.length > 0 &&
                   Array.isArray(priorActiveRun?.conceptPresentations) &&
                   priorActiveRun.conceptPresentations.length > 0
-                    ? [...priorActiveRun.conceptPresentations]
+                    ? numOutputs === 1 && carryoverImageIndex >= 0
+                      ? [priorActiveRun.conceptPresentations[carryoverImageIndex]]
+                      : [...priorActiveRun.conceptPresentations]
                     : ([] as (ConceptPresentation | undefined)[]);
                 const existingRun =
                   existingIndex >= 0
@@ -2182,25 +2443,33 @@ export function ImagePreviewExperience(props: {
                   Number.isFinite(base.selectedConceptIndex)
                     ? Math.max(0, Math.min(numOutputs - 1, Math.floor(base.selectedConceptIndex)))
                     : null;
+                const nextSelectedConceptIndex =
+                  committedConceptIndex !== null
+                    ? committedConceptIndex
+                    : preserveViewMode && base.viewMode === "single" && numOutputs === 1
+                      ? 0
+                      : null;
+                const nextViewMode: PreviewViewMode =
+                  committedConceptIndex !== null
+                    ? "single"
+                    : numOutputs > 1
+                      ? "gallery"
+                      : preserveViewMode
+                        ? base.viewMode!
+                        : "single";
                 const next: PreviewCacheV3 = {
                   ...base,
                   status: params.status,
                   runs: nextRuns,
                   activeRunId: runId,
-                  selectedConceptIndex:
-                    committedConceptIndex !== null
-                      ? committedConceptIndex
-                      : preserveViewMode && base.viewMode === "single" && numOutputs === 1
-                        ? 0
-                        : null,
-                  viewMode:
-                    committedConceptIndex !== null
-                      ? "single"
-                      : numOutputs > 1
-                        ? "gallery"
-                        : preserveViewMode
-                          ? base.viewMode
-                          : "single",
+                  selectedConceptIndex: nextSelectedConceptIndex,
+                  viewMode: nextViewMode,
+                  ...(nextViewMode === "single" && nextSelectedConceptIndex !== null
+                    ? {
+                        isolatedRunId: runId,
+                        isolatedConceptIndex: nextSelectedConceptIndex,
+                      }
+                    : {}),
                   message: params.message ?? nextRun.message ?? generationMessage,
                   error: params.status === "error" ? params.error ?? "Some concepts could not be generated." : null,
                   errorDetails: params.status === "error" ? params.errorDetails ?? null : null,
@@ -2785,6 +3054,8 @@ export function ImagePreviewExperience(props: {
   const studioRefinementBusy = Boolean(
     studioEstimateActive && busy && activeGenerationReason === "manual",
   );
+  const preLeadRefinementCount = runs.length;
+  const preLeadRefinementLimit = 3;
   const leadGateActive = leadGateEnabled && Boolean(hero) && !leadCaptured;
   const canUseLiveBudgetSlider = !leadGateEnabled || leadCaptured;
   /** Single-image mode with pricing unlocked (no gate, or lead captured). */
@@ -2816,22 +3087,29 @@ export function ImagePreviewExperience(props: {
   }, [leadCaptured, leadGateEnabled, sessionId, suppressInlineLeadGate]);
 
   const applyStudioRefinement = useCallback(
-    (value: string | Suggestion) => {
+    (value: string | Suggestion, anchorImage?: string | null) => {
       const note =
         typeof value === "string"
           ? value.trim()
           : String(value.prompt || value.text || "").trim();
       if (!note || studioRefinementBusy) return;
       pendingRefinementNotesRef.current = note;
-      if (leadGateEnabled && !leadCaptured) {
+      pendingRefinementAnchorRef.current = anchorImage || hero;
+      if (leadGateEnabled && !leadCaptured && preLeadRefinementCount >= preLeadRefinementLimit) {
         openDesignEstimateLeadFlow();
         return;
       }
       setStudioRefinementDraft("");
       requestManualGenerate();
     },
-    [leadCaptured, leadGateEnabled, openDesignEstimateLeadFlow, requestManualGenerate, studioRefinementBusy],
+    [hero, leadCaptured, leadGateEnabled, openDesignEstimateLeadFlow, preLeadRefinementCount, requestManualGenerate, studioRefinementBusy],
   );
+
+  useEffect(() => {
+    if (!leadGateEnabled || leadCaptured || busy) return;
+    if (preLeadRefinementCount < preLeadRefinementLimit) return;
+    openDesignEstimateLeadFlow();
+  }, [busy, leadCaptured, leadGateEnabled, openDesignEstimateLeadFlow, preLeadRefinementCount]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -2854,6 +3132,143 @@ export function ImagePreviewExperience(props: {
   const stagedConceptPresentation = conceptPresentationFor(activeRun, stagedConceptIndex);
   const conceptGenerationComplete = readyConceptCount >= conceptGalleryTargetCount && !busy;
   const conceptGenerationFailed = cache?.status === "error";
+  const previousReadyConceptIndex = stagedConceptIndex > 0 ? stagedConceptIndex - 1 : null;
+  const nextReadyConceptIndex =
+    stagedConceptIndex + 1 < readyConceptCount ? stagedConceptIndex + 1 : null;
+  const suggestionConceptImage = showConceptPicker ? stagedConceptImage : hero;
+  const suggestionConceptIndex = showConceptPicker
+    ? stagedConceptIndex
+    : selectedConceptIndex !== null && Number.isFinite(selectedConceptIndex)
+      ? selectedConceptIndex
+      : 0;
+  const suggestionConceptPresentation = conceptPresentationFor(activeRun, suggestionConceptIndex);
+  const suggestionServiceRaw =
+    (effectiveStepDataSoFar as any)?.["step-service-primary"] ??
+    (effectiveStepDataSoFar as any)?.["step-service"] ??
+    (effectiveStepDataSoFar as any)?.["step_service_primary"] ??
+    (effectiveStepDataSoFar as any)?.["step_service"];
+  const suggestionServiceId = Array.isArray(suggestionServiceRaw)
+    ? String(suggestionServiceRaw[0] || "").trim()
+    : String(suggestionServiceRaw || "").trim();
+  const suggestionBudget = extractBudgetValue(effectiveStepDataSoFar || {});
+  const aiSuggestionCacheKey =
+    suggestionConceptImage && suggestionServiceId
+      ? safeJsonStringify({
+          version: 2,
+          image: suggestionConceptImage,
+          service: suggestionServiceId,
+          budget: suggestionBudget,
+          title: suggestionConceptPresentation.title,
+        })
+      : "";
+  const activeAiConceptSuggestions = aiSuggestionCacheKey
+    ? aiConceptSuggestions[aiSuggestionCacheKey]
+    : undefined;
+  const aiSuggestionsRequested = aiSuggestionCacheKey
+    ? aiConceptSuggestionsRequestedRef.current.has(aiSuggestionCacheKey)
+    : false;
+  const contextualSuggestionsLoading = Boolean(
+    aiSuggestionCacheKey &&
+      !activeAiConceptSuggestions &&
+      (!aiSuggestionsRequested || aiConceptSuggestionsLoadingKey === aiSuggestionCacheKey),
+  );
+  const serviceFallbackSuggestions =
+    FALLBACK_REFINEMENTS[studioSuggestionDomain || "interior"];
+  const contextualSuggestionPool =
+    activeAiConceptSuggestions?.length
+      ? activeAiConceptSuggestions
+      : visibleStudioSuggestions.length
+        ? visibleStudioSuggestions
+        : serviceFallbackSuggestions;
+  const contextualStudioSuggestions =
+    contextualSuggestionPool.length <= 3
+      ? contextualSuggestionPool
+      : Array.from(
+          { length: 3 },
+          (_, index) => contextualSuggestionPool[(studioSuggestionOffset + index) % contextualSuggestionPool.length],
+        );
+
+  useEffect(() => {
+    if (!aiSuggestionCacheKey || !suggestionConceptImage || !suggestionServiceId) return;
+    if (aiConceptSuggestions[aiSuggestionCacheKey]?.length) return;
+    if (aiConceptSuggestionsRequestedRef.current.has(aiSuggestionCacheKey)) return;
+
+    aiConceptSuggestionsRequestedRef.current.add(aiSuggestionCacheKey);
+    setAiConceptSuggestionsLoadingKey(aiSuggestionCacheKey);
+    const controller = new AbortController();
+    const projectInterest = Object.entries(effectiveStepDataSoFar || {})
+      .filter(([stepId]) => /^step-(project-|style-direction|scope|components?)/.test(stepId))
+      .flatMap(([, answer]) => (Array.isArray(answer) ? answer : [answer]))
+      .map((answer) => String(answer || "").trim())
+      .filter(Boolean)
+      .slice(0, 12);
+
+    void fetch(`/api/ai-form/${encodeURIComponent(instanceId)}/concept-suggestions`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      signal: controller.signal,
+      body: JSON.stringify({
+        selectedServiceId: suggestionServiceId,
+        projectInterest,
+        budget: suggestionBudget,
+        starterLabel: studioStarterConcept?.label || null,
+        directionTitle: suggestionConceptPresentation.title,
+        directionSummary: suggestionConceptPresentation.summary || null,
+        imageUrl: suggestionConceptImage,
+      }),
+    })
+      .then(async (response) => {
+        if (!response.ok) throw new Error(`Suggestion generation failed (${response.status})`);
+        return response.json();
+      })
+      .then((payload) => {
+        const suggestions = Array.isArray(payload?.suggestions)
+          ? payload.suggestions
+              .map((item: any): Suggestion | null => {
+                const label = String(item?.label || "").trim();
+                const prompt = String(item?.prompt || "").trim();
+                return label && prompt
+                  ? { text: label, suggestionLabel: label, prompt, category: String(payload?.serviceName || "") }
+                  : null;
+              })
+              .filter((item: Suggestion | null): item is Suggestion => Boolean(item))
+              .slice(0, 5)
+          : [];
+        if (suggestions.length >= 3) {
+          setAiConceptSuggestions((current) => ({ ...current, [aiSuggestionCacheKey]: suggestions }));
+        }
+      })
+      .catch((error) => {
+        if (error instanceof DOMException && error.name === "AbortError") {
+          aiConceptSuggestionsRequestedRef.current.delete(aiSuggestionCacheKey);
+          return;
+        }
+        if (process.env.NODE_ENV !== "production") {
+          console.warn("[preview] contextual suggestion generation failed", error);
+        }
+      })
+      .finally(() => {
+        setAiConceptSuggestionsLoadingKey((current) => (current === aiSuggestionCacheKey ? null : current));
+      });
+
+    return () => controller.abort();
+  }, [
+    activeRun,
+    aiConceptSuggestions,
+    aiSuggestionCacheKey,
+    effectiveStepDataSoFar,
+    instanceId,
+    studioStarterConcept?.label,
+    suggestionBudget,
+    suggestionConceptImage,
+    suggestionConceptPresentation.summary,
+    suggestionConceptPresentation.title,
+    suggestionServiceId,
+  ]);
+
+  useEffect(() => {
+    setStudioSuggestionOffset(0);
+  }, [aiSuggestionCacheKey]);
 
   const [overlayPricingExpanded, setOverlayPricingExpanded] = useState(false);
   const [overlayPricingCollapsedLocal, setOverlayPricingCollapsedLocal] = useState<boolean>(
@@ -3103,6 +3518,14 @@ export function ImagePreviewExperience(props: {
           ...base,
           selectedConceptIndex: index,
           viewMode: "single",
+          isolatedRunId: activeRun?.id ?? null,
+          isolatedConceptIndex: index,
+          ...((activeRun?.images?.length || 0) > 1
+            ? {
+                sourceConceptRunId: activeRun?.id ?? null,
+                sourceConceptIndex: index,
+              }
+            : {}),
           updatedAt: Date.now(),
         };
         saveCache(instanceId, sessionId, next);
@@ -3135,12 +3558,12 @@ export function ImagePreviewExperience(props: {
 
   const showConcept = useCallback(
     (index: number) => {
-      const nextIndex = Math.max(0, Math.min(conceptGalleryCellCount - 1, index));
+      const nextIndex = Math.max(0, Math.min(Math.max(0, readyConceptCount - 1), index));
       if (nextIndex === stagedConceptIndex) return;
       setConceptSlideDirection(nextIndex > stagedConceptIndex ? 1 : -1);
       setStagedConceptIndex(nextIndex);
     },
-    [conceptGalleryCellCount, stagedConceptIndex],
+    [readyConceptCount, stagedConceptIndex],
   );
 
   // Exact pricing is only fetched for the currently selected hero image.
@@ -3450,18 +3873,33 @@ export function ImagePreviewExperience(props: {
     setCache((prev) => {
       const base = prev ?? loadCache(instanceId, sessionId);
       if (!base) return prev;
+      const sourceRun = base.sourceConceptRunId
+        ? runs.find((run) => run.id === base.sourceConceptRunId && run.images?.length > 1)
+        : null;
       const runWithGrid = runs.find((r) => r.images && r.images.length > 1);
+      const galleryRun = sourceRun ?? (activeRunHasMultiple ? activeRun : runWithGrid);
+      const isolatedRun = base.activeRunId
+        ? runs.find((run) => run.id === base.activeRunId && run.images?.length > 0)
+        : null;
       const next: PreviewCacheV3 = {
         ...base,
         viewMode: "gallery",
-        activeRunId: activeRunHasMultiple ? base.activeRunId : runWithGrid?.id ?? base.activeRunId,
+        activeRunId: galleryRun?.id ?? base.activeRunId,
         selectedConceptIndex: null,
+        sourceConceptRunId: base.sourceConceptRunId ?? galleryRun?.id ?? null,
+        sourceConceptIndex: base.sourceConceptIndex ?? 0,
+        isolatedRunId: isolatedRun?.id ?? base.isolatedRunId ?? null,
+        isolatedConceptIndex:
+          typeof base.selectedConceptIndex === "number"
+            ? base.selectedConceptIndex
+            : base.isolatedConceptIndex ?? 0,
         updatedAt: Date.now(),
       };
       saveCache(instanceId, sessionId, next);
       return next;
     });
   }, [
+    activeRun,
     activeRunHasMultiple,
     enabled,
     hasMultiImageRun,
@@ -3861,6 +4299,92 @@ export function ImagePreviewExperience(props: {
     pendingExactPricingReveal &&
     accuratePricingStatus !== "error"
   );
+  const studioEstimateAction = studioRefinementBusy ? (
+    <div
+      data-studio-estimate-action
+      className="inline-flex h-11 min-w-[12.5rem] shrink-0 items-center gap-2.5 rounded-full px-4 text-left text-primary-foreground shadow-md"
+      style={{ backgroundColor: theme.primaryColor || "var(--form-primary-color, #111827)", fontFamily: theme.fontFamily }}
+      aria-live="polite"
+    >
+      <Sparkles className="h-4 w-4 shrink-0" aria-hidden />
+      <span className="min-w-0">
+        <span className="block text-[9px] font-semibold uppercase tracking-[0.14em] text-primary-foreground/70">
+          Project estimate
+        </span>
+        <span className="block truncate text-sm font-semibold">Updating with this change</span>
+      </span>
+    </div>
+  ) : waitingForExactPricing ? (
+    <div
+      data-studio-estimate-action
+      className="inline-flex h-11 min-w-[12.5rem] shrink-0 items-center gap-2.5 rounded-full px-4 text-left text-primary-foreground shadow-md"
+      style={{ backgroundColor: theme.primaryColor || "var(--form-primary-color, #111827)", fontFamily: theme.fontFamily }}
+      aria-live="polite"
+    >
+      <Loader2 className="h-4 w-4 shrink-0 animate-spin" aria-hidden />
+      <span className="min-w-0">
+        <span className="block text-[9px] font-semibold uppercase tracking-[0.14em] text-primary-foreground/70">
+          Project estimate
+        </span>
+        <span className="block truncate text-sm font-semibold">Preparing your range</span>
+      </span>
+    </div>
+  ) : !leadGateEnabled || leadCaptured ? (
+    studioEstimateReady ? (
+      <div
+        data-studio-estimate-action
+        className="inline-flex h-11 min-w-[12.5rem] shrink-0 items-center rounded-full px-4 text-left text-primary-foreground shadow-md"
+        style={{ backgroundColor: theme.primaryColor || "var(--form-primary-color, #111827)", fontFamily: theme.fontFamily }}
+        aria-live="polite"
+      >
+        <span className="min-w-0">
+          <span className="block text-[9px] font-semibold uppercase tracking-[0.14em] text-primary-foreground/70">
+            Project estimate
+          </span>
+          <span className="block truncate text-sm font-semibold sm:text-[15px]">{studioEstimateRangeLabel}</span>
+        </span>
+      </div>
+    ) : (
+      <button
+        type="button"
+        data-studio-estimate-action
+        onClick={() => {
+          setPendingExactPricingReveal(true);
+          setAccuratePricingStatus("running");
+          void fetchAccuratePricingRef.current?.();
+        }}
+        className="group inline-flex h-11 min-w-[12.5rem] shrink-0 items-center justify-between gap-3 rounded-full px-4 text-left text-primary-foreground shadow-md transition hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2"
+        style={{ backgroundColor: theme.primaryColor || "var(--form-primary-color, #111827)", fontFamily: theme.fontFamily }}
+      >
+        <span className="min-w-0">
+          <span className="block text-[9px] font-semibold uppercase tracking-[0.14em] text-primary-foreground/70">
+            Project estimate
+          </span>
+          <span className="block truncate text-sm font-semibold">Calculate estimate</span>
+        </span>
+        <ChevronRight className="h-4 w-4 shrink-0 transition-transform group-hover:translate-x-0.5" />
+      </button>
+    )
+  ) : (
+    <button
+      type="button"
+      data-studio-estimate-action
+      onClick={() => {
+        pendingRefinementNotesRef.current = null;
+        openDesignEstimateLeadFlow();
+      }}
+      className="group inline-flex h-11 min-w-[12.5rem] shrink-0 items-center justify-between gap-3 rounded-full px-4 text-left text-primary-foreground shadow-md transition hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2"
+      style={{ backgroundColor: theme.primaryColor || "var(--form-primary-color, #111827)", fontFamily: theme.fontFamily }}
+    >
+      <span className="min-w-0">
+        <span className="block text-[9px] font-semibold uppercase tracking-[0.14em] text-primary-foreground/70">
+          Project estimate
+        </span>
+        <span className="block truncate text-sm font-semibold">Reveal estimate</span>
+      </span>
+      <ChevronRight className="h-4 w-4 shrink-0 transition-transform group-hover:translate-x-0.5" />
+    </button>
+  );
   const pillLabel = waitingForExactPricing
     ? "CALCULATING COST"
     : leadGateEnabled
@@ -4023,12 +4547,26 @@ export function ImagePreviewExperience(props: {
     setCache((prev) => {
       const base = prev ?? loadCache(instanceId, sessionId);
       if (!base) return prev;
+      const sourceRun = base.sourceConceptRunId
+        ? runs.find((run) => run.id === base.sourceConceptRunId && run.images?.length > 1)
+        : null;
       const runWithGrid = runs.find((r) => r.images && r.images.length > 1);
+      const galleryRun = sourceRun ?? (activeRunHasMultiple ? activeRun : runWithGrid);
+      const isolatedRun = base.activeRunId
+        ? runs.find((run) => run.id === base.activeRunId && run.images?.length > 0)
+        : null;
       const next: PreviewCacheV3 = {
         ...base,
         viewMode: "gallery",
-        activeRunId: activeRunHasMultiple ? base.activeRunId : runWithGrid?.id ?? base.activeRunId,
+        activeRunId: galleryRun?.id ?? base.activeRunId,
         selectedConceptIndex: null,
+        sourceConceptRunId: base.sourceConceptRunId ?? galleryRun?.id ?? null,
+        sourceConceptIndex: base.sourceConceptIndex ?? 0,
+        isolatedRunId: isolatedRun?.id ?? base.isolatedRunId ?? null,
+        isolatedConceptIndex:
+          typeof base.selectedConceptIndex === "number"
+            ? base.selectedConceptIndex
+            : base.isolatedConceptIndex ?? 0,
         updatedAt: Date.now(),
       };
       saveCache(instanceId, sessionId, next);
@@ -4287,7 +4825,7 @@ export function ImagePreviewExperience(props: {
               >
 	              {showConceptPicker ? (
                   progressiveConcepts ? (
-                    <div className="flex h-full min-h-0 w-full max-w-full flex-1 flex-col overflow-hidden px-0 pb-2 sm:px-3 sm:pb-3">
+                    <div className="mx-auto flex h-full min-h-0 w-full max-w-[88rem] flex-1 flex-col overflow-hidden px-0 pb-2 sm:px-3 sm:pb-3">
                       <div className="shrink-0 px-1 pb-2 pt-1 sm:px-0 sm:pb-3">
                         <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
                           <div className="min-w-0">
@@ -4296,25 +4834,23 @@ export function ImagePreviewExperience(props: {
                               style={{ fontFamily: theme.fontFamily }}
                             >
                               {conceptGenerationComplete
-                                ? "Choose the concept closest to your vision."
+                                ? "Explore your personalized directions."
                                 : conceptGenerationFailed
                                   ? readyConceptCount > 0
                                     ? `${readyConceptCount} of ${conceptGalleryTargetCount} concepts are ready`
                                     : "Concept generation paused"
-                                  : "Creating your concepts…"}
+                                    : "Creating your concepts…"}
                             </p>
                             <p className="mt-1 text-xs text-muted-foreground sm:text-sm">
                               {conceptGenerationComplete
-                                ? "Preview each concept, then choose one."
+                                ? "Browse the variations below, then change anything you want."
                                 : conceptGenerationFailed
                                   ? readyConceptCount > 0
                                     ? "Explore what’s ready or try generating the rest again."
                                     : "We couldn’t finish these concepts. Try again in a moment."
                                   : readyConceptCount > 0
                                     ? "Explore each concept as it arrives."
-                                    : studioStarterConcept
-                                      ? `Building around ${studioStarterConcept.label}.`
-                                      : "Your first concept will appear here."}
+                                    : "Concepts will appear here as they’re ready."}
                             </p>
                           </div>
                           <div className="flex items-center justify-between gap-2 sm:shrink-0 sm:justify-start">
@@ -4335,30 +4871,11 @@ export function ImagePreviewExperience(props: {
                             ) : null}
                           </div>
                         </div>
-                        {busy ? (
-                          <div className="mt-3 flex max-w-[18rem] items-center gap-1.5" aria-label={`${readyConceptCount} of ${conceptGalleryTargetCount} concepts ready`}>
-                            {Array.from({ length: conceptGalleryTargetCount }).map((_, index) => {
-                              const conceptReady = Boolean(activeRun?.images?.[index]);
-                              return (
-                                <motion.span
-                                  key={`concept-progress-${index}`}
-                                  className={cn("h-1 flex-1 rounded-full", conceptReady ? "bg-primary" : "bg-primary/15")}
-                                  animate={
-                                    !conceptReady && !reduceMotion
-                                      ? { opacity: [0.35, 0.85, 0.35] }
-                                      : { opacity: 1 }
-                                  }
-                                  transition={{ duration: 1.5, delay: index * 0.14, repeat: conceptReady ? 0 : Infinity, ease: "easeInOut" }}
-                                />
-                              );
-                            })}
-                          </div>
-                        ) : null}
                       </div>
 
                       <div className="flex min-h-0 flex-1 flex-col">
                         <div
-                          className="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden px-7 pb-5 sm:px-16 sm:pb-6"
+                          className="relative flex min-h-0 flex-1 px-2 pb-2 sm:px-6 sm:pb-3"
                           onKeyDown={(event) => {
                             if (event.key === "ArrowLeft") {
                               event.preventDefault();
@@ -4370,156 +4887,246 @@ export function ImagePreviewExperience(props: {
                             }
                           }}
                         >
-                          <div
-                          className="relative h-full min-h-[15rem] w-full max-w-[72rem]"
-                            tabIndex={0}
-                            aria-label="Personalized concept slideshow"
-                          >
-                            <AnimatePresence initial={false} custom={conceptSlideDirection} mode="popLayout">
-                              <motion.div
-                                key={`active-concept-${stagedConceptIndex}`}
-                                custom={conceptSlideDirection}
-                                layoutId={stagedConceptImage && activeRun?.id ? `generated-concept:${activeRun.id}:${stagedConceptIndex}` : undefined}
-                                initial={reduceMotion ? { opacity: 0 } : { opacity: 0, x: conceptSlideDirection * 54, scale: 0.975 }}
-                                animate={{ opacity: 1, x: 0, rotate: 0, scale: 1 }}
-                                exit={reduceMotion ? { opacity: 0 } : { opacity: 0, x: conceptSlideDirection * -90, rotate: conceptSlideDirection * -2.5, scale: 0.97 }}
-                                transition={{ duration: reduceMotion ? 0.1 : 0.32, ease: [0.16, 1, 0.3, 1] }}
-                                drag="x"
-                                dragConstraints={{ left: 0, right: 0 }}
-                                dragDirectionLock
-                                dragElastic={0.18}
-                                onDragEnd={(_, info) => {
-                                  const swipeLeft = info.offset.x < -55 || info.velocity.x < -360;
-                                  const swipeRight = info.offset.x > 55 || info.velocity.x > 360;
-                                  if (swipeLeft) showConcept(stagedConceptIndex + 1);
-                                  else if (swipeRight) showConcept(stagedConceptIndex - 1);
-                                }}
-                                className="absolute inset-0 z-10 cursor-grab overflow-hidden rounded-2xl border border-foreground/10 bg-muted shadow-[0_18px_50px_rgba(15,23,42,0.14)] active:cursor-grabbing"
-                                aria-label={stagedConceptPresentation.title}
-                              >
-                                {stagedConceptImage ? (
-                                  <>
-                                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                                    <img
-                                      src={stagedConceptImage}
-                                      alt={stagedConceptPresentation.title}
-                                      className="absolute inset-0 h-full w-full select-none object-cover"
-                                      draggable={false}
-                                    />
-                                  </>
-                                ) : (
-                                  <div className="absolute inset-0 overflow-hidden bg-muted">
-                                    {studioStarterConcept?.imageUrl ? (
-                                      <>
+                          {readyConceptCount === 0 ? (
+                            <div
+                              className="flex min-h-[15rem] w-full flex-1 items-center justify-center rounded-[1.25rem] border border-foreground/10 bg-muted/20 px-6 text-center shadow-sm"
+                              style={{
+                                backgroundColor:
+                                  hexToRgba(theme.primaryColor, 0.045) || undefined,
+                                fontFamily: theme.fontFamily,
+                              }}
+                              aria-live="polite"
+                            >
+                              <div className="flex max-w-sm flex-col items-center">
+                                {!conceptGenerationFailed ? (
+                                  <div
+                                    className="mb-4 flex h-11 w-11 items-center justify-center rounded-full bg-background shadow-sm ring-1 ring-black/[0.05]"
+                                    style={{ color: theme.primaryColor }}
+                                  >
+                                    <Loader2 className="h-5 w-5 animate-spin" aria-hidden />
+                                  </div>
+                                ) : null}
+                                <p className="text-base font-semibold text-foreground">
+                                  {conceptGenerationFailed
+                                    ? "We couldn’t create your concepts"
+                                    : "Creating your first concept…"}
+                                </p>
+                                <p className="mt-1.5 text-sm text-muted-foreground">
+                                  {conceptGenerationFailed
+                                    ? "Try again and we’ll pick up from your selected direction."
+                                    : "It will appear here automatically as soon as it’s ready."}
+                                </p>
+                              </div>
+                            </div>
+                          ) : (
+                            <div
+                              className="relative min-h-[15rem] w-full flex-1 overflow-hidden"
+                              tabIndex={0}
+                              aria-label="Personalized concept carousel"
+                            >
+                              <AnimatePresence initial={false} custom={conceptSlideDirection} mode="wait">
+                                <motion.div
+                                  key={`active-concept-${stagedConceptIndex}`}
+                                  custom={conceptSlideDirection}
+                                  layoutId={activeRun?.id ? `generated-concept:${activeRun.id}:${stagedConceptIndex}` : undefined}
+                                  initial={
+                                    reduceMotion
+                                      ? { opacity: 0 }
+                                      : { opacity: 0, x: conceptSlideDirection * 34, scale: 0.99 }
+                                  }
+                                  animate={{ opacity: 1, x: 0, scale: 1 }}
+                                  exit={
+                                    reduceMotion
+                                      ? { opacity: 0 }
+                                      : { opacity: 0, x: conceptSlideDirection * -34, scale: 0.99 }
+                                  }
+                                  transition={{ duration: reduceMotion ? 0.1 : 0.24, ease: [0.16, 1, 0.3, 1] }}
+                                  drag={readyConceptCount > 1 ? "x" : false}
+                                  dragConstraints={{ left: 0, right: 0 }}
+                                  dragDirectionLock
+                                  dragElastic={0.12}
+                                  onDragEnd={(_, info) => {
+                                    if (info.offset.x < -45 && nextReadyConceptIndex !== null) {
+                                      showConcept(nextReadyConceptIndex);
+                                    } else if (info.offset.x > 45 && previousReadyConceptIndex !== null) {
+                                      showConcept(previousReadyConceptIndex);
+                                    }
+                                  }}
+                                  className="absolute inset-0 z-20 flex touch-pan-y items-center justify-center"
+                                  aria-label={stagedConceptPresentation.title}
+                                >
+                                  <div className="relative flex h-full w-fit max-w-[82%] items-center justify-center">
+                                    {previousReadyConceptIndex !== null && activeRun?.images?.[previousReadyConceptIndex] ? (
+                                      <motion.button
+                                        key={`previous-concept-${previousReadyConceptIndex}`}
+                                        type="button"
+                                        onPointerDown={(event) => event.stopPropagation()}
+                                        onClick={() => showConcept(previousReadyConceptIndex)}
+                                        initial={reduceMotion ? { opacity: 0 } : { opacity: 0, x: -18 }}
+                                        animate={{ opacity: 1, x: 0 }}
+                                        transition={{ duration: reduceMotion ? 0.1 : 0.22 }}
+                                        className="absolute bottom-[8%] top-[8%] z-10 w-24 overflow-hidden rounded-2xl border border-foreground/10 bg-muted shadow-sm sm:w-28"
+                                        style={{ right: "calc(100% + 0.75rem)" }}
+                                        aria-label="Show previous concept"
+                                      >
                                         {/* eslint-disable-next-line @next/next/no-img-element */}
                                         <img
-                                          src={studioStarterConcept.imageUrl}
+                                          src={activeRun.images[previousReadyConceptIndex]}
                                           alt=""
-                                          className="absolute inset-0 h-full w-full scale-[1.04] object-cover opacity-55 blur-[5px]"
-                                          aria-hidden
+                                          className="h-full w-full object-cover opacity-55 saturate-75"
                                         />
-                                        <div className="absolute inset-0 bg-background/50 backdrop-blur-[1px]" />
-                                      </>
-                                    ) : (
-                                      <div className="absolute inset-0 bg-[radial-gradient(circle_at_32%_24%,rgba(255,255,255,0.85),transparent_42%),linear-gradient(135deg,rgba(15,23,42,0.03),rgba(15,23,42,0.1))]" />
-                                    )}
-                                    {!conceptGenerationFailed ? (
-                                      <motion.div
-                                        className="absolute -inset-x-1/2 inset-y-0 bg-gradient-to-r from-transparent via-white/20 to-transparent"
-                                        animate={reduceMotion ? undefined : { x: ["-35%", "35%"] }}
-                                        transition={{ duration: 2.8, ease: "easeInOut", repeat: Infinity, repeatType: "mirror" }}
-                                      />
+                                        <span className="absolute inset-0 bg-background/25" />
+                                      </motion.button>
                                     ) : null}
-                                    <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 px-6 text-center">
-                                      <div className="inline-flex items-center gap-2.5 rounded-full border border-foreground/10 bg-background/85 px-4 py-2.5 text-sm font-semibold text-foreground shadow-sm backdrop-blur-md">
-                                        {conceptGenerationFailed ? (
-                                          <Sparkles className="h-4 w-4 text-foreground/45" />
-                                        ) : (
-                                          <Loader2 className="h-4 w-4 animate-spin text-primary" />
-                                        )}
-                                        <span>
-                                          {conceptGenerationFailed
-                                            ? "This concept needs another try"
-                                            : `Creating ${stagedConceptPresentation.title}`}
-                                        </span>
-                                      </div>
-                                      {!conceptGenerationFailed ? (
-                                        <p className="max-w-sm text-xs font-medium text-foreground/60 sm:text-sm">
-                                          {CONCEPT_SLOT_LOADING_MESSAGES[stagedConceptIndex % CONCEPT_SLOT_LOADING_MESSAGES.length] ?? "Exploring a personalized direction…"}
-                                        </p>
-                                      ) : null}
+
+                                    <div
+                                      className="relative flex h-full w-fit max-w-full items-center justify-center overflow-hidden rounded-[1.25rem] border border-foreground/10 bg-muted/20 shadow-[0_14px_36px_rgba(15,23,42,0.12)]"
+                                      style={{
+                                        backgroundColor:
+                                          hexToRgba(theme.primaryColor, 0.04) || undefined,
+                                      }}
+                                    >
+                                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                                      <img
+                                        src={stagedConceptImage || ""}
+                                        alt={stagedConceptPresentation.title}
+                                        className="block h-full w-auto max-w-full select-none object-contain"
+                                        draggable={false}
+                                      />
+                                      <Button
+                                        type="button"
+                                        onPointerDown={(event) => event.stopPropagation()}
+                                        onClick={() => handleUseConcept(stagedConceptIndex)}
+                                        className="absolute bottom-3 right-3 z-20 h-10 rounded-full px-5 text-sm font-semibold shadow-lg sm:bottom-4 sm:right-4"
+                                        style={{ backgroundColor: theme.primaryColor, color: "#fff", fontFamily: theme.fontFamily }}
+                                      >
+                                        Choose this concept <ChevronRight className="ml-1 h-4 w-4" />
+                                      </Button>
                                     </div>
+
+                                    {nextReadyConceptIndex !== null && activeRun?.images?.[nextReadyConceptIndex] ? (
+                                      <motion.button
+                                        key={`next-concept-${nextReadyConceptIndex}`}
+                                        type="button"
+                                        onPointerDown={(event) => event.stopPropagation()}
+                                        onClick={() => showConcept(nextReadyConceptIndex)}
+                                        initial={reduceMotion ? { opacity: 0 } : { opacity: 0, x: 18 }}
+                                        animate={{ opacity: 1, x: 0 }}
+                                        transition={{ duration: reduceMotion ? 0.1 : 0.22 }}
+                                        className="absolute bottom-[8%] top-[8%] z-10 w-24 overflow-hidden rounded-2xl border border-foreground/10 bg-muted shadow-sm sm:w-28"
+                                        style={{ left: "calc(100% + 0.75rem)" }}
+                                        aria-label="Show next concept"
+                                      >
+                                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                                        <img
+                                          src={activeRun.images[nextReadyConceptIndex]}
+                                          alt=""
+                                          className="h-full w-full object-cover opacity-55 saturate-75"
+                                        />
+                                        <span className="absolute inset-0 bg-background/25" />
+                                      </motion.button>
+                                    ) : null}
+
+                                    {previousReadyConceptIndex !== null ? (
+                                      <button
+                                        type="button"
+                                        onPointerDown={(event) => event.stopPropagation()}
+                                        onClick={() => showConcept(previousReadyConceptIndex)}
+                                        className="absolute left-0 top-1/2 z-30 hidden h-11 w-11 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-foreground/10 bg-background/95 text-foreground shadow-md transition hover:scale-105 sm:flex"
+                                        aria-label="Previous concept"
+                                      >
+                                        <ChevronLeft className="h-5 w-5" />
+                                      </button>
+                                    ) : null}
+                                    {nextReadyConceptIndex !== null ? (
+                                      <button
+                                        type="button"
+                                        onPointerDown={(event) => event.stopPropagation()}
+                                        onClick={() => showConcept(nextReadyConceptIndex)}
+                                        className="absolute right-0 top-1/2 z-30 hidden h-11 w-11 translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-foreground/10 bg-background/95 text-foreground shadow-md transition hover:scale-105 sm:flex"
+                                        aria-label="Next concept"
+                                      >
+                                        <ChevronRight className="h-5 w-5" />
+                                      </button>
+                                    ) : null}
                                   </div>
-                                )}
-                                {stagedConceptImage ? (
-                                  <Button
-                                    type="button"
-                                    onPointerDown={(event) => event.stopPropagation()}
-                                    onClick={(event) => {
-                                      event.stopPropagation();
-                                      handleUseConcept();
-                                    }}
-                                    className="absolute bottom-3 right-3 z-20 h-10 rounded-full px-5 text-sm font-semibold shadow-lg sm:bottom-4 sm:right-4"
-                                    style={{ backgroundColor: theme.primaryColor, color: "#fff", fontFamily: theme.fontFamily }}
-                                  >
-                                    Use this concept <ChevronRight className="ml-1 h-4 w-4" />
-                                  </Button>
-                                ) : null}
-                              </motion.div>
-                            </AnimatePresence>
-                            {readyConceptCount > 0 ? (
-                              <>
-                                <button
-                                  type="button"
-                                  onClick={() => showConcept(stagedConceptIndex - 1)}
-                                  disabled={stagedConceptIndex <= 0}
-                                  className="absolute left-3 top-1/2 z-30 hidden h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-white/30 bg-background/90 text-foreground shadow-md backdrop-blur-md transition hover:scale-105 disabled:pointer-events-none disabled:opacity-25 sm:flex"
-                                  aria-label="Previous concept"
-                                >
-                                  <ChevronLeft className="h-5 w-5" />
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => showConcept(stagedConceptIndex + 1)}
-                                  disabled={stagedConceptIndex >= conceptGalleryCellCount - 1}
-                                  className="absolute right-3 top-1/2 z-30 hidden h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-white/30 bg-background/90 text-foreground shadow-md backdrop-blur-md transition hover:scale-105 disabled:pointer-events-none disabled:opacity-25 sm:flex"
-                                  aria-label="Next concept"
-                                >
-                                  <ChevronRight className="h-5 w-5" />
-                                </button>
-                              </>
-                            ) : null}
-                          </div>
+                                </motion.div>
+                              </AnimatePresence>
+                            </div>
+                          )}
                         </div>
 
-                        <div
-                          className={cn(
-                            "mx-auto flex w-full max-w-5xl shrink-0 flex-col items-center gap-2 px-2 pt-1 sm:flex-row",
-                            "sm:justify-center",
-                          )}
-                        >
-                          <div className="flex items-center gap-3">
-                            {readyConceptCount > 0 ? (
-                              <span className="max-w-[18rem] truncate text-xs font-semibold text-foreground/65 sm:text-sm">
+                        {stagedConceptImage ? (
+                          <div className="mx-auto w-full shrink-0 px-2 sm:px-6">
+                            <div className="flex w-full flex-wrap items-center justify-center gap-x-3 gap-y-1 pb-1.5 text-center">
+                              <span className="text-sm font-semibold text-foreground/85">
                                 {stagedConceptPresentation.title}
                               </span>
-                            ) : null}
-                            <div className="flex items-center gap-1.5" aria-label={`${stagedConceptPresentation.title} selected`}>
-                              {Array.from({ length: conceptGalleryCellCount }).map((_, idx) => (
-                                <button
-                                  key={idx}
-                                  type="button"
-                                  onClick={() => showConcept(idx)}
-                                  className={cn(
-                                    "h-2 rounded-full transition-all",
-                                    stagedConceptIndex === idx ? "w-5 bg-primary" : activeRun?.images?.[idx] ? "w-2 bg-foreground/35" : "w-2 bg-foreground/15",
-                                  )}
-                                  aria-label={`Show ${conceptPresentationFor(activeRun, idx).title}`}
+                              <span className="text-xs font-semibold tabular-nums text-foreground/55">
+                                {stagedConceptIndex + 1} of {conceptGalleryCellCount}
+                              </span>
+                              <span className="inline-flex items-center gap-1 text-xs font-semibold text-primary/80">
+                                <Sparkles className="h-3 w-3" />
+                                Price range updates with this direction
+                              </span>
+                            </div>
+                            <div className="flex w-full items-center gap-2 overflow-x-auto pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                              <span className="shrink-0 text-xs font-semibold text-foreground/60">Change it:</span>
+                              {contextualSuggestionsLoading ? (
+                                <>
+                                  <Skeleton className="h-8 w-36 shrink-0 rounded-full" />
+                                  <Skeleton className="h-8 w-32 shrink-0 rounded-full" />
+                                  <Skeleton className="h-8 w-40 shrink-0 rounded-full" />
+                                </>
+                              ) : contextualStudioSuggestions.slice(0, 3).map((suggestion, index) => {
+                                const label = suggestion.suggestionLabel?.trim() || suggestion.text;
+                                return (
+                                  <button
+                                    key={`gallery-refinement-${suggestion.promptId || label}-${index}`}
+                                    type="button"
+                                    disabled={studioRefinementBusy}
+                                    onClick={() => {
+                                      handleUseConcept(stagedConceptIndex);
+                                      applyStudioRefinement(suggestion, stagedConceptImage);
+                                    }}
+                                    className="inline-flex h-8 max-w-[14rem] shrink-0 items-center gap-1.5 rounded-full border border-foreground/15 bg-background px-3 text-xs font-semibold text-foreground/75 transition hover:border-primary/35 hover:bg-primary/5 disabled:cursor-wait disabled:opacity-50"
+                                  >
+                                    <Sparkles className="h-3 w-3 text-primary" />
+                                    <span className="truncate">{label}</span>
+                                  </button>
+                                );
+                              })}
+                              <div className="flex h-8 min-w-[17rem] flex-1 items-center rounded-full border border-foreground/15 bg-background pl-3 pr-1 transition focus-within:border-primary/35">
+                                <Input
+                                  value={studioRefinementDraft}
+                                  onChange={(event) => setStudioRefinementDraft(event.target.value)}
+                                  onKeyDown={(event) => {
+                                    if (event.key !== "Enter" || event.shiftKey || !studioRefinementDraft.trim()) return;
+                                    event.preventDefault();
+                                    handleUseConcept(stagedConceptIndex);
+                                    applyStudioRefinement(studioRefinementDraft, stagedConceptImage);
+                                  }}
+                                  disabled={studioRefinementBusy}
+                                  placeholder="Or describe a change…"
+                                  aria-label="Describe a change to this variation"
+                                  className="h-7 min-w-0 flex-1 border-0 bg-transparent px-0 text-xs shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
                                 />
-                              ))}
+                                <button
+                                  type="button"
+                                  disabled={studioRefinementBusy || !studioRefinementDraft.trim()}
+                                  onClick={() => {
+                                    handleUseConcept(stagedConceptIndex);
+                                    applyStudioRefinement(studioRefinementDraft, stagedConceptImage);
+                                  }}
+                                  className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground transition hover:brightness-105 disabled:opacity-35"
+                                  aria-label="Apply change to this variation"
+                                >
+                                  <ChevronRight className="h-3.5 w-3.5" />
+                                </button>
+                              </div>
                             </div>
                           </div>
-                        </div>
+                        ) : null}
                       </div>
                     </div>
                   ) : (
@@ -4710,14 +5317,22 @@ export function ImagePreviewExperience(props: {
 	              )
 	              ) : hero ? (
 	                studioEstimateActive ? (
-                    <div className="h-full min-h-0 w-full overflow-hidden bg-background px-2 py-2 sm:px-4 sm:py-3 lg:px-6 lg:py-4">
+                    <div className="h-full min-h-0 w-full overflow-hidden bg-background px-0 pb-2 sm:px-3 sm:pb-3">
                       <motion.div
                         initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 12 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: reduceMotion ? 0.1 : 0.3, ease: "easeOut" }}
-                        className="mx-auto flex h-full min-h-0 w-full max-w-[80rem] flex-col gap-2"
+                        className="mx-auto flex h-full min-h-0 w-full max-w-[88rem] flex-col gap-2"
                         style={{ fontFamily: theme.fontFamily }}
                       >
+                        <div className="shrink-0 px-1 pb-1 pt-1 sm:px-0 sm:pb-2">
+                          <p className="text-balance text-lg font-semibold leading-tight text-foreground sm:text-xl">
+                            Refine your selected direction.
+                          </p>
+                          <p className="mt-1 text-xs text-muted-foreground sm:text-sm">
+                            Try a suggested change, describe your own, or reveal the project estimate.
+                          </p>
+                        </div>
                         <motion.figure
                           layoutId={
                             selectedConceptIndex !== null && activeRun?.id
@@ -4727,13 +5342,8 @@ export function ImagePreviewExperience(props: {
                           transition={{ layout: { duration: reduceMotion ? 0.1 : 0.34, ease: [0.16, 1, 0.3, 1] } }}
                           className="flex min-h-0 min-w-0 flex-1 flex-col"
                         >
-                          <div className="group relative min-h-0 flex-1 overflow-hidden rounded-[1.35rem] border border-foreground/10 bg-muted shadow-[0_18px_50px_rgba(15,23,42,0.13)]">
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img
-                              src={hero}
-                              alt="Selected design direction"
-                              className="absolute inset-0 h-full w-full object-cover"
-                            />
+                          <div className="group relative min-h-0 flex-1 overflow-hidden rounded-[1.25rem] border border-foreground/8 bg-neutral-950 shadow-[0_18px_50px_rgba(15,23,42,0.14)]">
+                            <SharpConceptCanvas src={hero} alt="Selected design direction" />
                             {studioRefinementBusy ? (
                               <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/15 p-5">
                                 <div className="inline-flex items-center gap-2.5 rounded-full border border-white/25 bg-background/95 px-4 py-2.5 text-sm font-semibold text-foreground shadow-lg backdrop-blur-md">
@@ -4773,53 +5383,6 @@ export function ImagePreviewExperience(props: {
                                 <Maximize2 className="h-4 w-4" />
                               </button>
                             </div>
-                            {!studioRefinementBusy ? (
-                              <div className="absolute bottom-3 right-3 z-20 max-w-[calc(100%-1.5rem)] sm:bottom-4 sm:right-4">
-                                {waitingForExactPricing ? (
-                                  <div className="inline-flex h-11 items-center gap-2 rounded-full border border-white/25 bg-background/95 px-4 text-sm font-semibold text-foreground shadow-lg backdrop-blur-md">
-                                    <Loader2 className="h-4 w-4 animate-spin text-primary" aria-hidden /> Preparing estimate…
-                                  </div>
-                                ) : !leadGateEnabled || leadCaptured ? (
-                                  studioEstimateReady ? (
-                                    <div className="rounded-2xl border border-white/20 bg-background/95 px-4 py-2.5 text-right text-foreground shadow-lg backdrop-blur-md">
-                                      <span className="block text-[9px] font-semibold uppercase tracking-[0.15em] text-muted-foreground">Project estimate</span>
-                                      <span className="block text-sm font-semibold tracking-tight sm:text-base" style={{ fontFamily: theme.fontFamily }}>
-                                        {studioEstimateRangeLabel}
-                                      </span>
-                                    </div>
-                                  ) : (
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        setPendingExactPricingReveal(true);
-                                        setAccuratePricingStatus("running");
-                                        void fetchAccuratePricingRef.current?.();
-                                      }}
-                                      className="inline-flex min-h-11 items-center gap-2 rounded-full bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground shadow-lg transition hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2"
-                                    >
-                                      Calculate project estimate <ChevronRight className="h-4 w-4" />
-                                    </button>
-                                  )
-                                ) : (
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      pendingRefinementNotesRef.current = null;
-                                      openDesignEstimateLeadFlow();
-                                    }}
-                                    className="group inline-flex min-h-12 items-center gap-3 rounded-full border border-white/20 bg-primary px-5 py-2.5 text-left text-primary-foreground shadow-[0_12px_30px_rgba(0,0,0,0.22)] transition hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2"
-                                  >
-                                    <span className="min-w-0">
-                                      <span className="block text-[9px] font-semibold uppercase tracking-[0.15em] text-primary-foreground/70">Project pricing</span>
-                                      <span className="block truncate text-sm font-semibold sm:text-base" style={{ fontFamily: theme.fontFamily }}>
-                                        Get project estimate
-                                      </span>
-                                    </span>
-                                    <ChevronRight className="h-4 w-4 shrink-0 text-primary-foreground/85 transition-transform group-hover:translate-x-0.5" />
-                                  </button>
-                                )}
-                              </div>
-                            ) : null}
                           </div>
                           <figcaption className="shrink-0 px-1 pt-2 text-center">
                             <p className="text-sm font-semibold text-foreground/85 sm:text-base">
@@ -4831,15 +5394,24 @@ export function ImagePreviewExperience(props: {
                           </figcaption>
                         </motion.figure>
 
-                        <section className="mx-auto w-full shrink-0 px-1" aria-label="Refine this concept">
-                          <div className="px-1 py-1.5">
-                            <div className="flex w-full items-center gap-2 overflow-x-auto pb-0.5 [scrollbar-width:none] sm:flex-wrap sm:justify-center sm:overflow-visible [&::-webkit-scrollbar]:hidden">
-                              {studioSuggestionsLoading ? (
-                                <span className="inline-flex h-10 shrink-0 items-center gap-2 px-2 text-sm text-muted-foreground">
-                                  <Loader2 className="h-4 w-4 animate-spin text-primary" aria-hidden /> Preparing ideas…
-                                </span>
+                        <section
+                          className="mx-auto w-full shrink-0 px-1"
+                          aria-label="Refine this concept and view project estimate"
+                          data-studio-action-rail
+                        >
+                          <div className="flex min-w-0 items-center gap-2">
+                            <span className="shrink-0 pl-1 text-xs font-semibold text-foreground/60">
+                              Change this design:
+                            </span>
+                            <div className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                              {contextualSuggestionsLoading ? (
+                                <>
+                                  <Skeleton className="h-9 w-40 shrink-0 rounded-full" />
+                                  <Skeleton className="h-9 w-36 shrink-0 rounded-full" />
+                                  <Skeleton className="h-9 w-44 shrink-0 rounded-full" />
+                                </>
                               ) : (
-                                visibleStudioSuggestions.map((suggestion, index) => {
+                                contextualStudioSuggestions.map((suggestion, index) => {
                                   const label = suggestion.suggestionLabel?.trim() || suggestion.text;
                                   return (
                                     <button
@@ -4847,8 +5419,8 @@ export function ImagePreviewExperience(props: {
                                       type="button"
                                       disabled={studioRefinementBusy}
                                       onClick={() => applyStudioRefinement(suggestion)}
-                                      className="group inline-flex h-9 max-w-[17rem] shrink-0 items-center gap-2 rounded-full border border-foreground/10 bg-background/80 px-3.5 text-sm font-medium text-foreground/75 shadow-sm transition hover:border-primary/40 hover:bg-primary/5 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 disabled:cursor-wait disabled:opacity-45"
-                                      title={leadGateEnabled && !leadCaptured ? `Save your concept to apply: ${label}` : `Apply: ${label}`}
+                                      className="group inline-flex h-9 max-w-[14rem] shrink-0 items-center gap-2 rounded-full border border-foreground/10 bg-background px-3.5 text-sm font-medium text-foreground/75 shadow-sm transition hover:border-primary/40 hover:bg-primary/5 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 disabled:cursor-wait disabled:opacity-45"
+                                      title={leadGateEnabled && !leadCaptured ? `Apply preview change: ${label}` : `Apply: ${label}`}
                                     >
                                       <Sparkles className="h-3.5 w-3.5 shrink-0 text-primary" aria-hidden />
                                       <span className="truncate">{label}</span>
@@ -4856,45 +5428,37 @@ export function ImagePreviewExperience(props: {
                                   );
                                 })
                               )}
-                              {rankedStudioSuggestions.length > 3 && !studioSuggestionsLoading ? (
-                                <button
-                                  type="button"
-                                  disabled={studioRefinementBusy}
-                                  onClick={() => setStudioSuggestionOffset((offset) => (offset + 3) % rankedStudioSuggestions.length)}
-                                  className="inline-flex h-9 shrink-0 items-center gap-1 rounded-full border border-foreground/10 bg-background/80 px-3.5 text-sm font-medium text-foreground/70 shadow-sm transition hover:border-primary/40 hover:bg-primary/5 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 disabled:opacity-45"
-                                >
-                                  More ideas <ChevronRight className="h-3.5 w-3.5" aria-hidden />
-                                </button>
-                              ) : null}
-                              <div className="flex h-9 min-w-[15rem] max-w-[22rem] flex-1 items-center gap-2 rounded-full border border-foreground/10 bg-background/80 pl-4 pr-1.5 shadow-sm focus-within:border-primary/40 focus-within:ring-2 focus-within:ring-primary/15">
-                                <Input
-                                  value={studioRefinementDraft}
-                                  onChange={(event) => setStudioRefinementDraft(event.target.value)}
-                                  onKeyDown={(event) => {
-                                    if (event.key === "Enter" && !event.shiftKey) {
-                                      event.preventDefault();
-                                      applyStudioRefinement(studioRefinementDraft);
-                                    }
-                                  }}
-                                  disabled={studioRefinementBusy}
-                                  placeholder="Describe a change…"
-                                  aria-label="Describe a design change"
-                                  className="h-8 min-w-0 border-0 bg-transparent px-0 text-sm shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
-                                />
-                                <button
-                                  type="button"
-                                  disabled={studioRefinementBusy || !studioRefinementDraft.trim()}
-                                  onClick={() => applyStudioRefinement(studioRefinementDraft)}
-                                  className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground transition hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-35"
-                                  aria-label="Apply design change"
-                                  title="Apply change"
-                                >
-                                  {studioRefinementBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden /> : <Send className="h-3.5 w-3.5" aria-hidden />}
-                                </button>
-                              </div>
+                            </div>
+                            <div className="flex shrink-0 justify-end">
+                              {studioEstimateAction}
                             </div>
                           </div>
-
+                          <div className="mt-1.5 flex h-9 w-full items-center gap-2 rounded-full border border-foreground/15 bg-background pl-4 pr-1.5 focus-within:border-primary/40 focus-within:ring-2 focus-within:ring-primary/10">
+                            <Input
+                              value={studioRefinementDraft}
+                              onChange={(event) => setStudioRefinementDraft(event.target.value)}
+                              onKeyDown={(event) => {
+                                if (event.key === "Enter" && !event.shiftKey) {
+                                  event.preventDefault();
+                                  applyStudioRefinement(studioRefinementDraft);
+                                }
+                              }}
+                              disabled={studioRefinementBusy}
+                              placeholder="Describe another change to this design…"
+                              aria-label="Describe a design change"
+                              className="h-9 min-w-0 border-0 bg-transparent px-0 text-sm shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
+                            />
+                            <button
+                              type="button"
+                              disabled={studioRefinementBusy || !studioRefinementDraft.trim()}
+                              onClick={() => applyStudioRefinement(studioRefinementDraft)}
+                              className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground transition hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-35"
+                              aria-label="Apply design change"
+                              title="Apply change"
+                            >
+                              <Send className="h-3.5 w-3.5" aria-hidden />
+                            </button>
+                          </div>
                         </section>
                       </motion.div>
                     </div>
@@ -5515,7 +6079,7 @@ export function ImagePreviewExperience(props: {
               ) : null}
 
 	              {/* Side navigation arrows — outside the clipped inner container */}
-	              {hero && canPrev && !leadGateActive && (
+	              {hero && canPrev && !leadGateActive && !studioEstimateActive && (
 	                <button
 	                  type="button"
 	                  onClick={goPrev}
@@ -5525,7 +6089,7 @@ export function ImagePreviewExperience(props: {
 	                  ‹
 	                </button>
 	              )}
-	              {hero && canNext && !leadGateActive && (
+	              {hero && canNext && !leadGateActive && !studioEstimateActive && (
 	                <button
 	                  type="button"
 	                  onClick={goNext}
@@ -5537,7 +6101,7 @@ export function ImagePreviewExperience(props: {
 	              )}
 
 	              {/* Pagination dots — only in dominant/full-screen layout where there's no room for a strip below */}
-	              {runs.length > 1 && hero && isDominantLayout && (
+	              {runs.length > 1 && hero && isDominantLayout && !studioEstimateActive && (
 	                <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-30 flex items-center gap-1.5 pointer-events-none">
 	                  {runs.map((_, idx) => (
 	                    <div

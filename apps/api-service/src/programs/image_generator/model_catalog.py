@@ -47,6 +47,32 @@ FLUX_PRO = ModelCatalogEntry(
     notes="Best default for fresh scene generation without anchor images.",
 )
 
+FLUX_2_PRO = ModelCatalogEntry(
+    key="flux-2-pro-edit",
+    model_id="black-forest-labs/flux-2-pro",
+    label="Flux 2 Pro",
+    speed="medium",
+    quality="very_high",
+    max_reference_images=8,
+    best_for=(
+        "scene_text_to_image",
+        "scene_edit",
+        "scene_refinement",
+        "scene_placement",
+        "iterative_edit",
+        "anchor_preservation",
+    ),
+    output_format="png",
+    aspect_ratio="match_input_image",
+    guidance_scale=6.0,
+    num_inference_steps=28,
+    provider_input_style="flux-2",
+    required_tags=("landscapes",),
+    traits=("high_prompt_adherence", "edit_preservation", "multi_image_edit", "photoreal_generation"),
+    priorities=("highest_quality", "highest_reliability", "lowest_latency"),
+    notes="Highest-quality default for successive scene edits and multi-reference placement.",
+)
+
 FLUX_KONTEXT = ModelCatalogEntry(
     key="flux-kontext-edit",
     model_id="black-forest-labs/flux-kontext-pro",
@@ -66,6 +92,43 @@ FLUX_KONTEXT = ModelCatalogEntry(
     required_tags=("landscapes",),
     traits=("high_prompt_adherence", "edit_preservation"),
     notes="Best default for anchored scene edits with one primary reference image.",
+)
+
+P_IMAGE_EDIT = ModelCatalogEntry(
+    key="p-image-fast-edit",
+    model_id="prunaai/p-image-edit",
+    label="P-Image Edit",
+    speed="very_fast",
+    quality="medium",
+    max_reference_images=4,
+    best_for=("fast_preview_edit", "localized_edit", "single_image_edit"),
+    output_format="jpg",
+    aspect_ratio="match_input_image",
+    guidance_scale=1.0,
+    num_inference_steps=1,
+    provider_input_style="p-image-edit",
+    traits=("high_prompt_adherence", "low_latency", "edit_preservation"),
+    priorities=("lowest_latency", "lowest_cost", "highest_quality"),
+    notes="Sub-second preview editor for simple interactive refinements.",
+)
+
+P_IMAGE = ModelCatalogEntry(
+    key="p-image-fast-draft",
+    model_id="prunaai/p-image",
+    label="P-Image",
+    speed="very_fast",
+    quality="medium",
+    max_reference_images=0,
+    best_for=("fast_preview_generation", "option_images", "thumbnails", "speed"),
+    output_format="jpg",
+    aspect_ratio="16:9",
+    guidance_scale=1.0,
+    num_inference_steps=1,
+    prompt_upsampling=False,
+    provider_input_style="p-image",
+    traits=("high_prompt_adherence", "low_latency"),
+    priorities=("lowest_latency", "lowest_cost", "highest_quality"),
+    notes="Warm sub-second text-to-image model for progressive concept drafts.",
 )
 
 GROK_IMAGINE_IMAGE = ModelCatalogEntry(
@@ -130,7 +193,10 @@ MODEL_CATALOG: Dict[str, ModelCatalogEntry] = {
     entry.model_id: entry
     for entry in (
         FLUX_PRO,
+        FLUX_2_PRO,
         FLUX_KONTEXT,
+        P_IMAGE,
+        P_IMAGE_EDIT,
         GROK_IMAGINE_IMAGE,
         NANO_BANANA,
         FLUX_SCHNELL,
@@ -168,22 +234,28 @@ def resolve_model_entry(
     if normalized == "tryon":
         return NANO_BANANA
 
-    if normalized in {"scene-placement", "scene-refinement", "drilldown"}:
-        return GROK_IMAGINE_IMAGE
+    if normalized == "scene-refinement":
+        return FLUX_2_PRO
+
+    if normalized in {"scene-placement", "drilldown"}:
+        return FLUX_2_PRO
 
     if normalized == "scene" and (has_reference_images or has_scene_image or has_product_image or has_user_image):
-        return FLUX_KONTEXT
+        return FLUX_2_PRO
 
     return FLUX_PRO
 
 
 __all__ = [
+    "FLUX_2_PRO",
     "FLUX_KONTEXT",
     "FLUX_PRO",
     "FLUX_SCHNELL",
     "GROK_IMAGINE_IMAGE",
     "MODEL_CATALOG",
     "NANO_BANANA",
+    "P_IMAGE",
+    "P_IMAGE_EDIT",
     "ModelCatalogEntry",
     "get_model_entry",
     "normalize_use_case",

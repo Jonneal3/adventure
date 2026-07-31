@@ -548,7 +548,7 @@ def _resolve_gallery_model_id(payload: Dict[str, Any], base_spec: Dict[str, Any]
     explicit = str(payload.get("modelId") or payload.get("model_id") or "").strip()
     if explicit:
         return explicit
-    return "black-forest-labs/flux-schnell"
+    return "prunaai/p-image"
 
 
 def _build_slot_prompt(
@@ -586,7 +586,17 @@ def _build_slot_prompt(
         )
     elif scene_anchor:
         lines.append(
-            "Preserve the uploaded space's structural envelope, camera perspective, and overall footprint, but make the finished design visibly distinct for this slot."
+            "Treat the input image as the required design anchor. Preserve its camera perspective, room geometry, "
+            "structural envelope, major object placement, and recognizable overall composition. Keep the result "
+            "clearly in the same design family as the input. Create this slot by changing only plausible finish-level "
+            "details such as materials, fixtures, lighting, hardware, trim, and feature complexity. Do not invent a "
+            "different room, a new floor plan, or an unrelated design."
+        )
+        lines.append(
+            "Strict fixture-preservation rule: keep every toilet, shower, tub, vanity, sink, door, and window in its "
+            "original zone. Do not move, duplicate, add, merge, or overlap these fixtures. A toilet must never appear "
+            "inside a shower, tub, glass wet enclosure, vanity, or doorway. Keep glass boundaries and fixture clearances "
+            "physically plausible and visually unambiguous."
         )
 
     lines.extend(
@@ -595,9 +605,19 @@ def _build_slot_prompt(
             f"Material level: {slot.material_level}.",
             f"Lighting style: {slot.lighting_style}.",
             f"Detail density: {slot.detail_level}.",
-            f"Layout variation: {slot.layout_variation}.",
+            (
+                "Composition rule: keep the anchored layout and fixture plan unchanged; create variation only through "
+                "materials, finish quality, hardware, lighting treatment, trim, storage detailing, and surface complexity."
+                if scene_anchor
+                else f"Layout variation: {slot.layout_variation}."
+            ),
             f"Price signal: the final image should look credibly aligned with a {currency} {price_low:,}-{price_high:,} implementation for this service.",
-            "Make this clearly distinct from sibling variants through layout emphasis, fixture mix, material package, and lighting mood, not by changing to a different style family.",
+            (
+                "Make this clearly distinct from sibling variants through material package, finish quality, hardware, "
+                "lighting mood, and detail level while preserving the exact fixture zones."
+                if scene_anchor
+                else "Make this clearly distinct from sibling variants through layout emphasis, fixture mix, material package, and lighting mood, not by changing to a different style family."
+            ),
             "Absolute priority: this must read as a real photographed finished result, not AI art, not a mood board, and not a 3D render.",
             "Do not add text, letters, numbers, numerals, digits, captions, labels, logos, watermarks, signage, price tags, measurement marks, or callouts anywhere in the image.",
             "Use believable camera optics, accurate scale, true-to-life proportions, natural shadow falloff, grounded objects, realistic reflections, and material textures with subtle real-world imperfections.",

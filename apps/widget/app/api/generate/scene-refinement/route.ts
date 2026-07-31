@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
 			return NextResponse.json({ error: "sceneImage is required" }, { status: 400 });
 		}
 
-		const modelId = body.modelId || "xai/grok-imagine-image";
+		const modelId = body.modelId || "black-forest-labs/flux-2-pro";
 		const numOutputs =
 			generationIntent === "small_improvement" || generationIntent === "small-improvement"
 				? 1
@@ -105,8 +105,8 @@ export async function POST(request: NextRequest) {
 		const hasInputImage = allImages.length > 0;
 
 		const guidanceScale = body.guidanceScale ?? 6.0;
-		const numInferenceSteps = body.numInferenceSteps ?? 18;
-		const promptUpsampling = body.promptUpsampling ?? (hasInputImage ? false : undefined);
+		const numInferenceSteps = body.numInferenceSteps ?? 28;
+		const promptUpsampling = body.promptUpsampling ?? false;
 		const safetyTolerance =
 			typeof body.safetyTolerance === "number"
 				? Math.min(body.safetyTolerance, hasInputImage ? 2 : 6)

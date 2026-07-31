@@ -14,7 +14,7 @@ function storageKeyV2(instanceId: string, sessionId: string) {
 }
 
 function storageKeyV3(instanceId: string, sessionId: string) {
-  return `ai_form_image_preview:v3:${instanceId}:${sessionId}`;
+  return `ai_form_image_preview:v3a3:${instanceId}:${sessionId}`;
 }
 
 function storageKeyUploads(instanceId: string, sessionId: string) {

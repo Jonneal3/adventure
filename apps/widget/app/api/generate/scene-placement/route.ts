@@ -45,11 +45,13 @@ export async function POST(request: NextRequest) {
     if (!body.sceneImage) {
       return NextResponse.json({ error: 'sceneImage is required' }, { status: 400 });
     }
-    const modelId = body.modelId || 'xai/grok-imagine-image';
+    const modelId = body.modelId || 'black-forest-labs/flux-2-pro';
 
     // Number of outputs
     const numOutputs =
-      generationIntent === "small_improvement" || generationIntent === "small-improvement"
+      modelId.includes("flux-2-pro") ||
+      generationIntent === "small_improvement" ||
+      generationIntent === "small-improvement"
         ? 1
         : body.numOutputs || body.gallery_max_images || 4;
 

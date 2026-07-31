@@ -31,13 +31,17 @@ export type PreviewCacheSnapshot = {
   activeRunId?: string | null;
   selectedConceptIndex?: number | null;
   viewMode?: "gallery" | "single" | null;
+  sourceConceptRunId?: string | null;
+  sourceConceptIndex?: number | null;
+  isolatedRunId?: string | null;
+  isolatedConceptIndex?: number | null;
   message?: string | null;
   error?: string | null;
   updatedAt?: number | null;
 };
 
 function storageKeyV3(instanceId: string, sessionId: string) {
-  return `ai_form_image_preview:v3:${instanceId}:${sessionId}`;
+  return `ai_form_image_preview:v3a3:${instanceId}:${sessionId}`;
 }
 
 export function readPreviewCacheSnapshot(instanceId: string, sessionId: string): PreviewCacheSnapshot | null {

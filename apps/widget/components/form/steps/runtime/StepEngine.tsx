@@ -2394,9 +2394,19 @@ export function StepEngine({
     const options = Array.isArray(styleStep?.options) ? styleStep.options : [];
     const option = options.find((candidate: any) => String(candidate?.value || candidate?.label || "") === selectedValue);
     if (!option) return null;
+    const pricingIndex = Math.max(0, options.indexOf(option));
     const imageUrl = typeof option?.imageUrl === "string" ? option.imageUrl : typeof option?.image_url === "string" ? option.image_url : "";
     return imageUrl
-      ? { value: selectedValue, label: String(option?.label || selectedValue), imageUrl, isProjectPhoto: false }
+      ? {
+          value: selectedValue,
+          label: String(option?.label || selectedValue),
+          description: typeof option?.description === "string" ? option.description : "",
+          imageUrl,
+          isProjectPhoto: false,
+          pricingIndex,
+          ...(typeof option?.priceTier === "string" && option.priceTier.trim() ? { priceTier: option.priceTier.trim() } : {}),
+          ...(option?.priceRange ? { priceRange: option.priceRange } : {}),
+        }
       : null;
   })();
   const styleStepIndex = (state?.steps || []).findIndex((step: any) => String(step?.id || "") === DETERMINISTIC_STYLE_ID);
@@ -2417,7 +2427,7 @@ export function StepEngine({
   const conceptsComplete = Boolean((activePreviewRun?.images?.length || 0) >= 4 && previewCacheSnapshot?.status === "complete");
   const estimateReached = Boolean(effectivePreviewEnabled && selectedConceptCommitted);
   const activeStudioPhase = effectivePreviewEnabled
-    ? selectedConceptCommitted
+    ? previewSurfaceMode === "single" && selectedConceptCommitted
       ? "estimate"
       : "concepts"
     : currentStep?.id === DETERMINISTIC_STYLE_ID
@@ -2425,17 +2435,31 @@ export function StepEngine({
       : currentStep?.id === DETERMINISTIC_BUDGET_ID
         ? "budget"
         : "project";
-  const studioPhases = localSkeletonMode
+  // Keep the phase rail stable once the visitor reaches Concepts. Tying its
+  // visibility to lead capture or a lingering style-step selection caused it
+  // to pop in and out while a refinement was being generated.
+  const hideDiscoveryProgress = activeStudioPhase === "starting-point";
+  const studioPhases = localSkeletonMode && !hideDiscoveryProgress
     ? [
-        { key: "starting-point", label: "Starting point", active: activeStudioPhase === "starting-point", complete: startingPointComplete, enabled: styleStepIndex >= 0 },
-        { key: "project", label: "Project", active: activeStudioPhase === "project", complete: projectPhaseComplete, enabled: projectStepIndex >= 0 && (projectStepIndex <= maxVisitedIndex || projectPhaseComplete) },
-        { key: "budget", label: "Budget", active: activeStudioPhase === "budget", complete: budgetPhaseComplete, enabled: budgetStepIndex >= 0 && (budgetStepIndex <= maxVisitedIndex || budgetPhaseComplete) },
-        { key: "concepts", label: "Concepts", active: activeStudioPhase === "concepts", complete: conceptsComplete, enabled: flowCompleted && (effectivePreviewEnabled || previewHasImage) },
+        {
+          key: "project",
+          label: "Customize",
+          active: activeStudioPhase === "project" || activeStudioPhase === "budget",
+          complete: projectPhaseComplete && budgetPhaseComplete,
+          enabled: projectStepIndex >= 0,
+        },
+        {
+          key: "concepts",
+          label: "Concepts",
+          active: activeStudioPhase === "concepts",
+          complete: conceptsComplete,
+          enabled: flowCompleted && (effectivePreviewEnabled || previewHasImage),
+        },
         {
           key: "estimate",
-          label: "Estimate",
+          label: "Refine & Estimate",
           active: activeStudioPhase === "estimate",
-          complete: estimateReached && (config?.leadCaptureRequired === false || leadCapturedForUI),
+          complete: estimateReached,
           enabled: estimateReached,
         },
       ]
@@ -2443,6 +2467,31 @@ export function StepEngine({
   const handleStudioPhaseNavigate = (phaseKey: string) => {
     setAdventureInputMode("questions");
     if (phaseKey === "estimate") {
+      if (instanceId && sessionId) {
+        updatePreviewCacheSnapshot(instanceId, sessionId, (cache) => {
+          if (!cache || !Array.isArray(cache.runs) || cache.runs.length === 0) return cache;
+          const preferredRunId = cache.isolatedRunId || cache.sourceConceptRunId;
+          const preferredRun = preferredRunId
+            ? cache.runs.find((run) => run.id === preferredRunId && Array.isArray(run.images) && run.images.length > 0)
+            : null;
+          if (!preferredRun) return cache;
+          const preferredIndexRaw =
+            cache.isolatedRunId === preferredRun.id
+              ? cache.isolatedConceptIndex
+              : cache.sourceConceptIndex;
+          const preferredIndex =
+            typeof preferredIndexRaw === "number" && Number.isFinite(preferredIndexRaw)
+              ? Math.max(0, Math.min(preferredRun.images.length - 1, Math.floor(preferredIndexRaw)))
+              : 0;
+          return {
+            ...cache,
+            activeRunId: preferredRun.id,
+            selectedConceptIndex: preferredIndex,
+            viewMode: "single",
+            updatedAt: Date.now(),
+          };
+        });
+      }
       setStudioPreviewRequested(true);
       setQuestionPaneRevealedByUser(false);
       const targetIndex = budgetStepIndex >= 0 ? budgetStepIndex : Math.max(0, (state?.steps?.length || 1) - 1);

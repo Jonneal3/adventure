@@ -956,6 +956,7 @@ def generate_image(payload: Dict[str, Any]) -> Dict[str, Any]:
     - Return `{ images: string[], predictionId }` for widget compatibility
     """
     request_id = f"image_{int(time.time() * 1000)}"
+    total_started_at = time.perf_counter()
     payload = _normalize_generation_request(payload)
     variation_mode = str(payload.get("variationMode") or payload.get("variation_mode") or "").strip().lower()
 
@@ -999,7 +1000,9 @@ def generate_image(payload: Dict[str, Any]) -> Dict[str, Any]:
     except Exception:
         pass
 
+    prompt_started_at = time.perf_counter()
     prompt_text, negative_prompt, prompt_error = _resolve_prompt_phase(payload)
+    prompt_completed_at = time.perf_counter()
     if prompt_error:
         if "requestId" not in prompt_error:
             prompt_error["requestId"] = request_id
@@ -1073,4 +1076,30 @@ def generate_image(payload: Dict[str, Any]) -> Dict[str, Any]:
             "requestId": request_id,
         }
 
-    return {**provider_resp, "ok": True, "provider": provider_name, "requestId": request_id}
+    total_completed_at = time.perf_counter()
+    provider_latency = (
+        provider_resp.get("adventureBxLatencyMs")
+        if isinstance(provider_resp.get("adventureBxLatencyMs"), dict)
+        else {}
+    )
+    latency = {
+        **provider_latency,
+        "prompt": round((prompt_completed_at - prompt_started_at) * 1000),
+        "total": round((total_completed_at - total_started_at) * 1000),
+    }
+    print(
+        "[image_generator] request_latency",
+        {
+            "requestId": request_id,
+            "modelId": payload.get("modelId"),
+            **latency,
+        },
+        flush=True,
+    )
+    return {
+        **provider_resp,
+        "ok": True,
+        "provider": provider_name,
+        "requestId": request_id,
+        "adventureBxLatencyMs": latency,
+    }

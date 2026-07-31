@@ -226,9 +226,13 @@ export default function ClientDesignInstancePage({ accountId, instanceId }: Prop
   };
 
   const refreshGenerationSession = () => {
-    // This forces the preview iframe to reload (new runtime session).
+    // Navbar Refresh is the designer equivalent of the runtime's Start over action.
     setIsRefreshingSession(true);
-    window.dispatchEvent(new CustomEvent('designer-refresh-widget-preview'));
+    window.dispatchEvent(
+      new CustomEvent('designer-refresh-widget-preview', {
+        detail: { resetSession: true, source: 'navbar' },
+      })
+    );
     window.setTimeout(() => setIsRefreshingSession(false), 1200);
   };
 

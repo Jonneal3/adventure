@@ -90,11 +90,14 @@ def test_scene_refinement_inputs_include_previous_prompt_and_refinement_notes() 
                 "serviceSummary": "Bathroom remodeling service.",
             },
             "sceneImage": "https://example.com/scene.png",
+            "budgetRange": 42000,
         }
     )
 
     assert inputs["previous_prompt"] == "Warm transitional bathroom with oak vanity and matte brass hardware."
     assert "terrazzo" in inputs["refinement_notes"].lower()
+    assert inputs["budget_level"] == "35000"
+    assert "35,000" in inputs["budget_requirements"]
 
 
 def test_scene_inputs_budget_tier_shift_uses_broad_regeneration_adherence() -> None:

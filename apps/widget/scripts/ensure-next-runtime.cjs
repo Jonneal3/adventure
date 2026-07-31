@@ -17,7 +17,11 @@ function safeRm(p) {
 }
 
 const cwd = process.cwd();
-const nextDir = path.join(cwd, ".next");
+const configuredDistDir =
+  typeof process.env.WIDGET_NEXT_DIST_DIR === "string" && process.env.WIDGET_NEXT_DIST_DIR.trim()
+    ? process.env.WIDGET_NEXT_DIST_DIR.trim()
+    : ".next-dev";
+const nextDir = path.join(cwd, configuredDistDir);
 const runtimePath = path.join(nextDir, "server", "webpack-runtime.js");
 const chunksDir = path.join(nextDir, "server", "chunks");
 const vendorChunksDir = path.join(nextDir, "server", "chunks", "vendor-chunks");

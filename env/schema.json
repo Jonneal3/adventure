@@ -389,6 +389,15 @@
       "targets": ["development", "preview", "production"],
       "required": false,
       "secret": true
+    },
+    {
+      "name": "RESEND_FROM_EMAIL",
+      "group": "email",
+      "apps": ["adv-widget"],
+      "targets": ["development", "preview", "production"],
+      "required": false,
+      "secret": false,
+      "description": "Verified sender used for Adventure V2 results emails, for example Adventure <results@example.com>."
     }
   ],
   "deprecatedAliases": [

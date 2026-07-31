@@ -14,7 +14,9 @@ function decodeJwtRole(token: string): string | null {
   }
 }
 
-export function createSupabaseAdminClient() {
+export function createSupabaseAdminClient(options?: {
+  fetchTimeoutMs?: number;
+}) {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   const serviceKeyRole = serviceKey ? decodeJwtRole(serviceKey) : null;
@@ -33,7 +35,9 @@ export function createSupabaseAdminClient() {
     );
   }
 
-  const timeoutMsRaw = Number(process.env.SUPABASE_FETCH_TIMEOUT_MS);
+  const timeoutMsRaw = Number(
+    options?.fetchTimeoutMs ?? process.env.SUPABASE_FETCH_TIMEOUT_MS
+  );
   const supabaseFetchTimeoutMs =
     Number.isFinite(timeoutMsRaw) && timeoutMsRaw > 0
       ? timeoutMsRaw
@@ -57,4 +61,3 @@ export function createSupabaseAdminClient() {
 
   return { supabase, serviceKeyRole };
 }
-

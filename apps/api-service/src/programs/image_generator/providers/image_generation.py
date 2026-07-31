@@ -607,7 +607,9 @@ def generate_images(
     )
 
     _log_provider("replicate_request_payload", inp)
+    provider_started_at = time.perf_counter()
     created = _replicate_create_prediction(model_id=model, input=inp)
+    create_completed_at = time.perf_counter()
     prediction_id = str(created.get("id") or "")
     status = str(created.get("status") or "")
     output = created.get("output")
@@ -622,6 +624,23 @@ def generate_images(
 
     # Pass through the raw Replicate prediction response (exact shape from Replicate API),
     # so callers can read `id`, `status`, `output`, `input`, etc.
+    provider_completed_at = time.perf_counter()
     response_payload = final if isinstance(final, dict) else {"status": "failed", "error": "Invalid Replicate response"}
+    response_payload = {
+        **response_payload,
+        "adventureBxLatencyMs": {
+            "predictionCreate": round((create_completed_at - provider_started_at) * 1000),
+            "providerWait": round((provider_completed_at - create_completed_at) * 1000),
+            "providerTotal": round((provider_completed_at - provider_started_at) * 1000),
+        },
+    }
+    print(
+        "[image_generator] provider_latency",
+        {
+            "modelId": model,
+            **response_payload["adventureBxLatencyMs"],
+        },
+        flush=True,
+    )
     _log_provider("replicate_response_payload", response_payload)
     return response_payload

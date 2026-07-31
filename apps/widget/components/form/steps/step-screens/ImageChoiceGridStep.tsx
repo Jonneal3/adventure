@@ -7,6 +7,7 @@ import type { MultipleChoiceUI } from "@/types/ai-form-ui-contract";
 import { StepLayout } from "../ui-layout/StepLayout";
 import { ImageChoiceGrid } from "../input-controls/ImageChoiceGridControl";
 import { layoutDebugClassName, withLayoutDebugStyle } from "../runtime/step-engine/debug-layout";
+import { Camera, Loader2 } from "lucide-react";
 
 interface ImageChoiceGridStepProps {
   step: StepDefinition | MultipleChoiceUI;
@@ -120,6 +121,8 @@ export function ImageChoiceGridStep({
   actionsVariant,
   compactInPreview,
   layoutDebugEnabled = false,
+  instanceId,
+  onProjectPhotoSelected,
 }: ImageChoiceGridStepProps) {
   const isUIStep = "type" in (step as any) && !("componentType" in (step as any));
   const optionsRaw = isUIStep
@@ -144,9 +147,16 @@ export function ImageChoiceGridStep({
         ? 5
       : undefined;
   const [value, setValue] = React.useState<any>(stepData ?? (multiple ? [] : ""));
+  const [starterPage, setStarterPage] = React.useState(0);
+  const projectPhotoInputRef = React.useRef<HTMLInputElement>(null);
+  const [projectPhotoUploading, setProjectPhotoUploading] = React.useState(false);
+  const [projectPhotoError, setProjectPhotoError] = React.useState<string | null>(null);
   React.useEffect(() => {
     if (stepData !== undefined) setValue(stepData);
   }, [stepData]);
+  React.useEffect(() => {
+    setStarterPage(0);
+  }, [(step as any)?.id]);
 
   const isNarrowViewport = useIsNarrowViewport(768);
   const effectiveVariant: ImageChoiceVariant = guidedThumbnailMode
@@ -165,11 +175,15 @@ export function ImageChoiceGridStep({
       : normalizedColumns;
 
   const selectedArray = Array.isArray(value) ? value : value ? [value] : [];
+  const visibleOptions = isStyleStep
+    ? options.slice(starterPage * 10, starterPage * 10 + 10)
+    : options;
+  const hasMoreStarterOptions = isStyleStep && options.length > 10;
   const canContinue = multiple ? selectedArray.length >= minSelections : Boolean(value);
   const maxReached = Boolean(multiple && Number.isFinite(Number(maxSelections)) && selectedArray.length >= Number(maxSelections));
   const autoContinueOnSelect = isPricedGridStep
     ? !multiple
-    : isStyleStep && !multiple;
+    : false;
   const handleValueChange = React.useCallback(
     (nextValue: string | string[]) => {
       setValue(nextValue);
@@ -180,6 +194,40 @@ export function ImageChoiceGridStep({
     },
     [autoContinueOnSelect, isLoading, onComplete]
   );
+  const handleStarterPhoto = React.useCallback(async (file?: File | null) => {
+    if (!file || !isStyleStep || !instanceId || !onProjectPhotoSelected || projectPhotoUploading) return;
+    if (!file.type.startsWith("image/")) {
+      setProjectPhotoError("Choose an image file.");
+      return;
+    }
+    if (file.size > 8 * 1024 * 1024) {
+      setProjectPhotoError("Choose an image smaller than 8 MB.");
+      return;
+    }
+    setProjectPhotoUploading(true);
+    setProjectPhotoError(null);
+    try {
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result || ""));
+        reader.onerror = () => reject(new Error("Could not read that photo."));
+        reader.readAsDataURL(file);
+      });
+      const response = await fetch("/api/upload-reference-image", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ instanceId, image: dataUrl }),
+      });
+      const payload = response.ok ? await response.json().catch(() => ({})) : null;
+      const url = typeof payload?.url === "string" && payload.url ? payload.url : dataUrl;
+      await onProjectPhotoSelected(url);
+      onComplete("__project_photo__");
+    } catch (error) {
+      setProjectPhotoError(error instanceof Error ? error.message : "Could not add that photo.");
+    } finally {
+      setProjectPhotoUploading(false);
+    }
+  }, [instanceId, isStyleStep, onComplete, onProjectPhotoSelected, projectPhotoUploading]);
   const selectionCounter = multiple && Number.isFinite(Number(maxSelections))
     ? (
         <span
@@ -239,10 +287,11 @@ export function ImageChoiceGridStep({
       canGoBack={canGoBack}
       isLoading={isLoading}
       canContinue={canContinue}
+      continueLabel={isStyleStep ? "See similar concepts" : undefined}
       headerInlineControl={resolvedHeaderInlineControl}
       actionsVariant={isStyleStep ? "default" : actionsVariant ?? (isNarrowViewport ? "sticky_mobile" : "default")}
       stickyActionsTransparent={isStyleStep}
-      hideContinueAction={isPricedGridStep || isStyleStep}
+      hideContinueAction={isPricedGridStep}
       compactInPreview={isPricedGridStep ? false : compactInPreview}
       preferWideLayout={isPricedGridStep || !compactInPreview}
       layoutDebugEnabled={layoutDebugEnabled}
@@ -253,7 +302,7 @@ export function ImageChoiceGridStep({
           isPricedGridStep
             ? "flex min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden"
             : isStyleStep
-              ? "flex h-full min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden"
+              ? "relative flex h-full min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden"
             : !isPricedGridStep && compactInPreview
               ? "mx-auto flex w-full max-w-none min-w-0 shrink-0 flex-col min-h-0"
               : "flex min-h-0 w-full min-w-0 flex-col"
@@ -266,7 +315,7 @@ export function ImageChoiceGridStep({
             isPricedGridStep
               ? "w-full min-w-0 flex min-h-0 flex-1 flex-col"
               : isStyleStep
-                ? "flex h-full min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden"
+                ? "relative flex h-full min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden"
               : "w-full min-h-0 flex-1 flex flex-col"
           )}
           style={
@@ -279,11 +328,12 @@ export function ImageChoiceGridStep({
             <div className="shrink-0 pb-2 text-center text-xs text-muted-foreground">{trustLine}</div>
           ) : null}
           <div
+            data-starter-scroll-viewport={isStyleStep ? "true" : undefined}
             className={cn(
               isPricedGridStep || isStyleStep
                 ? "min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain touch-pan-y"
                 : null,
-              isStyleStep ? "pb-3 sm:pb-4" : null,
+              isStyleStep ? "pb-20 sm:pb-20" : null,
             )}
             style={isPricedGridStep || isStyleStep ? ({ WebkitOverflowScrolling: "touch" } as React.CSSProperties) : undefined}
           >
@@ -294,7 +344,7 @@ export function ImageChoiceGridStep({
                 if (isLoading) return;
                 onComplete(finalValue);
               }}
-              options={options}
+              options={visibleOptions}
               multiple={multiple}
               maxSelections={maxSelections}
               variant={effectiveVariant}
@@ -307,6 +357,47 @@ export function ImageChoiceGridStep({
               className={!isPricedGridStep && compactInPreview ? "w-full min-h-0 shrink-0" : undefined}
             />
           </div>
+          {isStyleStep ? (
+            <div className="absolute inset-x-0 bottom-0 z-20 w-full border-t border-black/[0.07] bg-[var(--form-surface-color)] px-4 py-3 shadow-[0_-10px_28px_rgba(15,23,42,0.06)]">
+              <input
+                ref={projectPhotoInputRef}
+                type="file"
+                accept="image/*"
+                className="sr-only"
+                onChange={(event) => {
+                  const file = event.currentTarget.files?.[0];
+                  void handleStarterPhoto(file);
+                  event.currentTarget.value = "";
+                }}
+              />
+              <div className="mx-auto grid w-full max-w-[720px] grid-cols-1 gap-2 sm:grid-cols-2">
+                <button
+                  type="button"
+                  disabled={isLoading}
+                  onClick={() => {
+                    if (hasMoreStarterOptions) {
+                      setStarterPage((page) => (page + 1) * 10 >= options.length ? 0 : page + 1);
+                      return;
+                    }
+                    onComplete("__not_sure__");
+                  }}
+                  className="flex h-10 items-center justify-center rounded-full border border-black/[0.11] bg-transparent px-4 text-[12px] font-semibold text-foreground/65 transition hover:border-black/20 hover:bg-black/[0.025] hover:text-foreground sm:text-[13px]"
+                >
+                  None of these — show me more
+                </button>
+                <button
+                  type="button"
+                  disabled={isLoading || projectPhotoUploading || !onProjectPhotoSelected}
+                  onClick={() => projectPhotoInputRef.current?.click()}
+                  className="flex h-10 items-center justify-center gap-2 rounded-full border border-black/[0.11] bg-transparent px-4 text-[12px] font-semibold text-foreground/65 transition hover:border-black/20 hover:bg-black/[0.025] hover:text-foreground disabled:opacity-45 sm:text-[13px]"
+                >
+                  {projectPhotoUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
+                  {projectPhotoUploading ? "Adding your photo…" : "Start with my project photo"}
+                </button>
+              </div>
+              {projectPhotoError ? <p className="mt-1 text-center text-xs font-medium text-red-600" role="alert">{projectPhotoError}</p> : null}
+            </div>
+          ) : null}
         </div>
       </div>
     </StepLayout>

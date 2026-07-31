@@ -133,18 +133,21 @@ const IframeWidgetPreview: React.FC<IframeWidgetPreviewProps> = ({
 
   // Allow parent designer UI to force-refresh the iframe (e.g. after placeholder gallery reorder).
   useEffect(() => {
-    const handler = () => {
+    const handler = (event: Event) => {
+      const resetSession =
+        event instanceof CustomEvent &&
+        Boolean((event.detail as { resetSession?: boolean } | null)?.resetSession);
       widgetReadyRef.current = false;
       setIsIframeLoaded(false);
       setIframeError(null);
       setResizedIframeHeight(null);
-      // Generate a brand-new session id so per-session usage limits reset.
-      setDesignerSessionId(`designer_${Math.random().toString(36).slice(2)}_${Date.now()}`);
-      // Force the runtime to start a new session via the supported contract.
-      setFreshNonce((n) => n + 1);
       setRefreshNonce((n) => n + 1);
 
-      // Best-effort: ask the runtime to clear any in-memory counters before reload.
+      if (!resetSession) return;
+
+      // Explicit navbar Refresh mirrors Start over: clear runtime state and use a new session.
+      setDesignerSessionId(`designer_${Math.random().toString(36).slice(2)}_${Date.now()}`);
+      setFreshNonce((n) => n + 1);
       try {
         const targetOrigin = getTargetOrigin();
         if (!targetOrigin) return;

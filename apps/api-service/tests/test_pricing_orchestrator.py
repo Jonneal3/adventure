@@ -150,3 +150,46 @@ def test_estimate_pricing_refinement_applies_delta_floor_for_material_changes(mo
     assert {driver["key"] for driver in resp["priceDrivers"]} >= {"planting_density", "hardscape"}
     delta = resp["deltaPriceRange"]
     assert ((delta["low"] + delta["high"]) / 2) >= 12_000
+
+
+def test_heuristic_pricing_uses_scope_and_revision_drivers_instead_of_echoing_budget(monkeypatch) -> None:
+    def _fake_build_context(_payload):
+        return {
+            "services_summary": "Bathroom remodeling service.",
+            "industry": "Home services",
+            "service": "Bathroom remodel",
+        }
+
+    monkeypatch.setattr(orchestrator, "build_context", _fake_build_context)
+    monkeypatch.setattr(orchestrator, "_pricing_vlm_enabled", lambda: False)
+
+    common = {
+        "budgetRange": 24_500,
+        "stepDataSoFar": {
+            "step-budget-v2": 24_500,
+            "step-scope-v2": "Cosmetic refresh",
+        },
+    }
+    starter = orchestrator.estimate_pricing(common)
+    refined = orchestrator.estimate_pricing(
+        {
+            **common,
+            "stepDataSoFar": {
+                **common["stepDataSoFar"],
+                "step-design-revisions-v2": ["Add a half wall and relocate the shower plumbing"],
+            },
+            "changedRefinementKeys": [
+                {
+                    "key": "design-revision-1",
+                    "label": "Add a half wall and relocate the shower plumbing",
+                }
+            ],
+        }
+    )
+
+    starter_midpoint = (starter["rangeLow"] + starter["rangeHigh"]) / 2
+    refined_midpoint = (refined["rangeLow"] + refined["rangeHigh"]) / 2
+    assert refined_midpoint > starter_midpoint
+    assert refined_midpoint != 24_500
+    assert {driver["key"] for driver in refined["priceDrivers"]} >= {"layout"}
+    assert "revision history" in " ".join(refined["notes"]).lower()

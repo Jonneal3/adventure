@@ -27,6 +27,8 @@ function supportsMultiOutput(modelId: string): boolean {
 	const model = String(modelId || '').trim().toLowerCase();
 	if (!model) return true;
 	if (model.includes('flux-kontext')) return false;
+	if (model.includes('flux-2-pro')) return false;
+	if (model.includes('p-image-edit')) return false;
 	if (model.includes('nano-banana')) return false;
 	if (model.includes('grok-imagine-image')) return false;
 	if (model.includes('flux-1.1-pro')) return false;
@@ -242,32 +244,32 @@ function resolveModelDefaults(
 	if (useCase === 'scene-placement') {
 		if (intent === "small_improvement" && hasInputImage) {
 			return {
-				modelId: body.modelId || 'xai/grok-imagine-image',
-				guidanceScale: body.guidanceScale ?? 5.5,
-				numInferenceSteps: body.numInferenceSteps ?? 14,
+				modelId: body.modelId || 'black-forest-labs/flux-2-pro',
+				guidanceScale: body.guidanceScale ?? 6.0,
+				numInferenceSteps: body.numInferenceSteps ?? 28,
 				promptUpsampling: body.promptUpsampling ?? false,
 				aspectRatio: body.aspectRatio || 'match_input_image',
-				outputFormat: body.outputFormat || 'jpg',
+				outputFormat: body.outputFormat || 'png',
 			};
 		}
 		return {
-			modelId: body.modelId || 'xai/grok-imagine-image',
+			modelId: body.modelId || 'black-forest-labs/flux-2-pro',
 			guidanceScale: body.guidanceScale ?? 6.0,
-			numInferenceSteps: body.numInferenceSteps ?? 18,
+			numInferenceSteps: body.numInferenceSteps ?? 28,
 			promptUpsampling: body.promptUpsampling ?? false,
 			aspectRatio: body.aspectRatio || 'match_input_image',
-			outputFormat: body.outputFormat || 'jpg',
+			outputFormat: body.outputFormat || 'png',
 		};
 	}
 
 	if (useCase === 'scene-refinement') {
 		return {
-			modelId: body.modelId || 'xai/grok-imagine-image',
+			modelId: body.modelId || 'black-forest-labs/flux-2-pro',
 			guidanceScale: body.guidanceScale ?? 6.0,
-			numInferenceSteps: body.numInferenceSteps ?? 18,
+			numInferenceSteps: body.numInferenceSteps ?? 28,
 			promptUpsampling: body.promptUpsampling ?? false,
 			aspectRatio: body.aspectRatio || 'match_input_image',
-			outputFormat: body.outputFormat || 'jpg',
+			outputFormat: body.outputFormat || 'png',
 		};
 	}
 
@@ -285,9 +287,9 @@ function resolveModelDefaults(
 	// scene
 	if (intent === "small_improvement" && hasInputImage) {
 		return {
-			modelId: body.modelId || 'black-forest-labs/flux-kontext-pro',
-			guidanceScale: body.guidanceScale ?? 5.2,
-			numInferenceSteps: body.numInferenceSteps ?? 14,
+			modelId: body.modelId || 'black-forest-labs/flux-2-pro',
+			guidanceScale: body.guidanceScale ?? 6.0,
+			numInferenceSteps: body.numInferenceSteps ?? 28,
 			promptUpsampling: body.promptUpsampling ?? false,
 			aspectRatio: body.aspectRatio || 'match_input_image',
 			outputFormat: body.outputFormat || 'png',
@@ -298,16 +300,16 @@ function resolveModelDefaults(
 		!hasInputImage && numOutputs > 1
 			? 'black-forest-labs/flux-schnell'
 			: hasInputImage
-				? 'black-forest-labs/flux-kontext-pro'
+				? 'black-forest-labs/flux-2-pro'
 				: 'black-forest-labs/flux-1.1-pro';
 	const sceneGuidance = sceneModelId.includes('flux-schnell') ? 4.25 : (hasInputImage ? 5.5 : 6.0);
-	const sceneSteps = sceneModelId.includes('flux-schnell') ? 6 : (hasInputImage ? 25 : 18);
+	const sceneSteps = sceneModelId.includes('flux-schnell') ? 6 : (hasInputImage ? 28 : 18);
 	const sceneFormat = sceneModelId.includes('flux-schnell') ? 'webp' : 'png';
 	return {
 		modelId: body.modelId || sceneModelId,
 		guidanceScale: body.guidanceScale ?? sceneGuidance,
 		numInferenceSteps: body.numInferenceSteps ?? sceneSteps,
-		promptUpsampling: body.promptUpsampling ?? (hasInputImage ? true : undefined),
+		promptUpsampling: body.promptUpsampling ?? (hasInputImage ? false : undefined),
 		aspectRatio: body.aspectRatio || (hasInputImage ? 'match_input_image' : '1:1'),
 		outputFormat: body.outputFormat || sceneFormat,
 	};
@@ -357,10 +359,14 @@ export async function POST(request: NextRequest) {
 			body,
 			generationIntent
 		);
-		const effectiveModelId = structuredVariantProgram ? 'black-forest-labs/flux-schnell' : defaults.modelId;
-		const effectiveGuidanceScale = structuredVariantProgram ? 3.5 : defaults.guidanceScale;
-		const effectiveNumInferenceSteps = structuredVariantProgram ? 4 : defaults.numInferenceSteps;
-		const effectiveOutputFormat = structuredVariantProgram ? 'webp' : defaults.outputFormat;
+		const effectiveModelId = structuredVariantProgram
+			? hasInputImage
+				? 'black-forest-labs/flux-kontext-pro'
+				: 'prunaai/p-image'
+			: defaults.modelId;
+		const effectiveGuidanceScale = structuredVariantProgram ? (hasInputImage ? 5.5 : 1) : defaults.guidanceScale;
+		const effectiveNumInferenceSteps = structuredVariantProgram ? (hasInputImage ? 25 : 1) : defaults.numInferenceSteps;
+		const effectiveOutputFormat = structuredVariantProgram ? (hasInputImage ? 'png' : 'jpg') : defaults.outputFormat;
 		const numOutputs = structuredVariantProgram ? requestedNumOutputs : resolveEffectiveNumOutputs(requestedNumOutputs, defaults.modelId);
 		if (!structuredVariantProgram && numOutputs !== requestedNumOutputs) {
 			logger.info('[GENERATE] Clamped requested outputs to model capability', {

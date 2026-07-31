@@ -10,7 +10,10 @@ const logged = new Set();
 function isWebpackRuntime(parentFilename) {
   if (typeof parentFilename !== "string") return false;
   const normalized = normalizePath(parentFilename);
-  return normalized.endsWith("/.next/server/webpack-runtime.js");
+  return (
+    normalized.endsWith("/.next/server/webpack-runtime.js") ||
+    normalized.endsWith("/.next-dev/server/webpack-runtime.js")
+  );
 }
 
 function toChunkShimRequest(request) {
@@ -43,14 +46,15 @@ function installResolvePatch() {
       if (altCandidates.length === 0) throw err;
 
       for (const alt of altCandidates) {
-        const key = `${request}=>${alt}`;
-        if (!logged.has(key)) {
-          logged.add(key);
-          // eslint-disable-next-line no-console
-          console.warn(`[widget] Remapping ${request} to ${alt} for Next server runtime chunks.`);
-        }
         try {
-          return current.call(this, alt, parent, isMain, options);
+          const resolved = current.call(this, alt, parent, isMain, options);
+          const key = `${request}=>${alt}`;
+          if (!logged.has(key)) {
+            logged.add(key);
+            // eslint-disable-next-line no-console
+            console.warn(`[widget] Remapping ${request} to ${alt} for Next server runtime chunks.`);
+          }
+          return resolved;
         } catch (altErr) {
           if (!altErr || altErr.code !== "MODULE_NOT_FOUND") throw altErr;
         }

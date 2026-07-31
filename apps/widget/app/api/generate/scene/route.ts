@@ -17,6 +17,8 @@ function supportsMultiOutput(modelId: string): boolean {
 	const model = String(modelId || '').trim().toLowerCase();
 	if (!model) return true;
 	if (model.includes('flux-kontext')) return false;
+	if (model.includes('flux-2-pro')) return false;
+	if (model.includes('p-image-edit')) return false;
 	if (model.includes('nano-banana')) return false;
 	if (model.includes('grok-imagine-image')) return false;
 	if (model.includes('flux-1.1-pro')) return false;
@@ -214,16 +216,16 @@ export async function POST(request: NextRequest) {
 		}
 
 		// Default model:
-		// - editing: FLUX Kontext Pro (single-image edit)
+			// - editing: FLUX 2 Pro (high-quality iterative edit)
 		// - initial multi-output concept gallery: FLUX Schnell
 		// - initial single-output: FLUX 1.1 Pro
 		const requestedNumOutputs = normalizeRequestedOutputs(body.numOutputs || body.gallery_max_images || 4);
 		const modelId =
 			body.modelId ||
 			(generationIntent === "small_improvement" || generationIntent === "small-improvement"
-				? (isEdit ? 'black-forest-labs/flux-kontext-pro' : 'black-forest-labs/flux-1.1-pro')
-				: isEdit
-					? 'black-forest-labs/flux-kontext-pro'
+					? (isEdit ? 'black-forest-labs/flux-2-pro' : 'black-forest-labs/flux-1.1-pro')
+					: isEdit
+						? 'black-forest-labs/flux-2-pro'
 					: requestedNumOutputs > 1
 						? 'black-forest-labs/flux-schnell'
 						: 'black-forest-labs/flux-1.1-pro');

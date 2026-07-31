@@ -83,6 +83,7 @@ export function ComponentRenderer(props: ComponentRendererProps) {
       compactInPreview,
       layoutDebugEnabled,
       instanceId: props.instanceId,
+      allStepData,
       onProjectPhotoSelected,
     };
     // If a UIStep carries a backend function call hint, render a dedicated UI.

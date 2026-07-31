@@ -10,6 +10,7 @@ from programs.image_generator.request_context import has_explicit_anchor_image, 
 _LIST_KEYS = {"referenceImages", "traits", "requiredTags", "routingPriorities"}
 _STRING_KEYS = {
     "generationIntent",
+    "editComplexity",
     "instanceId",
     "modelId",
     "referenceMode",
@@ -106,6 +107,7 @@ def normalize_image_request(payload: Dict[str, Any]) -> Dict[str, Any]:
     _merge_alias(normalized, source, "userImage", ("userImage", "user_image"))
     _merge_alias(normalized, source, "selectedImage", ("selectedImage", "selected_image"))
     _merge_alias(normalized, source, "generationIntent", ("generationIntent", "generation_intent"))
+    _merge_alias(normalized, source, "editComplexity", ("editComplexity", "edit_complexity"))
     _merge_alias(normalized, source, "previousPrompt", ("previousPrompt", "previous_prompt"))
     _merge_alias(normalized, source, "refinementNotes", ("refinementNotes", "refinement_notes"))
     _merge_alias(normalized, source, "variationMode", ("variationMode", "variation_mode"))
@@ -197,7 +199,7 @@ def resolve_image_request(payload: Dict[str, Any]) -> Dict[str, Any]:
                 "hasProductImage": has_product_image,
                 "hasUserImage": has_user_image,
                 "referenceImagesCount": len(reference_images),
-                "selectedModelId": recommendation.model_id,
+                "selectedModelId": resolved.get("modelId"),
                 "provider": "replicate",
                 "routingPolicy": routing_policy.to_dict(),
             },

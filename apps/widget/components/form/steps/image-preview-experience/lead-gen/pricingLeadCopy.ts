@@ -1,11 +1,12 @@
 /**
- * Pricing lead gates: single source for email -> name -> phone copy.
+ * Pricing lead gates: V1 captures email only. Name and phone copy remains for
+ * consultation-specific follow-up surfaces outside the pricing funnel.
  */
 export const PRICING_LEAD_COPY = {
-  title: "Want to keep refining this?",
-  description: "We’ll save this concept, unlock the detailed estimate, and let you keep designing.",
-  finePrint: "Your concept and progress stay together.",
-  ctaLabel: "Save & keep designing",
+  title: "Your personalized concept and price range are ready.",
+  description: "Enter your email to reveal pricing, save this design, and keep editing.",
+  finePrint: "Email only. Your concept and progress stay together.",
+  ctaLabel: "Reveal my estimate",
   emailPlaceholder: "Enter your email",
   nameTitle: "Make it yours",
   nameDescription: "What name should appear with your design?",

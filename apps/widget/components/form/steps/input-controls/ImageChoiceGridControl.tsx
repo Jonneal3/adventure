@@ -6,7 +6,7 @@ import { createPortal } from "react-dom";
 import { useFormTheme } from "../../demo/FormThemeProvider";
 import { cn } from "@/lib/utils";
 import { AnimatePresence, animate, motion, useMotionValue, useReducedMotion, useTransform } from "framer-motion";
-import { Check, ChevronLeft, ChevronRight } from "lucide-react";
+import { Check, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
 import { useLayoutDensity } from "../ui-layout/layout-density";
 import { formatCurrency } from "@/lib/ai-form/utils/currency";
 
@@ -729,6 +729,84 @@ export function ImageChoiceGrid({
               </button>
             ))}
           </div>
+        ) : null}
+      </div>
+    );
+  }
+
+  if (isStarterConcepts) {
+    return (
+      <div
+        className={cn("w-full px-2 pb-4 sm:px-3", className)}
+      >
+        <div className="mx-auto grid grid-flow-row-dense grid-cols-2 auto-rows-[8px] gap-3 sm:grid-cols-3 sm:gap-4 xl:grid-cols-4 xl:gap-5">
+          {options.map((opt, index) => {
+            const key = opt.value || opt.label;
+            const picked = selectedArray.includes(key);
+            const disabled = Boolean((multiple && !picked && isAtSelectionCap) || opt.disabled);
+            // Dense row spans create true masonry backfilling instead of leaving
+            // a tall blank column when one image happens to be shorter.
+            const rowSpans = [18, 13, 17, 19, 14, 16, 18, 13];
+            const rowSpan = rowSpans[index % rowSpans.length] || 16;
+
+            return (
+              <motion.button
+                key={key}
+                layoutId={sharedSelectionLayoutPrefix ? `${sharedSelectionLayoutPrefix}-${key}` : undefined}
+                initial={reduceMotion ? false : { opacity: 0, y: 14 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={reduceMotion ? { duration: 0 } : { delay: index * 0.045, duration: 0.28, ease: "easeOut" }}
+                disabled={disabled}
+                onClick={() => toggle(key)}
+                aria-label={`Choose ${opt.label} as a starting point`}
+                className={cn(
+                  "group relative flex h-full w-full flex-col overflow-hidden border bg-white text-left shadow-sm",
+                  "transform-gpu transition-[transform,box-shadow,border-color] duration-300 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/30",
+                  picked ? "border-black ring-2 ring-black/15" : "border-black/10 hover:-translate-y-1 hover:border-black/35 hover:shadow-2xl",
+                  disabled ? "cursor-not-allowed opacity-45" : "cursor-pointer active:scale-[0.99]",
+                )}
+                style={{ borderRadius: cardRadius, gridRowEnd: `span ${rowSpan}` }}
+              >
+                <div className="relative min-h-0 w-full flex-1 overflow-hidden bg-muted/30">
+                  {opt.imageUrl ? (
+                    <img
+                      src={opt.imageUrl}
+                      alt={opt.label}
+                      loading={index < 4 ? "eager" : "lazy"}
+                      decoding="async"
+                      fetchPriority={index < 2 ? "high" : undefined}
+                      className="h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.02]"
+                    />
+                  ) : (
+                    <div className="h-full w-full animate-pulse bg-muted/40" />
+                  )}
+                  {picked ? (
+                    <div className="absolute right-3 top-3 rounded-full bg-black p-1.5 text-white shadow-lg">
+                      <Check className="h-4 w-4" strokeWidth={3} />
+                    </div>
+                  ) : null}
+                </div>
+              </motion.button>
+            );
+          })}
+        </div>
+        {options.length > 6 ? (
+          <button
+            type="button"
+            className="sticky bottom-24 z-10 mx-auto mt-1 flex h-9 w-9 items-center justify-center rounded-full border border-black/10 bg-white/95 text-foreground/65 shadow-md backdrop-blur transition hover:-translate-y-0.5 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+            aria-label="Scroll to more designs"
+            onClick={(event) => {
+              const viewport = event.currentTarget.closest<HTMLElement>("[data-starter-scroll-viewport]");
+              viewport?.scrollBy({ top: Math.max(320, viewport.clientHeight * 0.7), behavior: "smooth" });
+            }}
+          >
+            <motion.span
+              animate={reduceMotion ? undefined : { y: [0, 4, 0] }}
+              transition={reduceMotion ? undefined : { duration: 1.35, repeat: Infinity, ease: "easeInOut" }}
+            >
+              <ChevronDown className="h-4 w-4" strokeWidth={2.25} />
+            </motion.span>
+          </button>
         ) : null}
       </div>
     );

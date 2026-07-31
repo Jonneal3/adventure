@@ -1,9 +1,8 @@
 import type { StepDefinition, UIStep } from "@/types/ai-form";
 import { buildDeterministicStyleStep } from "../../../static/deterministic-style-step";
-import { buildDeterministicBudgetStep, buildDeterministicUploadSteps } from "./deterministic-adventure-steps";
 
 export const LOCAL_SKELETON_FLOW_MODE = "local_skeleton";
-export const LOCAL_SKELETON_VERSION = "local-skeleton-v9-studio-repair";
+export const LOCAL_SKELETON_VERSION = "local-skeleton-v11-price-first-retrieval";
 export const LOCAL_SCOPE_STEP_ID = "step-project-scope";
 /** Refinement checklist when both DB scope presets and components exist (second scope step). */
 export const LOCAL_PARTS_STEP_ID = "step-project-parts";
@@ -23,6 +22,8 @@ export type LocalSkeletonServiceOption = {
     imageUrl?: string | null;
     description?: string | null;
     featuredRank?: number | null;
+    priceTier?: string | null;
+    priceRange?: { low?: number | null; high?: number | null; currency?: string | null } | null;
   }>;
 };
 
@@ -100,8 +101,8 @@ export function buildServiceSelectionStep(serviceOptions: LocalSkeletonServiceOp
   return {
     id: "step-service-primary",
     type: "multiple_choice",
-    question: "What service are you interested in?",
-    humanism: "Choose one to get started.",
+    question: "What are you pricing?",
+    humanism: "Let’s build a quick concept so we can give you more relevant pricing.",
     options: serviceOptions.slice(0, 40).map((option) => ({
       label: String(option?.label || option?.serviceName || "Service"),
       value: String(option?.value || ""),
@@ -173,8 +174,8 @@ function buildPresetScopeStep(
   return {
     id: LOCAL_SCOPE_STEP_ID,
     type: "multiple_choice",
-    question: "What are you hoping to accomplish?",
-    humanism: "Choose the outcome that feels closest.",
+    question: "What are you mainly interested in?",
+    humanism: "Let’s build a quick concept so we can give you more relevant pricing. Choose the closest option.",
     options: presetOptions,
     multi_select: false,
     columns: 2,
@@ -200,16 +201,19 @@ function buildPartsScopeStep(
   );
   return {
     id: usePartsOnlyStepId ? LOCAL_SCOPE_STEP_ID : LOCAL_PARTS_STEP_ID,
-    type: partOptions.length > 6 ? "chips_multi" : "multiple_choice",
-    question: scopeQuestion,
-    humanism: "Choose the elements that matter most.",
-    options: partOptions,
-    multi_select: true,
+    type: "multiple_choice",
+    question: "What are you mainly interested in?",
+    humanism: "Let’s build a quick concept so we can give you more relevant pricing. Choose the closest option.",
+    options: [
+      ...partOptions.slice(0, 7),
+      { label: "Not sure yet", value: "not_sure" },
+    ],
+    multi_select: false,
     min_selections: 1,
-    max_selections: Math.min(4, partOptions.length),
+    max_selections: 1,
     columns: 2,
     metricGain: 0.14,
-    blueprint: { presentation: { continue_label: "Continue" } },
+    blueprint: { presentation: { auto_advance: true, continue_label: "Continue" } },
   } as UIStep;
 }
 
@@ -222,12 +226,13 @@ function buildGenericExtentStep(serviceOption: LocalSkeletonServiceOption | null
   return {
     id: LOCAL_SCOPE_STEP_ID,
     type: "multiple_choice",
-    question: scaleQuestion,
-    humanism: "Pick the option that feels closest.",
+    question: "What are you mainly interested in?",
+    humanism: "Let’s build a quick concept so we can give you more relevant pricing. Choose the closest option.",
     options: withOtherChoiceOption([
       { label: "A quick refresh", value: "refresh" },
       { label: "A focused update", value: "partial_update" },
       { label: "A full transformation", value: "full_project" },
+      { label: "Not sure yet", value: "not_sure" },
     ]),
     multi_select: false,
     columns: 1,
@@ -242,24 +247,16 @@ function buildGenericExtentStep(serviceOption: LocalSkeletonServiceOption | null
  * then refinement `subcategory_components`, else generic extent.
  * When both presets and components exist, presets use step-project-scope and parts use step-project-parts.
  */
-export function buildLocalScopeSteps(serviceOption: LocalSkeletonServiceOption | null | undefined): UIStep[] {
-  const presets = normalizeSubcategoryScopeStrings(serviceOption?.subcategoryScope);
-  const components = normalizeComponents(serviceOption);
-  const steps: UIStep[] = [];
+export function buildLocalScopeSteps(_serviceOption: LocalSkeletonServiceOption | null | undefined): UIStep[] {
+  const presets = normalizeSubcategoryScopeStrings(_serviceOption?.subcategoryScope);
+  if (presets.length > 0) return [buildPresetScopeStep(_serviceOption, presets)];
 
-  if (presets.length > 0) {
-    steps.push(buildPresetScopeStep(serviceOption, presets));
-  }
-
+  const components = normalizeComponents(_serviceOption);
   if (components.length > 0) {
-    steps.push(buildPartsScopeStep(components, presets.length === 0, presets.length > 0));
+    return [buildPartsScopeStep(components, true, false)];
   }
 
-  if (presets.length === 0 && components.length === 0) {
-    steps.push(buildGenericExtentStep(serviceOption));
-  }
-
-  return steps;
+  return [buildGenericExtentStep(_serviceOption)];
 }
 
 /** @deprecated Prefer buildLocalScopeSteps — this returns only the first scope step (legacy). */
@@ -281,16 +278,9 @@ export function buildLocalPostServiceStepsWithConfig(params: {
   if (!serviceOption) return [];
   const scopeSteps = buildLocalScopeSteps(serviceOption);
   const styleStep = buildDeterministicStyleStep(serviceOption);
-  const budgetStep = buildDeterministicBudgetStep({
-    config: { previewPricing },
-    useCase,
-  });
-  // Optional project photos live beneath the opening gallery. Keep only uploads
-  // that are truly required by try-on / placement use cases in the step flow.
-  const uploadSteps = buildDeterministicUploadSteps(useCase).filter(
-    (step) => (step as StepDefinition)?.data?.required !== false,
-  );
-  return styleStep ? [styleStep, ...scopeSteps, budgetStep, ...uploadSteps] : [...scopeSteps, budgetStep, ...uploadSteps];
+  // V1 is pricing-first: retrieve relevant library concepts after one intent
+  // question. Budget, uploads, and AI generation belong after lead capture.
+  return styleStep ? [...scopeSteps, styleStep] : scopeSteps;
 }
 
 export function buildLocalSkeletonFlow(params: {

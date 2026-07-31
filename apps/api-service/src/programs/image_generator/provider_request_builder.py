@@ -74,7 +74,23 @@ def build_replicate_request(
         else primary_reference
     )
 
-    if style == "grok-image":
+    if style == "p-image":
+        request_input = {
+            "prompt": prompt_text,
+            "aspect_ratio": ratio or "16:9",
+            "prompt_upsampling": False if prompt_upsampling is None else bool(prompt_upsampling),
+            "disable_safety_checker": False,
+        }
+    elif style == "p-image-edit":
+        request_input = {
+            "prompt": prompt_text,
+            "images": [primary_edit_image, *[ref for ref in refs if ref != primary_edit_image]][:4],
+        }
+        request_input["images"] = [image for image in request_input["images"] if image]
+        if not request_input["images"]:
+            raise RuntimeError("p-image-edit requires at least one edit image")
+        request_input["aspect_ratio"] = ratio or "match_input_image"
+    elif style == "grok-image":
         request_input: Dict[str, Any] = {"prompt": prompt_text}
         if primary_edit_image:
             request_input["image"] = primary_edit_image
@@ -91,6 +107,22 @@ def build_replicate_request(
             # Match Replicate playground default (fp8); omitting can differ by API version.
             "go_fast": True if go_fast is None else bool(go_fast),
         }
+    elif style == "flux-2":
+        edit_images: List[str] = []
+        for image in [primary_edit_image, *refs]:
+            if image and image not in edit_images:
+                edit_images.append(image)
+        request_input = {
+            "prompt": prompt_text,
+            "aspect_ratio": ratio or ("match_input_image" if edit_images else "1:1"),
+            "resolution": "match_input_image" if edit_images else "2 MP",
+            "output_format": str(output_format or "png").strip() or "png",
+            "output_quality": 100,
+        }
+        if edit_images:
+            request_input["input_images"] = edit_images[:8]
+        if isinstance(safety_tolerance, int) and safety_tolerance > 0:
+            request_input["safety_tolerance"] = max(1, min(5, safety_tolerance))
     elif style == "flux-kontext":
         request_input = {"prompt": prompt_text}
         if primary_edit_image:

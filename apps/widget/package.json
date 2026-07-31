@@ -7,9 +7,9 @@
     "npm": ">=9"
   },
   "scripts": {
-    "predev": "node ./scripts/ensure-next-runtime.cjs",
-    "dev:raw": "set -a && . ../../env/.env.shared.local && set +a && BROWSERSLIST_IGNORE_OLD_DATA=1 node -r ./scripts/console-silence.cjs -r ./scripts/next-runtime-chunk-fix.cjs $(node -p \"require.resolve('next/dist/bin/next')\") dev -p 3001",
-    "clean:next": "node -e \"const fs=require('fs');fs.rmSync('.next',{recursive:true,force:true});fs.rmSync('node_modules/.cache',{recursive:true,force:true});\"",
+    "predev": "WIDGET_NEXT_DIST_DIR=.next-dev node ./scripts/ensure-next-runtime.cjs",
+    "dev:raw": "set -a && . ../../env/.env.shared.local && set +a && WIDGET_NEXT_DIST_DIR=.next-dev BROWSERSLIST_IGNORE_OLD_DATA=1 node -r ./scripts/console-silence.cjs -r ./scripts/next-runtime-chunk-fix.cjs $(node -p \"require.resolve('next/dist/bin/next')\") dev -p 3001",
+    "clean:next": "node -e \"const fs=require('fs');for(const dir of ['.next','.next-dev','node_modules/.cache'])fs.rmSync(dir,{recursive:true,force:true});\"",
     "dev:clean": "npm run clean:next && npm run dev:raw",
     "dev:nocache": "npm run dev:clean",
     "dev": "npm run dev:raw",
@@ -17,6 +17,8 @@
     "start": "set -a && . ../../env/.env.shared.local && set +a && next start",
     "lint": "next lint",
     "test:v1": "tsx --test ./tests/visual-pricing-v1.test.ts",
+    "test:v2": "tsx --test ./tests/adventure-v2.test.ts",
+    "test:runtime": "tsx --test ./tests/next-output-isolation.test.ts",
     "gen:types": "npm --prefix ../.. run supabase:gen:types",
     "db:update": "node ../../scripts/update-supabase.js",
     "sort:configs": "node ../../scripts/sort-configs.js",

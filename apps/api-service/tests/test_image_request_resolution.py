@@ -20,7 +20,7 @@ def test_resolve_scene_without_refs_uses_flux_pro_defaults() -> None:
     assert resolved["provider"] == "replicate"
 
 
-def test_resolve_scene_with_anchor_image_uses_kontext() -> None:
+def test_resolve_scene_with_anchor_image_uses_flux_2_pro() -> None:
     resolved = resolve_image_request(
         {
             "instanceId": "instance-2",
@@ -30,8 +30,8 @@ def test_resolve_scene_with_anchor_image_uses_kontext() -> None:
         }
     )
 
-    assert resolved["modelId"] == "black-forest-labs/flux-kontext-pro"
-    assert resolved["promptUpsampling"] is True
+    assert resolved["modelId"] == "black-forest-labs/flux-2-pro"
+    assert resolved["outputFormat"] == "png"
     assert resolved["routingPolicy"]["provider"] == "replicate"
 
 
@@ -50,7 +50,7 @@ def test_resolve_scene_guide_only_refs_stays_text_to_image_routing() -> None:
     assert resolved["routingPolicy"]["provider"] == "replicate"
 
 
-def test_resolve_scene_placement_uses_grok_inpaint_defaults() -> None:
+def test_resolve_scene_placement_uses_flux_2_pro_defaults() -> None:
     resolved = resolve_image_request(
         {
             "instanceId": "instance-3",
@@ -60,8 +60,23 @@ def test_resolve_scene_placement_uses_grok_inpaint_defaults() -> None:
         }
     )
 
-    assert resolved["modelId"] == "xai/grok-imagine-image"
+    assert resolved["modelId"] == "black-forest-labs/flux-2-pro"
     assert "inpainting" in resolved["routingPolicy"]["traits"]
+
+
+def test_resolve_scene_refinement_uses_high_quality_flux_2_defaults() -> None:
+    resolved = resolve_image_request(
+        {
+            "instanceId": "instance-fast-edit",
+            "useCase": "scene-refinement",
+            "sceneImage": "https://example.com/scene.png",
+            "refinementNotes": "Use warmer materials and improve the lighting.",
+        }
+    )
+
+    assert resolved["modelId"] == "black-forest-labs/flux-2-pro"
+    assert resolved["numInferenceSteps"] == 28
+    assert resolved["outputFormat"] == "png"
 
 
 def test_resolve_tryon_uses_nano_banana_defaults() -> None:
@@ -96,6 +111,65 @@ def test_build_replicate_request_uses_grok_edit_shape() -> None:
     assert request["modelId"] == "xai/grok-imagine-image"
     assert request["input"]["image"] == "https://example.com/scene.png"
     assert "aspect_ratio" not in request["input"]
+
+
+def test_build_replicate_request_uses_p_image_edit_shape() -> None:
+    request = build_replicate_request(
+        prompt="Use warmer tile and improve the lighting.",
+        model_id="prunaai/p-image-edit",
+        scene_image="https://example.com/scene.png",
+        reference_images=["https://example.com/scene.png", "https://example.com/material.png"],
+        num_outputs=1,
+    )
+
+    assert request["modelId"] == "prunaai/p-image-edit"
+    assert request["input"]["images"] == [
+        "https://example.com/scene.png",
+        "https://example.com/material.png",
+    ]
+    assert request["input"]["aspect_ratio"] == "match_input_image"
+
+def test_build_replicate_request_uses_flux_2_successive_edit_shape() -> None:
+    request = build_replicate_request(
+        prompt="Edit the supplied current image by adding a physically buildable half wall for the shower.",
+        model_id="black-forest-labs/flux-2-pro",
+        scene_image="https://example.com/current-revision.png",
+        reference_images=[
+            "https://example.com/current-revision.png",
+            "https://example.com/product-reference.png",
+        ],
+        output_format="png",
+        aspect_ratio="match_input_image",
+        safety_tolerance=2,
+        num_outputs=1,
+    )
+
+    assert request["modelId"] == "black-forest-labs/flux-2-pro"
+    assert request["input"]["input_images"] == [
+        "https://example.com/current-revision.png",
+        "https://example.com/product-reference.png",
+    ]
+    assert request["input"]["aspect_ratio"] == "match_input_image"
+    assert request["input"]["resolution"] == "match_input_image"
+    assert request["input"]["output_format"] == "png"
+    assert request["input"]["output_quality"] == 100
+
+
+def test_build_replicate_request_uses_fast_p_image_generation_shape() -> None:
+    request = build_replicate_request(
+        prompt="A polished modern outdoor living concept.",
+        model_id="prunaai/p-image",
+        aspect_ratio="16:9",
+        num_outputs=1,
+    )
+
+    assert request["modelId"] == "prunaai/p-image"
+    assert request["input"] == {
+        "prompt": "A polished modern outdoor living concept.",
+        "aspect_ratio": "16:9",
+        "prompt_upsampling": False,
+        "disable_safety_checker": False,
+    }
 
 
 def test_generate_image_resolves_model_before_provider_call(monkeypatch) -> None:

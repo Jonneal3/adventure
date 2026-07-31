@@ -155,17 +155,25 @@ test("rollout and surface normalization preserve canonical journey defaults", ()
   assert.equal(normalizeJourneySurface("unexpected"), "page");
 });
 
-test("canonical journey opens with one starter and expands it into the studio hero", () => {
+test("canonical journey asks one intent question, retrieves starters, and expands the selection into pricing", () => {
   const styleStep = readFileSync(`${widgetRoot}/components/form/steps/static/deterministic-style-step.ts`, "utf8");
   const skeleton = readFileSync(`${widgetRoot}/components/form/steps/runtime/step-engine/utils/build-local-skeleton.ts`, "utf8");
   const body = readFileSync(`${widgetRoot}/components/form/steps/runtime/step-engine/sections/StepEngineBodySection.tsx`, "utf8");
   const grid = readFileSync(`${widgetRoot}/components/form/steps/step-screens/ImageChoiceGridStep.tsx`, "utf8");
   const stepLayout = readFileSync(`${widgetRoot}/components/form/steps/ui-layout/StepLayout.tsx`, "utf8");
   assert.match(styleStep, /multi_select:\s*false/);
-  assert.match(styleStep, /\.slice\(0, 8\)/);
-  assert.match(skeleton, /local-skeleton-v9-studio-repair/);
-  assert.match(skeleton, /\[styleStep, \.\.\.scopeSteps/);
-  assert.match(skeleton, /data\?\.required !== false/);
+  assert.match(styleStep, /\.slice\(0, 20\)/);
+  assert.match(styleStep, /adjust the style, materials, and details next/);
+  assert.match(styleStep, /Choose the closest starting point/);
+  assert.match(skeleton, /local-skeleton-v11-price-first-retrieval/);
+  assert.match(skeleton, /\[\.\.\.scopeSteps, styleStep\]/);
+  assert.match(skeleton, /What are you pricing\?/);
+  assert.match(skeleton, /What are you mainly interested in\?/);
+  assert.doesNotMatch(skeleton, /buildDeterministicBudgetStep/);
+  assert.doesNotMatch(skeleton, /buildDeterministicUploadSteps/);
+  assert.match(grid, /None of these — show me more/);
+  assert.match(grid, /Start with my project photo/);
+  assert.doesNotMatch(grid, /Get price/);
   assert.doesNotMatch(grid, /Use my project photo instead/);
   assert.doesNotMatch(grid, /One click opens the idea/);
   assert.doesNotMatch(grid, /Start with your actual space/);
@@ -175,6 +183,29 @@ test("canonical journey opens with one starter and expands it into the studio he
   assert.match(body, /layoutId=\{starterConcept\?\.isProjectPhoto/);
   assert.match(body, /Back to ideas/);
   assert.match(body, /Want to see this in your space\? Add a photo/);
+  assert.match(body, /What would you change\?/);
+  assert.match(body, /Price range updating/);
+  assert.match(body, /Reveal my estimate/);
+});
+
+test("V1 working canvas allows limited pre-lead edits and gates pricing with email only", () => {
+  const body = readFileSync(`${widgetRoot}/components/form/steps/runtime/step-engine/sections/StepEngineBodySection.tsx`, "utf8");
+  const canvas = readFileSync(`${widgetRoot}/components/form/steps/image-preview-experience/gallery/ImagePreviewExperience.tsx`, "utf8");
+  const leadCopy = readFileSync(`${widgetRoot}/components/form/steps/image-preview-experience/lead-gen/pricingLeadCopy.ts`, "utf8");
+  assert.match(body, /What would you change\?/);
+  assert.match(body, /Use warmer materials/);
+  assert.match(body, /Add project photo/);
+  assert.match(body, /Budget direction/);
+  assert.match(body, /Price range updating/);
+  assert.match(canvas, /preLeadRefinementLimit = 3/);
+  assert.match(canvas, /preLeadRefinementCount >= preLeadRefinementLimit/);
+  assert.match(canvas, /prunaai\/p-image-edit/);
+  assert.match(canvas, /black-forest-labs\/flux-kontext-pro/);
+  assert.match(canvas, /hasProjectPhoto/);
+  assert.match(canvas, /editComplexity/);
+  assert.match(canvas, /submitCenteredPricingLead\(\{[\s\S]*email,[\s\S]*isPartial: true/);
+  assert.match(leadCopy, /Enter your email to reveal pricing/);
+  assert.match(leadCopy, /Reveal my estimate/);
 });
 
 test("generation stays on one four-slot studio canvas without the duplicate priced grid", () => {
@@ -191,25 +222,40 @@ test("generation stays on one four-slot studio canvas without the duplicate pric
   assert.match(canvas, /Your concepts are ready/);
   assert.match(canvas, /generated-concept:/);
   assert.match(canvas, /Creating your concepts…/);
+  assert.doesNotMatch(canvas, /Generating variations—they’ll appear here as they arrive/);
+  assert.match(canvas, /Change it:[\s\S]*contextualSuggestionsLoading[\s\S]*Skeleton className="h-8/);
   assert.match(canvas, /progressiveConcepts && shouldGenerateConceptGallery \? 1 : numOutputs/);
   assert.match(canvas, /Concept generation paused/);
   assert.match(canvas, /We couldn’t finish these concepts\. Try again in a moment\./);
   assert.match(canvas, /keepFailedConceptRun/);
   assert.doesNotMatch(canvas, />Built from</);
-  assert.match(canvas, /Use this concept/);
-  assert.match(canvas, /Personalized concept stack/);
-  assert.match(canvas, /drag="x"/);
+  assert.match(canvas, /Choose this concept/);
+  assert.match(canvas, /Creating your first concept…/);
+  assert.match(canvas, /It will appear here automatically as soon as it’s ready\./);
+  assert.match(canvas, /aria-label="Personalized concept carousel"/);
+  assert.match(canvas, /aria-label="Show previous concept"/);
+  assert.match(canvas, /aria-label="Show next concept"/);
+  assert.doesNotMatch(canvas, /aria-label="Generated concepts"/);
   assert.match(canvas, /showConcept/);
-  assert.match(canvas, /h-full min-h-\[15rem\] w-full/);
+  assert.match(canvas, /relative min-h-\[15rem\] w-full flex-1 overflow-hidden/);
   assert.match(canvas, /handleUseConcept/);
-  assert.match(canvas, /max-w-\[72rem\]/);
-  assert.match(canvas, /absolute left-3 top-1\/2/);
-  assert.match(canvas, /absolute right-3 top-1\/2/);
+  assert.doesNotMatch(canvas, /sm:w-\[26%\]/);
+  assert.doesNotMatch(canvas, /blur-\[3\.5px\]/);
+  assert.doesNotMatch(canvas, /bg-neutral-950 shadow-\[0_16px_40px/);
+  assert.match(canvas, /h-full w-fit max-w-\[82%\]/);
+  assert.match(canvas, /w-24 overflow-hidden rounded-2xl/);
+  assert.match(canvas, /select-none object-contain/);
+  assert.doesNotMatch(canvas, /max-w-5xl shrink-0 flex-col items-center/);
+  assert.match(canvas, /placeholder="Or describe a change…"/);
+  assert.match(canvas, /useStructuredConceptGeneration[\s\S]*aspectRatio: "4:3"/);
+  assert.match(canvas, /drag=\{readyConceptCount > 1 \? "x" : false\}/);
   assert.doesNotMatch(canvas, /desktopFilmstripColumns/);
   assert.match(canvas, /selectedOptionReferenceImages\.length > 0/);
+  assert.match(canvas, /starterRefinementAnchor \|\|[\s\S]*selectedStarterAnchor/);
+  assert.match(canvas, /referenceImagesForRequest\.length > 0 &&[\s\S]*!selectedStarterAnchor/);
   assert.match(canvas, /referenceMode = "guide_only"/);
   assert.match(header, /aria-label="Design progress"/);
-  assert.match(engine, /Starting point/);
+  assert.match(engine, /label: "Concepts"/);
   assert.match(engine, /phaseKey === "estimate"/);
   assert.match(engine, /onNavigateStudioPhase/);
   assert.match(engine, /selectedConceptIndex: null,[\s\S]*viewMode: "gallery"/);
@@ -220,6 +266,7 @@ test("estimate uses the cohesive studio composition without the legacy question 
   const body = readFileSync(`${widgetRoot}/components/form/steps/runtime/step-engine/sections/StepEngineBodySection.tsx`, "utf8");
   const preview = readFileSync(`${widgetRoot}/components/form/steps/runtime/step-engine/sections/PreviewSection.tsx`, "utf8");
   const canvas = readFileSync(`${widgetRoot}/components/form/steps/image-preview-experience/gallery/ImagePreviewExperience.tsx`, "utf8");
+  const suggestionsRoute = readFileSync(`${widgetRoot}/app/api/ai-form/[instanceId]/concept-suggestions/route.ts`, "utf8");
   const leadCopy = readFileSync(`${widgetRoot}/components/form/steps/image-preview-experience/lead-gen/pricingLeadCopy.ts`, "utf8");
   assert.match(engine, /studioEstimatePresentationActive/);
   assert.match(engine, /hideQuestionPaneUntilConceptSingle \|\|\s*studioEstimatePresentationActive/);
@@ -227,23 +274,40 @@ test("estimate uses the cohesive studio composition without the legacy question 
   assert.match(preview, /studioEstimateMode=\{studioEstimateMode\}/);
   assert.match(preview, /autoRegenerateEveryNAnsweredQuestions=\{studioEstimateMode \? 0 : 2\}/);
   assert.match(canvas, /max-w-\[88rem\]/);
-  assert.match(canvas, /aria-label="Refine this concept"/);
-  assert.match(canvas, /Unlock detailed estimate/);
-  assert.match(canvas, /Preliminary estimate/);
+  assert.ok((canvas.match(/<SharpConceptCanvas/g) || []).length >= 1);
+  assert.match(canvas, /Refine your selected direction\./);
+  assert.match(canvas, /aria-label="Refine this concept and view project estimate"/);
+  assert.match(canvas, /data-studio-action-rail/);
+  assert.match(canvas, /data-studio-estimate-action/);
+  assert.match(canvas, /Calculate estimate/);
+  assert.match(canvas, /Project estimate/);
   assert.match(canvas, /leadGateEnabled && !leadCaptured[\s\S]*formatCompactCurrency/);
-  assert.match(canvas, /pricingGateVariant === "coarse_visible"/);
-  assert.match(canvas, /Preliminary estimate ready/);
+  assert.match(canvas, /pricingGateVariant !== "coarse_visible"/);
+  assert.match(canvas, /Preparing your range/);
   assert.doesNotMatch(canvas, /\["Project scope", "Selected direction", "Budget"\]/);
-  assert.match(canvas, /visibleStudioSuggestions\.map/);
-  assert.match(canvas, /More ideas/);
-  assert.match(canvas, /studioEstimateMode && reason === "auto"/);
+  assert.match(canvas, /contextualStudioSuggestions\.map/);
+  assert.doesNotMatch(canvas, />More ideas</);
+  assert.match(canvas, /Describe another change to this design…/);
+  assert.match(canvas, /studioEstimateActive && reason === "auto"/);
   assert.match(canvas, /studioEstimateActive \? \([\s\S]*overflow-hidden/);
   assert.match(canvas, /applyStudioRefinement/);
+  assert.match(canvas, /concept-suggestions/);
+  assert.match(canvas, /contextualStudioSuggestions/);
+  assert.match(canvas, /serviceFallbackSuggestions[\s\S]*contextualSuggestionPool/);
+  assert.doesNotMatch(canvas, /Retry design ideas/);
+  assert.match(suggestionsRoute, /qwen\/qwen3\.6-27b/);
+  assert.match(suggestionsRoute, /type: "image_url"/);
+  assert.match(suggestionsRoute, /Ground each suggestion in a fixture, material, finish, or feature actually visible/);
   assert.match(canvas, /Applying your change…/);
   assert.doesNotMatch(canvas, /View my estimate/);
   assert.doesNotMatch(canvas, /studioDirectionSummary/);
   assert.match(canvas, /Back to concepts/);
-  assert.match(leadCopy, /Want to keep refining this\?/);
+  assert.match(canvas, /!studioEstimateActive && \(/);
+  assert.match(engine, /isolatedRunId \|\| cache\.sourceConceptRunId/);
+  assert.match(leadCopy, /Your personalized concept and price range are ready/);
+  assert.match(leadCopy, /Reveal my estimate/);
+  assert.match(canvas, /preLeadRefinementLimit = 3/);
+  assert.match(canvas, /isPartial: true/);
   assert.match(canvas, /singleModePreviewChrome = Boolean\(hero && !showConceptPicker && toolingEnabled && !studioEstimateActive\)/);
 });
 
@@ -258,8 +322,8 @@ test("launch resize bridge validates source, origin, instance, phase, and bounde
   assert.doesNotMatch(popupBlock, /ADVENTURE_RESIZE/);
 });
 
-test("production route uses the canonical StepEngine-backed form", () => {
-  const route = readFileSync(`${widgetRoot}/app/adventure/[instanceId]/page.tsx`, "utf8");
+test("explicit V1 route preserves the canonical StepEngine-backed form", () => {
+  const route = readFileSync(`${widgetRoot}/app/adventure/v1/[instanceId]/page.tsx`, "utf8");
   assert.match(route, /<AdventureFormExperience/);
   assert.doesNotMatch(route, /<VisualPricingJourney/);
 });

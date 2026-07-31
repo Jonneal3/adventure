@@ -57,7 +57,22 @@ _DRIVER_DEFINITIONS: dict[str, dict[str, object]] = {
     },
     "layout": {
         "label": "Layout",
-        "tokens": ("layout", "reconfigure", "move", "relocate", "expand", "open up", "island"),
+        "tokens": (
+            "layout",
+            "reconfigure",
+            "move",
+            "relocate",
+            "expand",
+            "open up",
+            "island",
+            "half wall",
+            "pony wall",
+            "partition",
+            "enclosure",
+            "curbless",
+            "plumbing",
+            "electrical",
+        ),
         "delta_floor": 10_000,
     },
     "finish_level": {
@@ -330,7 +345,10 @@ def _align_range_to_budget_tier(
     target_span = max(1_000, target_high - target_low)
     current_width = max(1_000, current_range.high - current_range.low)
     width = min(current_width, target_span)
-    midpoint = _clamp_int(budget_value, target_low, target_high)
+    # The budget chooses the valid tier, but the design-derived midpoint chooses
+    # where the estimate lands inside that tier. Snapping back to budget here
+    # would erase the image/scope signal calculated immediately above.
+    midpoint = _clamp_int(_range_midpoint(current_range), target_low, target_high)
     low = int(round(midpoint - width / 2.0))
     high = int(round(midpoint + width / 2.0))
     if low < target_low:
@@ -393,13 +411,19 @@ def _coerce_changed_refinement_keys(payload: Dict[str, Any]) -> list[dict[str, s
     return out[:10]
 
 
-def _driver_key_for_text(text: str) -> Optional[str]:
+def _driver_keys_for_text(text: str) -> list[str]:
     haystack = str(text or "").lower()
+    matched: list[str] = []
     for key, meta in _DRIVER_DEFINITIONS.items():
         tokens = meta.get("tokens") or ()
         if any(token in haystack for token in tokens):
-            return key
-    return None
+            matched.append(key)
+    return matched
+
+
+def _driver_key_for_text(text: str) -> Optional[str]:
+    matched = _driver_keys_for_text(text)
+    return matched[0] if matched else None
 
 
 def _build_price_drivers(
@@ -420,8 +444,7 @@ def _build_price_drivers(
         drivers.append({"key": driver_key, "label": label})
 
     for item in changed_refinement_keys:
-        matched = _driver_key_for_text(f"{item.get('key', '')} {item.get('label', '')}")
-        if matched:
+        for matched in _driver_keys_for_text(f"{item.get('key', '')} {item.get('label', '')}"):
             _push(matched)
 
     if budget_tier_shift:
@@ -435,6 +458,97 @@ def _build_price_drivers(
                 break
 
     return drivers[:3]
+
+
+def _matched_refinement_drivers(changed_refinement_keys: list[dict[str, str]]) -> list[dict[str, str]]:
+    drivers: list[dict[str, str]] = []
+    seen: set[str] = set()
+    for item in changed_refinement_keys:
+        for matched in _driver_keys_for_text(f"{item.get('key', '')} {item.get('label', '')}"):
+            if matched in seen:
+                continue
+            meta = _DRIVER_DEFINITIONS.get(matched) or {}
+            seen.add(matched)
+            drivers.append(
+                {
+                    "key": matched,
+                    "label": str(meta.get("label") or matched.replace("_", " ").title()).strip(),
+                }
+            )
+    return drivers[:5]
+
+
+def _refinement_cost_adjustment(
+    *,
+    calibration: ServiceCalibration,
+    changed_refinement_keys: list[dict[str, str]],
+) -> int:
+    drivers = _matched_refinement_drivers(changed_refinement_keys)
+    if not drivers:
+        return 0
+
+    refinement_text = " ".join(
+        f"{item.get('key', '')} {item.get('label', '')}" for item in changed_refinement_keys
+    ).lower()
+    decreasing = any(
+        token in refinement_text
+        for token in (
+            "remove",
+            "delete",
+            "eliminate",
+            "without",
+            "downgrade",
+            "simpler",
+            "reduce",
+            "less expensive",
+        )
+    )
+    explicit_scope_change = any(
+        token in refinement_text
+        for token in (
+            "add",
+            "upgrade",
+            "expand",
+            "move",
+            "relocate",
+            "install",
+            "replace",
+            "custom",
+            "premium",
+            "half wall",
+            "pony wall",
+            "partition",
+        )
+    )
+    raw_floor = sum(
+        int((_DRIVER_DEFINITIONS.get(str(driver.get("key") or "")) or {}).get("delta_floor") or 2_500)
+        for driver in drivers
+    )
+    factor = 0.35 if explicit_scope_change else 0.18
+    service_span = max(
+        1,
+        calibration.normalized_service_range().high - calibration.normalized_service_range().low,
+    )
+    adjustment = min(int(round(raw_floor * factor)), int(round(service_span * 0.18)))
+    return -adjustment if decreasing else adjustment
+
+
+def _pricing_detail_text(
+    *,
+    step_data: Dict[str, Any],
+    changed_refinement_keys: list[dict[str, str]],
+) -> str:
+    details: list[str] = []
+    for key, value in step_data.items():
+        normalized_key = str(key or "").lower()
+        if "scope" not in normalized_key and "revision" not in normalized_key:
+            continue
+        if isinstance(value, list):
+            details.extend(str(item) for item in value[:10] if item is not None)
+        elif value is not None:
+            details.append(str(value))
+    details.extend(str(item.get("label") or "") for item in changed_refinement_keys)
+    return " ".join(part.strip() for part in details if part.strip())[:3_000]
 
 
 def _delta_floor_for_drivers(calibration: ServiceCalibration, drivers: Iterable[dict[str, str]]) -> int:
@@ -499,6 +613,7 @@ def _estimate_heuristic_range(
     calibration: ServiceCalibration,
     budget_value: Optional[int],
     quantity_hints: Dict[str, int],
+    refinement_adjustment: int,
     apply_starter_floor: bool,
 ) -> PriceRange:
     if isinstance(budget_value, int) and budget_value > 0:
@@ -514,7 +629,7 @@ def _estimate_heuristic_range(
         rooms = int(quantity_hints["rooms"])
         mult *= max(0.85, min(1.8, rooms / 3.0))
 
-    center = int(round(center * mult))
+    center = int(round(center * mult)) + int(refinement_adjustment)
     center = _clamp_int(center, calibration.normalized_service_range().low, calibration.normalized_service_range().high)
     if apply_starter_floor:
         center = max(center, _starter_floor_midpoint(calibration))
@@ -529,6 +644,7 @@ def _estimate_current_range(
     budget_value: Optional[int],
     basis_text: str,
     quantity_hints: Dict[str, int],
+    refinement_adjustment: int,
     apply_starter_floor: bool,
 ) -> tuple[PriceRange, str, str]:
     if preview_url and _pricing_vlm_enabled():
@@ -555,6 +671,7 @@ def _estimate_current_range(
             calibration=calibration,
             budget_value=budget_value,
             quantity_hints=quantity_hints,
+            refinement_adjustment=refinement_adjustment,
             apply_starter_floor=apply_starter_floor,
         ),
         "heuristic_v2",
@@ -573,19 +690,24 @@ def estimate_pricing(payload: Dict[str, Any]) -> Dict[str, Any]:
     services_summary = str(ctx.get("services_summary") or ctx.get("service_summary") or "").strip()
     industry = str(ctx.get("industry") or "").strip()
     service = str(ctx.get("service") or "").strip()
-    basis_text = " ".join([services_summary, industry, service]).strip()
-    if not basis_text:
+    service_basis_text = " ".join([services_summary, industry, service]).strip()
+    if not service_basis_text:
         return {
             "ok": False,
             "error": "Missing service context (provide serviceSummary/service_summary or industry/service).",
             "requestId": request_id,
         }
 
-    calibration = match_service_calibration(basis_text)
+    calibration = match_service_calibration(service_basis_text)
     calibration_payload = calibration_response_payload(calibration)
     currency = _detect_currency(payload)
 
     step_data = _extract_step_data(payload)
+    pricing_detail_text = _pricing_detail_text(
+        step_data=step_data,
+        changed_refinement_keys=changed_refinement_keys,
+    )
+    pricing_basis_text = " ".join([service_basis_text, pricing_detail_text]).strip()
     budget_lo, budget_hi = _extract_budget_hint(step_data)
     top_level_budget = _extract_int(payload.get("budgetRange") or payload.get("budget_range") or payload.get("budget"))
     budget_value = top_level_budget
@@ -602,14 +724,19 @@ def estimate_pricing(payload: Dict[str, Any]) -> Dict[str, Any]:
         has_visible_baseline=bool(baseline_price_range or baseline_image_url),
     )
     quantity_hints = _extract_quantity_hints(step_data)
+    refinement_adjustment = _refinement_cost_adjustment(
+        calibration=calibration,
+        changed_refinement_keys=changed_refinement_keys,
+    )
 
     current_range, basis, confidence = _estimate_current_range(
         payload=payload,
         calibration=calibration,
         preview_url=preview_url,
         budget_value=budget_value,
-        basis_text=basis_text,
+        basis_text=pricing_basis_text,
         quantity_hints=quantity_hints,
+        refinement_adjustment=refinement_adjustment,
         apply_starter_floor=True,
     )
     current_range = _align_range_to_budget_tier(
@@ -633,8 +760,9 @@ def estimate_pricing(payload: Dict[str, Any]) -> Dict[str, Any]:
             calibration=calibration,
             preview_url=baseline_image_url,
             budget_value=None,
-            basis_text=basis_text,
+            basis_text=service_basis_text,
             quantity_hints=quantity_hints,
+            refinement_adjustment=0,
             apply_starter_floor=False,
         )
         baseline_budget_tier = resolve_budget_tier(calibration, _range_midpoint(visible_baseline_range))
@@ -695,5 +823,7 @@ def estimate_pricing(payload: Dict[str, Any]) -> Dict[str, Any]:
         response["notes"].append("Budget input used to place the estimate within service tiers.")
     if quantity_hints:
         response["notes"].append("Size/quantity hints used in fallback calibration.")
+    if changed_refinement_keys:
+        response["notes"].append("Design revision history used to identify price drivers.")
 
     return response

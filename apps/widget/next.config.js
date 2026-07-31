@@ -1,8 +1,12 @@
 const path = require('path');
+const { PHASE_DEVELOPMENT_SERVER } = require('next/constants');
 
 /** @type {import('next').NextConfig} */
-const nextConfig = {
-  distDir: '.next',
+const createNextConfig = (phase) => ({
+  // Keep the live preview compiler isolated from production builds. Running
+  // `next build` while `next dev` is open otherwise lets both processes mutate
+  // `.next`, producing mixed webpack runtimes and missing vendor chunks.
+  distDir: phase === PHASE_DEVELOPMENT_SERVER ? '.next-dev' : '.next',
   // Prevent OpenTelemetry from being bundled into vendor-chunks (avoids "Cannot find module './vendor-chunks/@opentelemetry.js'")
   // Next.js 14 uses experimental.serverComponentsExternalPackages; serverExternalPackages is Next 15+
   transpilePackages: ["@adventure/ai-form-ui-contract", "@adventure/refinement-server"],
@@ -179,6 +183,6 @@ const nextConfig = {
       },
     ],
   },
-}
+});
 
-module.exports = nextConfig 
+module.exports = createNextConfig;

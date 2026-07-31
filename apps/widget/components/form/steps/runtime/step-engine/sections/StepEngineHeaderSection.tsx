@@ -87,12 +87,15 @@ export function StepEngineHeaderSection(args: {
         </div>
       ) : null}
       {studioPhases.length > 0 ? (
-        <nav aria-label="Design progress" className="overflow-x-auto px-3 py-2 [scrollbar-width:none] sm:px-5 sm:py-2.5 [&::-webkit-scrollbar]:hidden">
+        <nav
+          aria-label="Design progress"
+          className="overflow-x-auto px-3 py-2 [scrollbar-width:none] sm:px-5 sm:py-2.5 [&::-webkit-scrollbar]:hidden"
+        >
           <ol className="mx-auto flex w-max min-w-max items-center justify-center whitespace-nowrap">
             {studioPhases.map((phase, index) => (
               <React.Fragment key={phase.key}>
                 {index > 0 ? (
-                  <li aria-hidden className="h-px w-5 shrink-0 bg-foreground/12 sm:w-9" />
+                  <li aria-hidden className="w-5 shrink-0 sm:w-10" />
                 ) : null}
                 <li className="shrink-0">
                   <button
@@ -104,22 +107,25 @@ export function StepEngineHeaderSection(args: {
                     className={cn(
                       "inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-[11px] font-semibold transition-all sm:text-xs",
                       phase.active
-                        ? "border-primary/25 text-foreground shadow-sm"
+                        ? "border-black/25 bg-black/[0.06] text-foreground shadow-sm"
                         : phase.enabled
-                          ? "border-transparent text-foreground/65 hover:border-primary/20 hover:bg-primary/5 hover:text-foreground"
+                          ? "border-transparent text-foreground/65 hover:border-black/15 hover:bg-black/[0.035] hover:text-foreground"
                           : "border-transparent text-foreground/32",
                     )}
-                    style={phase.active ? { backgroundColor: hexToRgba(theme.primaryColor || "#3b82f6", 0.09) || undefined } : undefined}
                   >
                     <span
                       className={cn(
                         "inline-flex h-4 w-4 items-center justify-center rounded-full border text-[9px]",
                         phase.complete || phase.active
-                          ? "border-primary/40 text-primary"
+                          ? "border-black/45 text-foreground"
                           : "border-foreground/15 text-foreground/35",
                       )}
                     >
-                      {phase.complete ? <Check className="h-2.5 w-2.5" strokeWidth={3} /> : <span className="h-1 w-1 rounded-full bg-current" />}
+                      {phase.complete && !phase.active ? (
+                        <Check className="h-2.5 w-2.5" strokeWidth={3} />
+                      ) : (
+                        <span className="h-1 w-1 rounded-full bg-current" />
+                      )}
                     </span>
                     {phase.label}
                   </button>

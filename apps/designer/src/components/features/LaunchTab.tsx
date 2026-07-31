@@ -18,6 +18,7 @@ interface LaunchTabProps {
 }
 
 type LaunchSurface = "page" | "embed" | "popup" | "inline";
+type AdventureRouteVersion = "v1" | "v2";
 
 function normalizeCssDimension(value: unknown, fallback: string): string {
   const raw = typeof value === "string" || typeof value === "number" ? String(value).trim() : "";
@@ -41,6 +42,7 @@ export const LaunchTab: React.FC<LaunchTabProps> = ({
   const [inlineEmbedCode, setInlineEmbedCode] = useState<string | null>(null);
   const [modalEmbedCode, setModalEmbedCode] = useState<string | null>(null);
   const [showMadeWith, setShowMadeWith] = useState(false);
+  const [adventureVersion, setAdventureVersion] = useState<AdventureRouteVersion>("v2");
 
   useEffect(() => {
     let cancelled = false;
@@ -82,11 +84,11 @@ export const LaunchTab: React.FC<LaunchTabProps> = ({
 
   const adventureUrlForSurface = useCallback(
     (surface: LaunchSurface) => {
-      const url = new URL(`/adventure/${encodeURIComponent(instanceId)}`, widgetBaseUrl);
+      const url = new URL(`/adventure/${adventureVersion}/${encodeURIComponent(instanceId)}`, widgetBaseUrl);
       url.searchParams.set("surface", surface);
       return url.toString();
     },
-    [instanceId, widgetBaseUrl]
+    [adventureVersion, instanceId, widgetBaseUrl]
   );
 
   const pageAdventureUrl = useMemo(
@@ -95,6 +97,12 @@ export const LaunchTab: React.FC<LaunchTabProps> = ({
   );
 
   const madeWithHref = process.env.NEXT_PUBLIC_SITE_URL || "https://adventure.app";
+
+  useEffect(() => {
+    setEmbedCode(null);
+    setInlineEmbedCode(null);
+    setModalEmbedCode(null);
+  }, [adventureVersion]);
 
   const buildContainedEmbedCode = useCallback((surface: "embed" | "inline") => {
     const productName = "Adventure";
@@ -123,8 +131,8 @@ export const LaunchTab: React.FC<LaunchTabProps> = ({
       large: "0 10px 15px -3px rgb(0 0 0 / 0.1)",
       medium: "0 4px 6px -1px rgb(0 0 0 / 0.1)",
       none: "none",
-      subtle: "0 1px 3px 0 rgb(0 0 0 / 0.1)",
       small: "0 1px 3px 0 rgb(0 0 0 / 0.1)",
+      subtle: "0 1px 3px 0 rgb(0 0 0 / 0.1)",
     };
 
     const resolvedShadow = shadowStyles[String(iframeShadow)] ?? shadowStyles.medium;
@@ -355,13 +363,13 @@ ${modalCloseOnEscape ? `  document.addEventListener('keydown', (e) => {
   const copy = useCallback(
     async (text: string, label: string) => {
       await navigator.clipboard.writeText(text);
-      toast({ title: "Copied", description: label });
+      toast({ description: label, title: "Copied" });
     },
     [toast]
   );
 
   const Card = useCallback(
-    ({ title, description, children }: { title: string; description?: string; children: React.ReactNode }) => (
+    ({ children, description, title }: { children: React.ReactNode; description?: string; title: string }) => (
       <div className="rounded-xl border border-border/60 bg-card/20 p-3">
         <div className="mb-3">
           <h4 className="text-sm font-semibold text-foreground">{title}</h4>
@@ -376,12 +384,12 @@ ${modalCloseOnEscape ? `  document.addEventListener('keydown', (e) => {
   const CodeBlock = useCallback(
     ({
       code,
-      ensureCode,
       copyLabel,
+      ensureCode,
     }: {
       code: string | null;
-      ensureCode: () => string;
       copyLabel: string;
+      ensureCode: () => string;
     }) => (
       <details className="group">
         <summary
@@ -419,12 +427,53 @@ ${modalCloseOnEscape ? `  document.addEventListener('keydown', (e) => {
   return (
     <div className="space-y-4 pt-2">
       <p className="px-1 text-xs text-muted-foreground leading-relaxed">
-        Direct link and embed codes point at{" "}
-        <code className="rounded bg-muted/50 px-1 py-0.5 font-mono text-[11px]">/adventure/{instanceId}?surface=…</code>
-        {hasAiForm ? " (AI form when enabled for this instance, otherwise the classic widget)." : "."}
+        Direct link and embed codes point at the selected version. Unversioned Adventure links now use V2.
       </p>
 
-      <Card title="Open in browser" description="Centered standalone page experience.">
+      <Card title="Experience version" description="Choose which isolated route to launch or embed.">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          {([
+            {
+              description: hasAiForm ? "Existing AI form and visual-pricing journey." : "Existing classic widget journey.",
+              label: "V1 — Current experience",
+              value: "v1",
+            },
+            {
+              description: "Scope-specific canvas, three edits, then pricing.",
+              label: "V2 — AI starter canvas",
+              value: "v2",
+            },
+          ] as const).map((option) => {
+            const selected = adventureVersion === option.value;
+            return (
+              <button
+                key={option.value}
+                type="button"
+                className={`rounded-lg border p-3 text-left transition-colors ${
+                  selected
+                    ? "border-primary bg-primary/5"
+                    : "border-border/60 bg-background/30 hover:bg-muted/40"
+                }`}
+                onClick={() => setAdventureVersion(option.value)}
+                aria-pressed={selected}
+              >
+                <span className="block text-xs font-semibold text-foreground">{option.label}</span>
+                <span className="mt-1 block text-[11px] leading-relaxed text-muted-foreground">
+                  {option.description}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+        <code className="mt-3 block rounded bg-muted/50 px-2 py-1.5 font-mono text-[11px]">
+          /adventure/{adventureVersion}/{instanceId}?surface=…
+        </code>
+      </Card>
+
+      <Card
+        title={`Open ${adventureVersion.toUpperCase()} in browser`}
+        description="Centered standalone page experience."
+      >
         <div className="flex">
           <Button
             variant="outline"

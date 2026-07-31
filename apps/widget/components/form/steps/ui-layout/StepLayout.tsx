@@ -564,13 +564,13 @@ export function StepLayout({
                         ...(glassStickyActions
                           ? {
                               fontFamily: theme.fontFamily,
-                              borderRadius: `${theme.borderRadius}px`,
+                              borderRadius: "9999px",
                             }
                           : {
-                              borderColor: theme.primaryColor,
-                              color: theme.primaryColor,
+                              borderColor: "#111111",
+                              color: "#111111",
                               fontFamily: theme.fontFamily,
-                              borderRadius: `${theme.borderRadius}px`,
+                              borderRadius: "9999px",
                             }),
                       }}
                     >
@@ -589,10 +589,10 @@ export function StepLayout({
                       )}
                       style={{
                         ...withLayoutDebugStyle(undefined, layoutDebugEnabled, "violet"),
-                        backgroundColor: theme.buttonStyle?.backgroundColor || theme.primaryColor,
-                        color: theme.buttonStyle?.textColor || "#ffffff",
+                        backgroundColor: "#111111",
+                        color: "#ffffff",
                         fontFamily: theme.fontFamily,
-                        borderRadius: `${theme.borderRadius}px`,
+                        borderRadius: "9999px",
                       }}
                     >
                       {isLoading ? "Loading..." : resolvedContinueLabel}
@@ -629,13 +629,13 @@ export function StepLayout({
                     ...(glassStickyActions
                       ? {
                           fontFamily: theme.fontFamily,
-                          borderRadius: `${theme.borderRadius}px`,
+                          borderRadius: "9999px",
                         }
                       : {
-                          borderColor: theme.primaryColor,
-                          color: theme.primaryColor,
+                          borderColor: "#111111",
+                          color: "#111111",
                           fontFamily: theme.fontFamily,
-                          borderRadius: `${theme.borderRadius}px`,
+                          borderRadius: "9999px",
                         }),
                   }}
                 >
@@ -654,10 +654,10 @@ export function StepLayout({
                   )}
                   style={{
                     ...withLayoutDebugStyle(undefined, layoutDebugEnabled, "violet"),
-                    backgroundColor: theme.buttonStyle?.backgroundColor || theme.primaryColor,
-                    color: theme.buttonStyle?.textColor || "#ffffff",
+                    backgroundColor: "#111111",
+                    color: "#ffffff",
                     fontFamily: theme.fontFamily,
-                    borderRadius: `${theme.borderRadius}px`,
+                    borderRadius: "9999px",
                   }}
                 >
                   {isLoading ? "Loading..." : resolvedContinueLabel}

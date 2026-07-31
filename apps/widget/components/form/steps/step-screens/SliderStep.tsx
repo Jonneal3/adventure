@@ -126,7 +126,7 @@ export function SliderStep({
             "font-black text-center",
             compactInPreview ? "w-full min-w-0 text-[clamp(1.45rem,3.4vh,2.6rem)] leading-none py-1" : isCompact ? "text-3xl sm:text-4xl" : "text-4xl sm:text-6xl"
           )}
-          style={{ color: theme.primaryColor, fontFamily: theme.fontFamily }}
+          style={{ color: theme.textColor, fontFamily: theme.fontFamily }}
         >
           {formatValue(value)}
         </div>

@@ -109,6 +109,7 @@ export function FormThemeProvider({ config, children }: FormThemeProviderProps) 
   // Without this, setting `fontFamily` from config/theme can silently fall back to system fonts.
   useEffect(() => {
     const fontsToLoad = [
+      "Inter",
       config.font_family,
       config.brand_name_font_family,
       config.prompt_font_family,
