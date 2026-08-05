@@ -34,3 +34,17 @@ test("development recovery and cleanup scripts target the isolated output", () =
   assert.match(packageJson.scripts["clean:next"], /['"]\.next-dev['"]/);
   assert.match(runtimeFix, /\/\.next-dev\/server\/webpack-runtime\.js/);
 });
+
+test("designer development and production compilers use separate outputs", () => {
+  const createDesignerConfig = require("../../designer/next.config.js") as (phase: string) => {
+    distDir?: string;
+  };
+  const designerPackage = JSON.parse(
+    readFileSync(new URL("../../designer/package.json", import.meta.url), "utf8"),
+  ) as { scripts: Record<string, string> };
+
+  assert.equal(createDesignerConfig(PHASE_DEVELOPMENT_SERVER).distDir, ".next-dev");
+  assert.equal(createDesignerConfig(PHASE_PRODUCTION_BUILD).distDir, ".next");
+  assert.equal(createDesignerConfig(PHASE_PRODUCTION_SERVER).distDir, ".next");
+  assert.match(designerPackage.scripts["dev:clean"], /\.next-dev/);
+});

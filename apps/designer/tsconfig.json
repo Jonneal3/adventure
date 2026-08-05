@@ -1,7 +1,11 @@
 {
   "compilerOptions": {
     "target": "es5",
-    "lib": ["dom", "dom.iterable", "es6"],
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "es6"
+    ],
     "allowJs": true,
     "skipLibCheck": true,
     "strict": true,
@@ -20,36 +24,85 @@
     ],
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"],
-      "@/components/*": ["./src/components/*"],
-      "@/lib/*": ["./src/lib/*"],
-      "@/hooks/*": ["./src/hooks/*"],
-      "@/contexts/*": ["./src/contexts/*"],
-      "@/types/*": ["./src/types/*"],
-      "@/types": ["./src/types"],
-      "@/utils/*": ["./src/utils/*"],
-      "@/config/*": ["./src/config/*"],
-      "@/config": ["./src/config"],
-      "@/supabase/*": ["./src/supabase/*"],
-      "@/supabase": ["./src/supabase"],
-      "@mage/*": ["./src/*"],
-      "@mage/lib/*": ["./src/lib/*"],
-      "@mage/lib": ["./src/lib"],
-      "@mage/hooks/*": ["./src/hooks/*"],
-      "@mage/hooks": ["./src/hooks"],
-      "@mage/supabase/*": ["./src/supabase/*"],
-      "@mage/supabase": ["./src/supabase"],
-      "@mage/types/*": ["./src/types/*"],
-      "@mage/types": ["./src/types"],
-      "supabase/*": ["./src/supabase/*"],
-      "supabase": ["./src/supabase"]
+      "@/*": [
+        "./src/*"
+      ],
+      "@/components/*": [
+        "./src/components/*"
+      ],
+      "@/lib/*": [
+        "./src/lib/*"
+      ],
+      "@/hooks/*": [
+        "./src/hooks/*"
+      ],
+      "@/contexts/*": [
+        "./src/contexts/*"
+      ],
+      "@/types/*": [
+        "./src/types/*"
+      ],
+      "@/types": [
+        "./src/types"
+      ],
+      "@/utils/*": [
+        "./src/utils/*"
+      ],
+      "@/config/*": [
+        "./src/config/*"
+      ],
+      "@/config": [
+        "./src/config"
+      ],
+      "@/supabase/*": [
+        "./src/supabase/*"
+      ],
+      "@/supabase": [
+        "./src/supabase"
+      ],
+      "@mage/*": [
+        "./src/*"
+      ],
+      "@mage/lib/*": [
+        "./src/lib/*"
+      ],
+      "@mage/lib": [
+        "./src/lib"
+      ],
+      "@mage/hooks/*": [
+        "./src/hooks/*"
+      ],
+      "@mage/hooks": [
+        "./src/hooks"
+      ],
+      "@mage/supabase/*": [
+        "./src/supabase/*"
+      ],
+      "@mage/supabase": [
+        "./src/supabase"
+      ],
+      "@mage/types/*": [
+        "./src/types/*"
+      ],
+      "@mage/types": [
+        "./src/types"
+      ],
+      "supabase/*": [
+        "./src/supabase/*"
+      ],
+      "supabase": [
+        "./src/supabase"
+      ]
     }
   },
   "include": [
     "next-env.d.ts",
     "**/*.ts",
     "**/*.tsx",
-    ".next/types/**/*.ts"
+    ".next/types/**/*.ts",
+    ".next-dev/types/**/*.ts"
   ],
-  "exclude": ["node_modules"]
+  "exclude": [
+    "node_modules"
+  ]
 }

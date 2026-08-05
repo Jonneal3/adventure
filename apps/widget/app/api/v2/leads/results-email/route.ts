@@ -74,9 +74,10 @@ export async function POST(request: NextRequest) {
       supabase.from("instances").select("id, name, config").eq("id", instanceId).maybeSingle(),
     ]);
     const submission = submissionResult.data as any;
-    if (!submission || submission?.submission_data?.experienceVersion !== "v2") {
+    const experienceVersion = submission?.submission_data?.experienceVersion;
+    if (!submission || (experienceVersion !== "v2" && experienceVersion !== "v3")) {
       return NextResponse.json(
-        { ok: false, error: "V2 submission not found" },
+        { ok: false, error: "Adventure submission not found" },
         { status: 404, headers: { "Cache-Control": "no-store" } }
       );
     }
@@ -109,6 +110,9 @@ export async function POST(request: NextRequest) {
     const serviceName = typeof body?.serviceName === "string" ? body.serviceName.trim().slice(0, 200) : "your project";
     const scope = typeof body?.scope === "string" ? body.scope.trim().slice(0, 300) : "";
     const canvasUrl = typeof body?.canvasUrl === "string" && /^https?:\/\//i.test(body.canvasUrl) ? body.canvasUrl : "";
+    const assumptions = Array.isArray(body?.assumptions)
+      ? body.assumptions.map((item: unknown) => String(item || "").trim().slice(0, 220)).filter(Boolean).slice(0, 8)
+      : [];
     const businessName =
       typeof instanceResult.data?.name === "string" && instanceResult.data.name.trim()
         ? instanceResult.data.name.trim()
@@ -121,6 +125,9 @@ export async function POST(request: NextRequest) {
     const safeCanvas = canvasUrl
       ? `<p style="margin:24px 0"><img src="${escapeHtml(canvasUrl)}" alt="Your generated concept" style="display:block;width:100%;max-width:640px;border-radius:16px" /></p>`
       : "";
+    const safeAssumptions = assumptions.length > 0
+      ? `<div style="margin:20px 0"><div style="font-size:13px;color:#687386;margin-bottom:8px">Based on</div><ul style="margin:0;padding-left:20px">${assumptions.map((item: string) => `<li style="margin:4px 0">${escapeHtml(item)}</li>`).join("")}</ul></div>`
+      : "";
     const html = `
       <div style="font-family:Inter,Arial,sans-serif;color:#172033;line-height:1.55;max-width:680px;margin:auto;padding:28px">
         <p style="font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:#687386;margin:0 0 8px">${escapeHtml(businessName)}</p>
@@ -131,6 +138,7 @@ export async function POST(request: NextRequest) {
           <div style="font-size:13px;color:#687386">Estimated project range</div>
           <div style="font-size:25px;font-weight:700;margin-top:4px">${escapeHtml(range)}</div>
         </div>
+        ${safeAssumptions}
         <p style="font-size:13px;color:#687386">This is an early planning estimate. Final pricing depends on measurements, selections, labor, and site conditions.</p>
       </div>
     `;
@@ -139,6 +147,7 @@ export async function POST(request: NextRequest) {
       `Service: ${serviceName}`,
       scope ? `Scope: ${scope}` : "",
       `Estimated project range: ${range}`,
+      ...assumptions.map((item: string) => `Based on: ${item}`),
       canvasUrl ? `View your concept: ${canvasUrl}` : "",
       "This is an early planning estimate; final pricing may vary.",
     ]
@@ -154,7 +163,7 @@ export async function POST(request: NextRequest) {
       headers: {
         Authorization: `Bearer ${resendKey}`,
         "Content-Type": "application/json",
-        "Idempotency-Key": `adventure-v2-results-${submissionId}`,
+        "Idempotency-Key": `adventure-${experienceVersion}-results-${submissionId}`,
       },
       body: JSON.stringify({
         from: process.env.RESEND_FROM_EMAIL || "Adventure <onboarding@resend.dev>",

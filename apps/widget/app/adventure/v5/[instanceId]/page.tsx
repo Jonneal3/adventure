@@ -1,6 +1,7 @@
+import { notFound } from "next/navigation";
+
 import { AdventureV5Experience } from "@/components/adventure/v5";
 import { prefetchWidgetInstance } from "@/lib/server/widget-prefetch";
-import { notFound } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
@@ -8,7 +9,7 @@ interface Props {
   params: { instanceId: string };
 }
 
-export default async function AdventurePage({ params }: Props) {
+export default async function AdventureV5Page({ params }: Props) {
   const prefetched = await prefetchWidgetInstance(params.instanceId);
   if (!prefetched?.instance) notFound();
 

@@ -13,7 +13,7 @@ const apply = process.argv.includes("--apply");
 const imageRoot = resolve(repoRoot, "output/imagegen/v2-scope-starters");
 const imageBucket = "images";
 const generatedFor = "v2_scope_starter";
-const catalogRevision = "2026-07-29-six-choice-catalog";
+const catalogRevision = "2026-08-01-scope-scene-catalog-v3";
 const bathroomSubcategoryId = "258f4d7f-746f-416b-b617-e1cca25b748f";
 const landscapeSubcategoryId = "ee70f353-c48e-4bd9-bfc1-cf1b00291fa9";
 
@@ -49,9 +49,24 @@ const scopeDefinitions = [
     family: "bathroom",
     fileBase: "bathroom-shower-tub",
     instanceId: "41766ba1-88b6-41c7-af1f-0a14ec4224e0",
+    replaceV1: true,
     service: "Bathroom Remodels",
     subcategoryId: bathroomSubcategoryId,
     scope: "Shower or tub area only",
+    directions: [
+      "Warm contemporary",
+      "Modern organic",
+      "Light transitional",
+      "Boutique contrast",
+      "Soft Scandinavian",
+      "Coastal natural",
+      "Japanese spa",
+      "Boutique bronze",
+      "Coastal blue",
+      "Warm Mediterranean",
+      "Graphic monochrome",
+      "Scandinavian wet room",
+    ],
   },
   {
     family: "bathroom",
@@ -69,6 +84,20 @@ const scopeDefinitions = [
     service: "Bathroom Remodels",
     subcategoryId: bathroomSubcategoryId,
     scope: "Tile & flooring",
+    directions: [
+      "Warm contemporary",
+      "Modern organic",
+      "Light transitional",
+      "Boutique contrast",
+      "Soft Scandinavian",
+      "Coastal natural",
+      "Minimal limestone grid",
+      "Deep green artisan tile",
+      "Honed travertine calm",
+      "Graphic monochrome",
+      "Warm terracotta and ivory",
+      "Blue-gray vertical rhythm",
+    ],
   },
   {
     family: "bathroom",
@@ -167,7 +196,7 @@ function slug(value) {
 }
 
 const starters = scopeDefinitions.flatMap((scopeDefinition) =>
-  directionLabels[scopeDefinition.family].map((label, index) => {
+  (scopeDefinition.directions || directionLabels[scopeDefinition.family]).map((label, index) => {
     const variantIndex = index + 1;
     const file =
       variantIndex === 1
@@ -249,7 +278,7 @@ async function rowsForScope(db, starter) {
     .eq("metadata->>generated_for", generatedFor)
     .eq("metadata->>starter_scope_key", starter.scopeKey)
     .order("created_at", { ascending: false })
-    .limit(20);
+    .limit(60);
   if (result.error) throw result.error;
   return result.data || [];
 }
@@ -433,7 +462,8 @@ async function verify(db) {
   for (const definition of scopeDefinitions) {
     const key = `${definition.subcategoryId}:${slug(definition.scope)}`;
     const variants = scopeVariants.get(key) || new Set();
-    const expected = ["v1", "v2", "v3", "v4", "v5", "v6"];
+    const expected = (definition.directions || directionLabels[definition.family])
+      .map((_, index) => `v${index + 1}`);
     if (
       variants.size !== expected.length ||
       expected.some((variant) => !variants.has(variant))

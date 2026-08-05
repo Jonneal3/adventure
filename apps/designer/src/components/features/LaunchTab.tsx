@@ -18,7 +18,6 @@ interface LaunchTabProps {
 }
 
 type LaunchSurface = "page" | "embed" | "popup" | "inline";
-type AdventureRouteVersion = "v1" | "v2";
 
 function normalizeCssDimension(value: unknown, fallback: string): string {
   const raw = typeof value === "string" || typeof value === "number" ? String(value).trim() : "";
@@ -42,7 +41,6 @@ export const LaunchTab: React.FC<LaunchTabProps> = ({
   const [inlineEmbedCode, setInlineEmbedCode] = useState<string | null>(null);
   const [modalEmbedCode, setModalEmbedCode] = useState<string | null>(null);
   const [showMadeWith, setShowMadeWith] = useState(false);
-  const [adventureVersion, setAdventureVersion] = useState<AdventureRouteVersion>("v2");
 
   useEffect(() => {
     let cancelled = false;
@@ -82,13 +80,14 @@ export const LaunchTab: React.FC<LaunchTabProps> = ({
     return withProtocol.replace(/\/+$/g, "");
   }, []);
 
+  // Always the canonical latest experience. Never expose /adventure/vN in Launch.
   const adventureUrlForSurface = useCallback(
     (surface: LaunchSurface) => {
-      const url = new URL(`/adventure/${adventureVersion}/${encodeURIComponent(instanceId)}`, widgetBaseUrl);
+      const url = new URL(`/adventure/${encodeURIComponent(instanceId)}`, widgetBaseUrl);
       url.searchParams.set("surface", surface);
       return url.toString();
     },
-    [adventureVersion, instanceId, widgetBaseUrl]
+    [instanceId, widgetBaseUrl]
   );
 
   const pageAdventureUrl = useMemo(
@@ -97,12 +96,6 @@ export const LaunchTab: React.FC<LaunchTabProps> = ({
   );
 
   const madeWithHref = process.env.NEXT_PUBLIC_SITE_URL || "https://adventure.app";
-
-  useEffect(() => {
-    setEmbedCode(null);
-    setInlineEmbedCode(null);
-    setModalEmbedCode(null);
-  }, [adventureVersion]);
 
   const buildContainedEmbedCode = useCallback((surface: "embed" | "inline") => {
     const productName = "Adventure";
@@ -340,8 +333,6 @@ ${modalCloseOnEscape ? `  document.addEventListener('keydown', (e) => {
 </script>`;
   }, [adventureUrlForSurface, config, madeWithHref, showMadeWith]);
 
-  const hasAiForm = Boolean((config as any)?.form_status_enabled);
-
   const ensureIframeCode = useCallback(() => {
     const next = buildContainedEmbedCode("embed");
     setEmbedCode(next);
@@ -427,51 +418,11 @@ ${modalCloseOnEscape ? `  document.addEventListener('keydown', (e) => {
   return (
     <div className="space-y-4 pt-2">
       <p className="px-1 text-xs text-muted-foreground leading-relaxed">
-        Direct link and embed codes point at the selected version. Unversioned Adventure links now use V2.
+        Direct link and embed codes below point at your live Adventure experience.
       </p>
 
-      <Card title="Experience version" description="Choose which isolated route to launch or embed.">
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-          {([
-            {
-              description: hasAiForm ? "Existing AI form and visual-pricing journey." : "Existing classic widget journey.",
-              label: "V1 — Current experience",
-              value: "v1",
-            },
-            {
-              description: "Scope-specific canvas, three edits, then pricing.",
-              label: "V2 — AI starter canvas",
-              value: "v2",
-            },
-          ] as const).map((option) => {
-            const selected = adventureVersion === option.value;
-            return (
-              <button
-                key={option.value}
-                type="button"
-                className={`rounded-lg border p-3 text-left transition-colors ${
-                  selected
-                    ? "border-primary bg-primary/5"
-                    : "border-border/60 bg-background/30 hover:bg-muted/40"
-                }`}
-                onClick={() => setAdventureVersion(option.value)}
-                aria-pressed={selected}
-              >
-                <span className="block text-xs font-semibold text-foreground">{option.label}</span>
-                <span className="mt-1 block text-[11px] leading-relaxed text-muted-foreground">
-                  {option.description}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-        <code className="mt-3 block rounded bg-muted/50 px-2 py-1.5 font-mono text-[11px]">
-          /adventure/{adventureVersion}/{instanceId}?surface=…
-        </code>
-      </Card>
-
       <Card
-        title={`Open ${adventureVersion.toUpperCase()} in browser`}
+        title="Open in browser"
         description="Centered standalone page experience."
       >
         <div className="flex">

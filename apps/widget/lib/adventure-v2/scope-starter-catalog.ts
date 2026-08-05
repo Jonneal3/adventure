@@ -17,6 +17,70 @@ export type V2ScopeStarterOption = ScopeStarterRow & {
   variantIndex: number;
 };
 
+const compatibleSceneScopesByScope: Record<string, string[]> = {
+  "full-bathroom-renovation": [
+    "Shower or tub area only",
+    "Vanity, cabinets & fixtures",
+    "Tile & flooring",
+    "Cosmetic refresh (paint, lighting, hardware)",
+    "Layout or plumbing changes",
+  ],
+  "shower-or-tub-area-only": [
+    "Tile & flooring",
+    "Full bathroom renovation",
+    "Layout or plumbing changes",
+  ],
+  "vanity-cabinets-and-fixtures": [
+    "Full bathroom renovation",
+    "Cosmetic refresh (paint, lighting, hardware)",
+    "Layout or plumbing changes",
+  ],
+  "tile-and-flooring": [
+    "Shower or tub area only",
+    "Full bathroom renovation",
+    "Layout or plumbing changes",
+  ],
+  "cosmetic-refresh-paint-lighting-hardware": [
+    "Full bathroom renovation",
+    "Vanity, cabinets & fixtures",
+  ],
+  "layout-or-plumbing-changes": [
+    "Full bathroom renovation",
+    "Shower or tub area only",
+  ],
+  "full-outdoor-renovation": [
+    "Patio and walkway upgrade",
+    "New lawn and garden installation",
+    "Driveway resurfacing and repair",
+    "Hardscape color scheme refresh",
+    "Outdoor lighting installation",
+    "Tree and shrub pruning service",
+  ],
+  "patio-and-walkway-upgrade": [
+    "Hardscape color scheme refresh",
+    "Outdoor lighting installation",
+    "Full outdoor renovation",
+  ],
+  "new-lawn-and-garden-installation": [
+    "Tree and shrub pruning service",
+    "Full outdoor renovation",
+  ],
+  "hardscape-color-scheme-refresh": [
+    "Patio and walkway upgrade",
+    "Driveway resurfacing and repair",
+    "Full outdoor renovation",
+  ],
+  "outdoor-lighting-installation": [
+    "Patio and walkway upgrade",
+    "New lawn and garden installation",
+    "Full outdoor renovation",
+  ],
+  "tree-and-shrub-pruning-service": [
+    "New lawn and garden installation",
+    "Full outdoor renovation",
+  ],
+};
+
 export type V2ScopeExperimentStarter = ScopeStarterRow & {
   experimentKey: string;
   variantId: string;
@@ -33,6 +97,10 @@ export function v2ScopeStarterKey(scope: string): string {
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "")
     .slice(0, 100) || "scope";
+}
+
+export function compatibleSceneScopesForScope(scope: string): string[] {
+  return compatibleSceneScopesByScope[v2ScopeStarterKey(scope)] || [];
 }
 
 function variantIndex(row: ScopeStarterRow): number {
@@ -84,7 +152,7 @@ export async function findV2NeutralScopeStarter(params: {
     ])
     .eq("metadata->>starter_scope_key", scopeKey)
     .eq("metadata->>starter_experiment_eligible", "true")
-    .limit(30);
+    .limit(100);
 
   if (result.error) {
     throw new Error(
@@ -141,11 +209,12 @@ export async function listV2ScopeStarters(params: {
     .from("images")
     .select("id, image_url, metadata, model_id, created_at")
     .eq("subcategory_id", params.subcategoryId)
+    .is("account_id", null)
     .eq("status", "completed")
     .eq("metadata->>generated_for", V2_SCOPE_STARTER_GENERATED_FOR)
     .eq("metadata->>starter_scope_key", scopeKey)
     .order("created_at", { ascending: false })
-    .limit(30);
+    .limit(100);
 
   if (result.error) {
     throw new Error(`Unable to load the scope starter catalog: ${result.error.message}`);
@@ -166,7 +235,47 @@ export async function listV2ScopeStarters(params: {
 
   return Array.from(byVariant.values())
     .sort((a, b) => a.variantIndex - b.variantIndex)
-    .slice(0, Math.max(1, Math.min(12, params.limit ?? 6)));
+    .slice(0, Math.max(1, Math.min(50, params.limit ?? 6)));
+}
+
+export async function listV2ScopeGalleryOptions(params: {
+  supabase: SupabaseClient<any, "public", any>;
+  subcategoryId: string;
+  scope: string;
+  limit?: number;
+}): Promise<V2ScopeStarterOption[]> {
+  const limit = Math.max(1, Math.min(50, params.limit ?? 50));
+  const sceneScopes = [params.scope, ...compatibleSceneScopesForScope(params.scope)];
+  const collectionResults = await Promise.allSettled(
+    sceneScopes.map((scope) =>
+      listV2ScopeStarters({
+        ...params,
+        scope,
+        limit,
+      })
+    )
+  );
+  const collections = collectionResults
+    .filter((result): result is PromiseFulfilledResult<V2ScopeStarterOption[]> => result.status === "fulfilled")
+    .map((result) => result.value);
+
+  if (collections.length === 0) {
+    const firstError = collectionResults.find(
+      (result): result is PromiseRejectedResult => result.status === "rejected"
+    );
+    throw firstError?.reason instanceof Error
+      ? firstError.reason
+      : new Error("Unable to load any full-scene scope catalogs");
+  }
+
+  const seen = new Set<string>();
+  return collections.flat()
+    .filter((row) => {
+      if (seen.has(row.id)) return false;
+      seen.add(row.id);
+      return true;
+    })
+    .slice(0, limit);
 }
 
 export async function findV2ScopeStarter(params: {

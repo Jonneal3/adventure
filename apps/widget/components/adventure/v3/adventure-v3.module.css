@@ -1,0 +1,512 @@
+.root {
+  --v3-accent: #172033;
+  --v3-text: #172033;
+  --v3-radius: 18px;
+  color: var(--v3-text);
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  width: 100%;
+}
+
+.root * { box-sizing: border-box; }
+.root button, .root input { font: inherit; }
+.root button { color: inherit; }
+
+.spin { animation: v3-spin .85s linear infinite; }
+@keyframes v3-spin { to { transform: rotate(360deg); } }
+
+.loadingState {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  min-height: 76dvh;
+  opacity: .68;
+}
+
+.stepShell,
+.workspace {
+  flex: 1;
+  margin: 0 auto;
+  max-width: 1240px;
+  min-width: 0;
+  padding: clamp(18px, 3vw, 38px);
+  width: 100%;
+}
+
+.stepShell { max-width: 980px; padding-bottom: 120px; }
+
+.stepTopbar,
+.workspaceHeader,
+.visualActions,
+.conceptActions,
+.cardHeading,
+.consultationCard > div,
+.consultationSuccess,
+.deliveryStatus {
+  align-items: center;
+  display: flex;
+}
+
+.stepTopbar {
+  justify-content: space-between;
+  margin-bottom: clamp(30px, 5vw, 62px);
+  min-height: 44px;
+  position: relative;
+}
+
+.iconButton,
+.restartButton,
+.textButton,
+.modalClose,
+.visualActions button,
+.editScopeButton {
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+
+.iconButton {
+  align-items: center;
+  border: 1px solid color-mix(in srgb, var(--v3-text) 14%, transparent);
+  border-radius: 999px;
+  display: flex;
+  height: 38px;
+  justify-content: center;
+  width: 38px;
+}
+
+.iconButton:disabled { opacity: 0; pointer-events: none; }
+
+.restartButton {
+  align-items: center;
+  display: flex;
+  font-size: 12px;
+  gap: 6px;
+  opacity: .66;
+  padding: 8px;
+  white-space: nowrap;
+}
+
+.phaseRail {
+  display: flex;
+  gap: 7px;
+  left: 50%;
+  max-width: calc(100% - 190px);
+  position: absolute;
+  transform: translateX(-50%);
+}
+
+.phaseRail > span {
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.phaseRail i {
+  background: color-mix(in srgb, var(--v3-text) 12%, transparent);
+  border-radius: 99px;
+  display: block;
+  height: 4px;
+  transition: background 160ms ease;
+  width: clamp(28px, 5vw, 58px);
+}
+
+.phaseRail span[data-active="true"] i { background: var(--v3-accent); }
+.phaseRail small { font-size: 9px; opacity: .48; white-space: nowrap; }
+.phaseRail span[data-active="true"] small { opacity: .74; }
+
+.stepContent {
+  margin: 0 auto;
+  max-width: 780px;
+  min-width: 0;
+  width: 100%;
+}
+
+.eyebrow {
+  font-size: 12px;
+  font-weight: 750;
+  letter-spacing: .09em;
+  margin-bottom: 10px;
+  opacity: .55;
+  text-transform: uppercase;
+}
+
+.stepContent h1,
+.workspaceHeader h1 {
+  font-size: clamp(32px, 5vw, 58px);
+  letter-spacing: -.05em;
+  line-height: 1.01;
+  margin: 0;
+}
+
+.stepContent > p,
+.workspaceHeader p {
+  font-size: clamp(15px, 2vw, 18px);
+  line-height: 1.55;
+  margin: 16px 0 30px;
+  max-width: 680px;
+  opacity: .68;
+}
+
+.choiceGrid { display: grid; gap: 12px; }
+
+.choiceCard {
+  align-items: center;
+  background: color-mix(in srgb, white 84%, transparent);
+  border: 1px solid color-mix(in srgb, var(--v3-text) 12%, transparent);
+  border-radius: var(--v3-radius);
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  min-height: 78px;
+  padding: 16px 20px;
+  text-align: left;
+  transition: border-color 150ms ease, box-shadow 150ms ease, transform 150ms ease;
+  width: 100%;
+}
+
+.choiceCard:hover {
+  border-color: color-mix(in srgb, var(--v3-accent) 52%, transparent);
+  box-shadow: 0 12px 34px rgb(23 32 51 / 7%);
+  transform: translateY(-1px);
+}
+
+.choiceCard > span { display: flex; flex-direction: column; gap: 5px; }
+.choiceCard strong { font-size: 17px; }
+.choiceCard small { font-size: 12px; font-weight: 520; opacity: .58; }
+
+.primaryButton,
+.secondaryButton {
+  align-items: center;
+  border-radius: 999px;
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 14px;
+  font-weight: 720;
+  gap: 8px;
+  justify-content: center;
+  min-height: 46px;
+  padding: 0 22px;
+  transition: opacity 140ms ease, transform 140ms ease;
+}
+
+.primaryButton {
+  background: var(--v3-accent);
+  border: 1px solid var(--v3-accent);
+  color: white !important;
+}
+
+.secondaryButton {
+  background: color-mix(in srgb, white 88%, transparent);
+  border: 1px solid color-mix(in srgb, var(--v3-text) 16%, transparent);
+}
+
+.primaryButton:disabled,
+.secondaryButton:disabled,
+.root button:disabled { cursor: not-allowed; opacity: .46; }
+.primaryButton:not(:disabled):hover,
+.secondaryButton:not(:disabled):hover { transform: translateY(-1px); }
+
+.detailsStep { max-width: 840px; }
+.driverStack { display: grid; gap: 12px; margin-bottom: 24px; }
+
+.driverGroup {
+  align-items: center;
+  background: color-mix(in srgb, white 84%, transparent);
+  border: 1px solid color-mix(in srgb, var(--v3-text) 11%, transparent);
+  border-radius: var(--v3-radius);
+  display: grid;
+  gap: 16px;
+  grid-template-columns: minmax(175px, .72fr) minmax(300px, 1.28fr);
+  padding: 17px 18px;
+}
+
+.driverGroup > div:first-child { display: flex; flex-direction: column; gap: 4px; }
+.driverGroup > div:first-child strong { font-size: 14px; }
+.driverGroup > div:first-child small { font-size: 11px; line-height: 1.4; opacity: .55; }
+
+.segmentedControl,
+.threeChoice,
+.chipGrid { display: grid; gap: 7px; }
+.segmentedControl { grid-template-columns: repeat(auto-fit, minmax(112px, 1fr)); }
+.threeChoice { grid-template-columns: repeat(3, 1fr); }
+.chipGrid { grid-template-columns: repeat(2, 1fr); }
+
+.segmentedControl button,
+.threeChoice button,
+.chipGrid button {
+  background: color-mix(in srgb, var(--v3-text) 3.5%, white);
+  border: 1px solid transparent;
+  border-radius: 11px;
+  cursor: pointer;
+  min-height: 42px;
+  padding: 9px 11px;
+}
+
+.segmentedControl button[data-selected="true"],
+.threeChoice button[data-selected="true"],
+.chipGrid button[data-selected="true"] {
+  background: color-mix(in srgb, var(--v3-accent) 9%, white);
+  border-color: color-mix(in srgb, var(--v3-accent) 48%, transparent);
+}
+
+.threeChoice button { align-items: flex-start; display: flex; flex-direction: column; text-align: left; }
+.threeChoice button strong { font-size: 13px; }
+.threeChoice button small { font-size: 10px; margin-top: 3px; opacity: .55; }
+.chipGrid button { align-items: center; display: flex; font-size: 12px; gap: 6px; text-align: left; }
+.chipGrid button svg { opacity: 0; }
+.chipGrid button[data-selected="true"] svg { opacity: 1; }
+
+.livePriceBar {
+  align-items: center;
+  backdrop-filter: blur(14px);
+  background: color-mix(in srgb, white 88%, transparent);
+  border: 1px solid color-mix(in srgb, var(--v3-text) 11%, transparent);
+  border-radius: 17px;
+  bottom: 18px;
+  box-shadow: 0 14px 45px rgb(23 32 51 / 10%);
+  display: flex;
+  justify-content: space-between;
+  left: 50%;
+  max-width: 760px;
+  padding: 13px 16px;
+  position: fixed;
+  transform: translateX(-50%);
+  width: calc(100% - 36px);
+  z-index: 12;
+}
+
+.livePriceBar > div { display: flex; flex-direction: column; gap: 2px; }
+.livePriceBar small { font-size: 10px; letter-spacing: .04em; opacity: .55; text-transform: uppercase; }
+.livePriceBar strong { font-size: 20px; letter-spacing: -.025em; }
+.livePriceBar > span { font-size: 11px; opacity: .5; }
+
+.roomMethodGrid { display: grid; gap: 14px; grid-template-columns: repeat(2, 1fr); }
+.roomMethodGrid > button {
+  background: color-mix(in srgb, white 84%, transparent);
+  border: 1px solid color-mix(in srgb, var(--v3-text) 12%, transparent);
+  border-radius: calc(var(--v3-radius) + 3px);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  min-height: 230px;
+  padding: 24px;
+  text-align: left;
+  transition: border-color 150ms ease, transform 150ms ease;
+}
+.roomMethodGrid > button:hover { border-color: color-mix(in srgb, var(--v3-accent) 55%, transparent); transform: translateY(-2px); }
+.roomMethodIcon { align-items: center; background: color-mix(in srgb, var(--v3-accent) 8%, white); border-radius: 14px; display: flex; height: 46px; justify-content: center; margin-bottom: 35px; width: 46px; }
+.roomMethodGrid strong { font-size: 19px; }
+.roomMethodGrid p { font-size: 13px; line-height: 1.5; margin: 8px 0 20px; opacity: .62; }
+.roomMethodGrid small { font-size: 11px; font-weight: 720; margin-top: auto; opacity: .5; text-transform: uppercase; }
+
+.uploadPanel,
+.exampleRoomSection { margin-bottom: 22px; }
+.uploadDropzone {
+  align-items: center;
+  background: color-mix(in srgb, white 82%, transparent);
+  border: 1px dashed color-mix(in srgb, var(--v3-text) 26%, transparent);
+  border-radius: calc(var(--v3-radius) + 3px);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  justify-content: center;
+  min-height: 250px;
+  width: 100%;
+}
+.uploadDropzone small { font-size: 11px; opacity: .5; }
+.uploadedPreview { background: white; border: 1px solid color-mix(in srgb, var(--v3-text) 11%, transparent); border-radius: var(--v3-radius); overflow: hidden; }
+.uploadedPreview > img { display: block; height: min(42dvh, 360px); object-fit: cover; width: 100%; }
+.uploadedPreview > div { align-items: center; display: flex; gap: 9px; padding: 13px 15px; }
+.uploadedPreview > div > span { display: flex; flex: 1; flex-direction: column; gap: 2px; }
+.uploadedPreview strong { font-size: 13px; }
+.uploadedPreview small { font-size: 10px; opacity: .5; }
+.uploadedPreview button { background: transparent; border: 0; color: var(--v3-accent); cursor: pointer; font-size: 12px; font-weight: 720; }
+.textButton { color: var(--v3-accent); display: block; font-size: 12px; margin: 13px auto 0; opacity: .7; text-decoration: underline; text-underline-offset: 3px; }
+
+.exampleRoomHeading { display: flex; flex-direction: column; gap: 4px; margin-bottom: 13px; }
+.exampleRoomHeading small { font-size: 11px; opacity: .55; }
+.roomGallery { display: grid; gap: 10px; grid-template-columns: repeat(3, 1fr); }
+.roomGallery > button {
+  aspect-ratio: 4 / 3;
+  background: #e8e7e2;
+  border: 2px solid transparent;
+  border-radius: 14px;
+  cursor: pointer;
+  overflow: hidden;
+  padding: 0;
+  position: relative;
+}
+.roomGallery > button[data-selected="true"] { border-color: var(--v3-accent); }
+.roomGallery img { display: block; height: 100%; object-fit: cover; width: 100%; }
+.roomGallery span { background: linear-gradient(transparent, rgb(0 0 0 / 70%)); bottom: 0; color: white; font-size: 11px; font-weight: 650; left: 0; padding: 28px 10px 9px; position: absolute; right: 0; text-align: left; }
+.roomGallery i { align-items: center; background: var(--v3-accent); border-radius: 999px; color: white; display: none; height: 25px; justify-content: center; position: absolute; right: 8px; top: 8px; width: 25px; }
+.roomGallery button[data-selected="true"] i { display: flex; }
+.roomSkeleton { animation: v3-pulse 1.2s ease-in-out infinite alternate; aspect-ratio: 4 / 3; background: color-mix(in srgb, var(--v3-text) 8%, white); border-radius: 14px; }
+@keyframes v3-pulse { to { opacity: .45; } }
+.emptyRooms { align-items: center; background: color-mix(in srgb, white 82%, transparent); border: 1px dashed color-mix(in srgb, var(--v3-text) 20%, transparent); border-radius: 15px; display: flex; flex-direction: column; gap: 7px; padding: 28px; text-align: center; }
+.emptyRooms small { font-size: 11px; max-width: 440px; opacity: .55; }
+.emptyRooms .secondaryButton { margin-top: 9px; }
+
+.lookStep { max-width: 900px; }
+.lookLayout { align-items: stretch; display: grid; gap: 16px; grid-template-columns: minmax(230px, .74fr) minmax(420px, 1.26fr); margin-bottom: 22px; }
+.startingRoomPreview { border-radius: calc(var(--v3-radius) + 2px); min-height: 430px; overflow: hidden; position: relative; }
+.startingRoomPreview img { height: 100%; object-fit: cover; position: absolute; width: 100%; }
+.startingRoomPreview span { background: rgb(23 32 51 / 78%); border-radius: 999px; bottom: 12px; color: white; font-size: 10px; left: 12px; padding: 6px 9px; position: absolute; }
+.styleGrid { display: grid; gap: 9px; grid-template-columns: repeat(2, 1fr); }
+.styleGrid > button {
+  background: color-mix(in srgb, white 84%, transparent);
+  border: 1px solid color-mix(in srgb, var(--v3-text) 11%, transparent);
+  border-radius: 14px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  min-height: 135px;
+  padding: 15px;
+  position: relative;
+  text-align: left;
+}
+.styleGrid > button[data-selected="true"] { background: color-mix(in srgb, var(--v3-accent) 7%, white); border-color: var(--v3-accent); }
+.styleNumber { font-size: 9px; font-weight: 760; letter-spacing: .08em; margin-bottom: auto; opacity: .38; }
+.styleGrid strong { font-size: 14px; margin-top: 15px; }
+.styleGrid small { font-size: 10px; line-height: 1.4; margin-top: 4px; opacity: .56; }
+.styleGrid i { align-items: center; background: var(--v3-accent); border-radius: 999px; color: white; display: none; height: 23px; justify-content: center; position: absolute; right: 10px; top: 10px; width: 23px; }
+.styleGrid button[data-selected="true"] i { display: flex; }
+
+.conceptStep { max-width: 980px; }
+.conceptGrid { display: grid; gap: 11px; grid-template-columns: repeat(2, 1fr); margin-bottom: 20px; }
+.conceptGrid > button,
+.conceptSkeleton { aspect-ratio: 4 / 3; border-radius: 16px; overflow: hidden; position: relative; }
+.conceptGrid > button { background: #e8e7e2; border: 2px solid transparent; cursor: pointer; padding: 0; }
+.conceptGrid > button[data-selected="true"] { border-color: var(--v3-accent); }
+.conceptGrid img { display: block; height: 100%; object-fit: cover; width: 100%; }
+.conceptGrid > button span { background: linear-gradient(transparent, rgb(0 0 0 / 68%)); bottom: 0; color: white; font-size: 12px; font-weight: 680; left: 0; padding: 35px 12px 11px; position: absolute; right: 0; text-align: left; }
+.conceptGrid > button i { align-items: center; background: var(--v3-accent); border-radius: 999px; color: white; display: none; height: 27px; justify-content: center; position: absolute; right: 10px; top: 10px; width: 27px; }
+.conceptGrid > button[data-selected="true"] i { display: flex; }
+.conceptSkeleton { align-items: center; animation: v3-pulse 1.2s ease-in-out infinite alternate; background: color-mix(in srgb, var(--v3-text) 7%, white); display: flex; flex-direction: column; gap: 8px; justify-content: center; }
+.conceptSkeleton span { font-size: 11px; opacity: .5; }
+.conceptActions { gap: 10px; justify-content: flex-end; }
+
+.errorBanner,
+.formError { background: #fff0ef; border: 1px solid #e8aaa5; border-radius: 12px; color: #922f28; font-size: 12px; line-height: 1.4; margin: 14px 0; padding: 11px 13px; }
+
+.workspace { max-width: 1320px; }
+.workspaceHeader { justify-content: space-between; margin-bottom: 24px; }
+.workspaceHeader h1 { font-size: clamp(32px, 4.4vw, 55px); }
+.workspaceHeader p { font-size: 15px; margin: 10px 0 0; }
+.workspaceGrid { align-items: start; display: grid; gap: clamp(18px, 3vw, 34px); grid-template-columns: minmax(0, 1.7fr) minmax(330px, .9fr); }
+.workspaceVisual { min-width: 0; }
+.resultImageFrame { background: #e8e7e2; border-radius: calc(var(--v3-radius) + 4px); overflow: hidden; position: relative; }
+.resultImageFrame img { aspect-ratio: 4 / 3; display: block; object-fit: cover; width: 100%; }
+.resultImageFrame > span { background: rgb(23 32 51 / 78%); border-radius: 999px; bottom: 13px; color: white; font-size: 10px; left: 13px; padding: 6px 9px; position: absolute; }
+.noConcept { align-items: center; aspect-ratio: 4 / 3; background: color-mix(in srgb, white 72%, transparent); border: 1px dashed color-mix(in srgb, var(--v3-text) 18%, transparent); border-radius: calc(var(--v3-radius) + 4px); display: flex; flex-direction: column; gap: 6px; justify-content: center; text-align: center; }
+.noConcept small { opacity: .55; }
+.visualActions { flex-wrap: wrap; gap: 6px; margin-top: 9px; }
+.visualActions button { align-items: center; border-radius: 999px; display: flex; font-size: 11px; gap: 5px; opacity: .68; padding: 7px 9px; }
+.visualActions button:hover { background: color-mix(in srgb, var(--v3-text) 6%, transparent); opacity: 1; }
+
+.estimatePanel { display: grid; gap: 11px; max-height: calc(100dvh - 165px); overflow-y: auto; padding-right: 3px; }
+.estimatePanel > section { background: color-mix(in srgb, white 84%, transparent); border: 1px solid color-mix(in srgb, var(--v3-text) 11%, transparent); border-radius: var(--v3-radius); padding: 17px; }
+.rangeCard { display: flex; flex-direction: column; }
+.rangeCard > small { font-size: 10px; font-weight: 720; letter-spacing: .06em; opacity: .5; text-transform: uppercase; }
+.rangeCard > strong { font-size: clamp(25px, 3vw, 35px); letter-spacing: -.04em; margin-top: 6px; }
+.rangeCard p { font-size: 11px; line-height: 1.45; margin: 7px 0 0; opacity: .56; }
+.cardHeading { border: 0; cursor: pointer; justify-content: space-between; padding: 0; width: 100%; }
+.cardHeading > span { display: flex; flex-direction: column; text-align: left; }
+.cardHeading strong, .cardHeadingStatic strong { font-size: 13px; }
+.cardHeading small, .cardHeadingStatic small { font-size: 10px; margin-top: 2px; opacity: .5; }
+.cardHeading svg { transition: transform 160ms ease; }
+.cardHeading svg[data-open="true"] { transform: rotate(180deg); }
+.assumptionsCard ul { display: none; list-style: none; margin: 13px 0 4px; padding: 0; }
+.assumptionsCard ul.assumptionsOpen { display: grid; gap: 7px; }
+.assumptionsCard li { align-items: flex-start; display: flex; font-size: 11px; gap: 7px; line-height: 1.35; opacity: .67; }
+.assumptionsCard li svg { flex: 0 0 auto; margin-top: 1px; }
+.editScopeButton { color: var(--v3-accent); font-size: 10px; font-weight: 700; margin-top: 11px; padding: 0; }
+.cardHeadingStatic { display: flex; flex-direction: column; margin-bottom: 12px; }
+.breakdownRow { align-items: center; border-top: 1px solid color-mix(in srgb, var(--v3-text) 8%, transparent); display: flex; font-size: 11px; justify-content: space-between; padding: 9px 0; }
+.breakdownRow span { opacity: .62; }
+.deliveryStatus { background: color-mix(in srgb, #22a06b 8%, white); border-radius: 10px; color: #16704b; font-size: 10px; gap: 6px; margin-top: 9px; padding: 9px; }
+.deliveryStatus[data-status="failed"] { background: #fff0ef; color: #922f28; }
+
+.unlockCard { display: grid; gap: 10px; grid-template-columns: 28px 1fr; }
+.unlockCard > svg { margin-top: 2px; }
+.unlockCard strong { font-size: 13px; }
+.unlockCard p { font-size: 10px; line-height: 1.45; margin: 4px 0 0; opacity: .57; }
+.unlockCard .primaryButton { grid-column: 1 / -1; width: 100%; }
+.unlockCard > small { font-size: 9px; grid-column: 1 / -1; opacity: .48; text-align: center; }
+.priceFactors { display: grid; gap: 14px; grid-template-columns: repeat(2, 1fr); }
+.priceFactors > div { display: flex; flex-direction: column; gap: 5px; }
+.priceFactors strong { font-size: 10px; margin-bottom: 2px; }
+.priceFactors span { font-size: 9px; line-height: 1.35; opacity: .58; }
+.consultationCard { align-items: center; display: flex; gap: 12px; justify-content: space-between; }
+.consultationCard > div { gap: 8px; }
+.consultationCard span { display: flex; flex-direction: column; }
+.consultationCard strong { font-size: 11px; }
+.consultationCard small { font-size: 9px; margin-top: 2px; opacity: .52; }
+.consultationCard .secondaryButton { min-height: 36px; padding: 0 13px; white-space: nowrap; }
+.consultationSuccess { color: #16704b; }
+
+.modalBackdrop { align-items: center; background: rgb(14 20 32 / 48%); display: flex; inset: 0; justify-content: center; padding: 18px; position: fixed; z-index: 50; }
+.modal { background: white; border-radius: 22px; box-shadow: 0 25px 80px rgb(0 0 0 / 22%); max-width: 430px; padding: 28px; position: relative; width: 100%; }
+.modalClose { align-items: center; border-radius: 999px; display: flex; height: 32px; justify-content: center; opacity: .56; position: absolute; right: 14px; top: 14px; width: 32px; }
+.modalIcon { align-items: center; background: color-mix(in srgb, var(--v3-accent) 9%, white); border-radius: 13px; display: flex; height: 45px; justify-content: center; margin-bottom: 18px; width: 45px; }
+.modal h2 { font-size: 24px; letter-spacing: -.035em; line-height: 1.1; margin: 0; }
+.modal > p { font-size: 12px; line-height: 1.5; margin: 10px 0 19px; opacity: .6; }
+.modal label { display: flex; font-size: 11px; font-weight: 680; gap: 5px; margin-top: 11px; flex-direction: column; }
+.modal label span { font-weight: 450; opacity: .48; }
+.modal input { border: 1px solid color-mix(in srgb, var(--v3-text) 16%, transparent); border-radius: 11px; font-size: 14px; min-height: 44px; outline: none; padding: 0 12px; }
+.modal input:focus { border-color: var(--v3-accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--v3-accent) 12%, transparent); }
+.modal .primaryButton { margin-top: 17px; width: 100%; }
+.privacyNote { display: block; font-size: 9px; margin-top: 9px; opacity: .48; text-align: center; }
+
+@media (max-width: 860px) {
+  .phaseRail small { display: none; }
+  .phaseRail { gap: 5px; max-width: calc(100% - 150px); }
+  .phaseRail i { width: clamp(20px, 6vw, 36px); }
+  .driverGroup { grid-template-columns: 1fr; }
+  .lookLayout { grid-template-columns: 1fr; }
+  .startingRoomPreview { min-height: 300px; }
+  .workspaceGrid { grid-template-columns: 1fr; }
+  .estimatePanel { max-height: none; overflow: visible; }
+}
+
+@media (max-width: 620px) {
+  .stepShell, .workspace { padding: 14px; }
+  .stepShell { padding-bottom: 105px; }
+  .stepTopbar { margin-bottom: 28px; }
+  .restartButton { font-size: 0; }
+  .restartButton svg { height: 16px; width: 16px; }
+  .phaseRail { max-width: calc(100% - 100px); }
+  .stepContent h1, .workspaceHeader h1 { font-size: 36px; }
+  .roomMethodGrid { grid-template-columns: 1fr; }
+  .roomMethodGrid > button { min-height: 175px; }
+  .roomMethodIcon { margin-bottom: 18px; }
+  .driverGroup { padding: 14px; }
+  .threeChoice, .segmentedControl { grid-template-columns: 1fr; }
+  .chipGrid { grid-template-columns: repeat(2, 1fr); }
+  .roomGallery { grid-template-columns: repeat(2, 1fr); }
+  .styleGrid { grid-template-columns: repeat(2, 1fr); }
+  .styleGrid > button { min-height: 128px; }
+  .conceptGrid { display: flex; margin-left: -14px; margin-right: -14px; overflow-x: auto; padding: 0 14px 8px; scroll-snap-type: x mandatory; }
+  .conceptGrid > button, .conceptSkeleton { flex: 0 0 86%; scroll-snap-align: center; }
+  .conceptActions { align-items: stretch; flex-direction: column-reverse; }
+  .conceptActions .primaryButton, .conceptActions .secondaryButton { width: 100%; }
+  .livePriceBar { bottom: 10px; }
+  .livePriceBar > span { display: none; }
+  .workspaceHeader { align-items: flex-start; }
+  .workspaceHeader .restartButton { font-size: 0; }
+  .workspaceVisual { display: flex; flex-direction: column; }
+  .resultImageFrame { position: sticky; top: 8px; z-index: 3; }
+  .priceFactors { grid-template-columns: 1fr; }
+  .consultationCard { align-items: stretch; flex-direction: column; }
+  .consultationCard .secondaryButton { width: 100%; }
+  .modal { padding: 24px 20px; }
+}

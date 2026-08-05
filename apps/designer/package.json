@@ -8,9 +8,9 @@
     "npm": ">=10.2.4"
   },
   "scripts": {
-    "clean": "rm -rf .next",
+    "clean": "rm -rf .next .next-dev node_modules/.cache",
     "dev": "set -a && . ../../env/.env.shared.local && set +a && next dev -p 3000",
-    "dev:clean": "rm -rf .next && set -a && . ../../env/.env.shared.local && set +a && next dev -p 3000",
+    "dev:clean": "rm -rf .next-dev node_modules/.cache && set -a && . ../../env/.env.shared.local && set +a && next dev -p 3000",
     "build": "NODE_ENV=production TSC_COMPILE_ON_ERROR=true next build",
     "build:clean": "rm -rf .next && set -a && . ../../env/.env.shared.local && set +a && NODE_ENV=production TSC_COMPILE_ON_ERROR=true next build",
     "start": "set -a && . ../../env/.env.shared.local && set +a && next start",

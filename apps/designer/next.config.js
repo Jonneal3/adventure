@@ -1,8 +1,12 @@
 const crypto = require('crypto');
 const path = require('path');
+const { PHASE_DEVELOPMENT_SERVER } = require('next/constants');
 
 /** @type {import('next').NextConfig} */
-const nextConfig = {
+const createNextConfig = (phase) => ({
+  // Keep the live Designer compiler isolated from production builds. Both
+  // processes writing to `.next` causes stale runtimes and missing vendor chunks.
+  distDir: phase === PHASE_DEVELOPMENT_SERVER ? '.next-dev' : '.next',
   reactStrictMode: false,
   transpilePackages: ['@adventure/refinement-server'],
   images: {
@@ -90,6 +94,6 @@ const nextConfig = {
   async redirects() {
     return [];
   }
-};
+});
 
-module.exports = nextConfig; 
+module.exports = createNextConfig;

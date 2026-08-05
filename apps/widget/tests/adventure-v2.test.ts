@@ -22,6 +22,7 @@ import {
   V2_IMAGE_PERSIST_TIMEOUT_MS,
 } from "../lib/adventure-v2/server-assets";
 import {
+  compatibleSceneScopesForScope,
   V2_NEUTRAL_SCOPE_STARTER_GENERATED_FOR,
 } from "../lib/adventure-v2/scope-starter-catalog";
 import {
@@ -36,18 +37,28 @@ function read(relativePath: string): string {
   return readFileSync(resolve(widgetRoot, relativePath), "utf8");
 }
 
-test("unversioned route promotes V2 while explicit V1 remains available", () => {
+test("unversioned route promotes V5; versioned URLs redirect to canonical latest", () => {
   const unversioned = read("app/adventure/[instanceId]/page.tsx");
   const v1 = read("app/adventure/v1/[instanceId]/page.tsx");
   const v2 = read("app/adventure/v2/[instanceId]/page.tsx");
+  const v3 = read("app/adventure/v3/[instanceId]/page.tsx");
+  const v4 = read("app/adventure/v4/[instanceId]/page.tsx");
+  const middleware = read("middleware.ts");
 
-  assert.match(unversioned, /<AdventureV2Experience/);
+  assert.match(unversioned, /<AdventureV5Experience/);
   assert.doesNotMatch(unversioned, /<AdventureFormExperience/);
   assert.match(v1, /data-adventure-version="v1"/);
   assert.match(v1, /<AdventureFormExperience/);
   assert.match(v1, /<AdventureWidgetExperience/);
   assert.match(v2, /<AdventureV2Experience/);
   assert.doesNotMatch(v2, /<AdventureFormExperience/);
+  assert.match(v3, /<AdventureV3Experience/);
+  assert.match(v4, /<AdventureV4Experience/);
+  assert.match(read("app/adventure/v5/[instanceId]/page.tsx"), /<AdventureV5Experience/);
+  // Public / Launch traffic must never stay on a versioned path.
+  assert.match(middleware, /VERSIONED_ADVENTURE/);
+  assert.match(middleware, /NextResponse\.redirect/);
+  assert.match(middleware, /\/adventure\/\$\{versioned\[1\]\}/);
 });
 
 test("capabilities resolve to reusable ordered UI modules with overrides", () => {
@@ -126,7 +137,10 @@ test("V2 canvas stages pricing unlock and caps preview edits before email", () =
   const regionRoute = read("app/api/v2/ai-form/[instanceId]/regions/route.ts");
 
   assert.match(canvasRoute, /black-forest-labs\/flux-2-pro/);
-  assert.doesNotMatch(canvasRoute, /prunaai\/p-image(?:-edit)?/);
+  // V2 generation must never reach for prunaai; only the named V3 edit fallback may.
+  const canvasRouteWithoutV3Fallback = canvasRoute.replace(/const V3_EDIT_FALLBACK_MODEL_ID = "[^"]+";/, "");
+  assert.match(canvasRoute, /const V3_EDIT_FALLBACK_MODEL_ID = "prunaai\/p-image-edit";/);
+  assert.doesNotMatch(canvasRouteWithoutV3Fallback, /prunaai\/p-image(?:-edit)?/);
   assert.match(canvasRoute, /google\/nano-banana/);
   assert.match(canvasRoute, /aspectRatio = "4:3"/);
   assert.match(canvasRoute, /generationBody\.sceneImage = currentCanvasUrl/);
@@ -326,8 +340,24 @@ test("scene starters prefer neutral scope imagery and retain a service fallback"
   assert.equal(V2_SERVICE_STARTER_GENERATED_FOR, "v2_service_starter");
   assert.match(scopeCatalog, /stableBucket/);
   assert.match(scopeCatalog, /starter_experiment_eligible/);
+  assert.match(scopeCatalog, /\.limit\(100\)/);
+  assert.match(scopeCatalog, /Math\.min\(50, params\.limit/);
+  assert.match(scopeCatalog, /listV2ScopeGalleryOptions/);
+  assert.match(scopeCatalog, /Promise\.allSettled/);
   assert.match(neutralSeed, /starter_variant_id: "focused-neutral-control"/);
   assert.doesNotMatch(neutralSeed, /\.from\("images"\)\s*\.delete/);
+});
+
+test("V3 gallery supplements each scope only with compatible full scenes", () => {
+  const scopeCatalog = read("lib/adventure-v2/scope-starter-catalog.ts");
+  assert.doesNotMatch(scopeCatalog, /refinement_option/);
+  assert.deepEqual(compatibleSceneScopesForScope("Shower or tub area only"), [
+    "Tile & flooring",
+    "Full bathroom renovation",
+    "Layout or plumbing changes",
+  ]);
+  assert.ok(!compatibleSceneScopesForScope("Vanity, cabinets & fixtures").includes("Shower or tub area only"));
+  assert.ok(compatibleSceneScopesForScope("Patio and walkway upgrade").includes("Full outdoor renovation"));
 });
 
 test("scene flow skips style selection and opens one neutral sample space", () => {
@@ -591,14 +621,20 @@ test("designer navbar refresh mirrors the V2 Start over reset", () => {
   assert.match(experience, /resetExperience\("in_form"\)/);
 });
 
-test("designer launch UI labels and emits explicit V1 and V2 URLs", () => {
+test("designer launch UI emits one unversioned Adventure URL per surface", () => {
   const launch = readFileSync(
     resolve(repoRoot, "apps/designer/src/components/features/LaunchTab.tsx"),
     "utf8"
   );
-  assert.match(launch, /V1 — Current experience/);
-  assert.match(launch, /V2 — AI starter canvas/);
-  assert.match(launch, /`\/adventure\/\$\{adventureVersion\}\/\$\{encodeURIComponent\(instanceId\)\}`/);
-  assert.match(launch, /useState<AdventureRouteVersion>\("v2"\)/);
-  assert.match(launch, /Unversioned Adventure links now use V2/);
+  const unversioned = readFileSync(
+    resolve(repoRoot, "apps/widget/app/adventure/[instanceId]/page.tsx"),
+    "utf8"
+  );
+
+  // Launch links no longer pin a version: every surface points at the
+  // unversioned route, which serves the current experience.
+  assert.match(launch, /`\/adventure\/\$\{encodeURIComponent\(instanceId\)\}`/);
+  assert.match(launch, /url\.searchParams\.set\("surface", surface\)/);
+  assert.doesNotMatch(launch, /AdventureRouteVersion|adventureVersion/);
+  assert.match(unversioned, /AdventureV5Experience/);
 });

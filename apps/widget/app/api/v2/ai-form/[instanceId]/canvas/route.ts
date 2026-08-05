@@ -23,6 +23,8 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const MAX_PROMPT_LENGTH = 800;
+const V3_EDIT_MODEL_ID = "black-forest-labs/flux-2-pro";
+const V3_EDIT_FALLBACK_MODEL_ID = "prunaai/p-image-edit";
 
 function normalizeMode(raw: unknown): ExperienceMode | null {
   const value = String(raw || "").trim().toLowerCase().replace(/_/g, "-");
@@ -133,11 +135,18 @@ export async function POST(
       action === "concept" &&
       generationIntent === "concept_preview" &&
       requestedModelId === "black-forest-labs/flux-schnell";
+    const isV3Concept =
+      action === "edit" &&
+      generationIntent === "v3_concept";
+    const isV3PersonalizedPreview =
+      action === "edit" &&
+      generationIntent === "v3_personalized_preview";
     const priorChanges = Array.isArray(body?.priorChanges)
       ? body.priorChanges.map((change: unknown) => text(change, 220)).filter(Boolean).slice(-6)
       : [];
     const sourceAssets = body?.sourceAssets && typeof body.sourceAssets === "object" ? body.sourceAssets : {};
     const currentCanvasUrl = sourceUrl(body?.currentCanvasUrl);
+    const referenceProjectImageUrl = sourceUrl(body?.referenceProjectImageUrl);
 
     if (!params.instanceId || !sessionId || !serviceId || !serviceName || !scope || !budget || !mode) {
       return NextResponse.json(
@@ -314,13 +323,23 @@ export async function POST(
       generationBody.aspectRatio = "match_input_image";
     } else if (action === "edit") {
       useCase = "scene-refinement";
-      modelId = "black-forest-labs/flux-2-pro";
+      modelId = isV3Concept || isV3PersonalizedPreview
+        ? V3_EDIT_MODEL_ID
+        : "black-forest-labs/flux-2-pro";
       generationBody.sceneImage = currentCanvasUrl;
-      generationBody.referenceImages = [currentCanvasUrl];
+      if (isV3PersonalizedPreview && referenceProjectImageUrl) {
+        generationBody.referenceImages = [currentCanvasUrl, referenceProjectImageUrl];
+      } else {
+        generationBody.referenceImages = [currentCanvasUrl];
+      }
       generationBody.aspectRatio = "match_input_image";
       generationBody.outputFormat = "png";
       generationBody.previousPrompt = priorChanges.join(" | ");
       generationBody.refinementNotes = requestedChange;
+      if (isV3Concept || isV3PersonalizedPreview) {
+        generationBody.goFast = true;
+        generationBody.numInferenceSteps = 12;
+      }
     } else {
       useCase = "scene";
       modelId = "black-forest-labs/flux-2-pro";
@@ -332,17 +351,50 @@ export async function POST(
     generationBody.generationIntent = action === "concept"
       ? "concept_preview"
       : action === "edit"
-        ? "small_improvement"
+        ? isV3PersonalizedPreview
+          ? "v3_personalized_preview"
+          : "small_improvement"
         : "initial";
 
     const generateUrl = new URL("/api/generate", request.url);
-    const generationResponse = await fetch(generateUrl, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify(generationBody),
-      cache: "no-store",
-    });
-    const generated = await generationResponse.json().catch(() => null);
+    const requestGeneration = async (payload: Record<string, unknown>) => {
+      const response = await fetch(generateUrl, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(payload),
+        cache: "no-store",
+      });
+      return {
+        response,
+        data: await response.json().catch(() => null),
+      };
+    };
+
+    let generationAttempt = await requestGeneration(generationBody);
+    if (
+      !generationAttempt.response.ok &&
+      generationAttempt.response.status >= 500 &&
+      (isV3Concept || isV3PersonalizedPreview) &&
+      modelId === V3_EDIT_MODEL_ID
+    ) {
+      logger.warn("[adventure-v2:canvas] v3 edit model failed; retrying fallback", {
+        instanceId: params.instanceId,
+        sessionId,
+        generationIntent,
+        primaryModelId: modelId,
+        fallbackModelId: V3_EDIT_FALLBACK_MODEL_ID,
+        status: generationAttempt.response.status,
+      });
+      modelId = V3_EDIT_FALLBACK_MODEL_ID;
+      generationAttempt = await requestGeneration({
+        ...generationBody,
+        modelId,
+        outputFormat: "jpg",
+      });
+    }
+
+    const generationResponse = generationAttempt.response;
+    const generated = generationAttempt.data;
     if (!generationResponse.ok || !generated?.success) {
       const message =
         typeof generated?.error === "string"
