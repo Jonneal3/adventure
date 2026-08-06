@@ -16,6 +16,11 @@ function metadataLabel(metadata: Record<string, unknown> | null, fallback: strin
   return typeof value === "string" && value.trim() ? value.trim() : fallback;
 }
 
+function metadataPriceTier(metadata: Record<string, unknown> | null): string | null {
+  const raw = metadata?.price_tier ?? metadata?.priceTier;
+  return typeof raw === "string" && raw.trim() ? raw.trim() : null;
+}
+
 export async function GET(
   request: NextRequest,
   { params }: { params: { instanceId: string } }
@@ -48,7 +53,8 @@ export async function GET(
             scope,
             limit: 50,
           });
-          return rows.map((row) => ({ row, scope }));
+          // Keep each image's real scene scope so pricing can differ by work type.
+          return rows.map((row) => ({ row, scope: row.sceneScope || scope }));
         } catch (error) {
           logger.warn("[adventure-v3:visual-projects] scope lookup failed", {
             instanceId: params.instanceId,
@@ -92,6 +98,7 @@ export async function GET(
           ? String(row.label || `Project ${index + 1}`)
           : metadataLabel(row.metadata, `Project ${index + 1}`),
         scope,
+        priceTier: metadataPriceTier(row.metadata || null),
         modelId: row.model_id || null,
         createdAt: row.created_at ? new Date(row.created_at).getTime() : Date.now(),
       }));

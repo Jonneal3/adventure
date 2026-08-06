@@ -57,8 +57,12 @@ test("V5 inherits V4's flow: primer skipped, curated budget, and V4 refinement e
   assert.match(component, /personalize: "customize"/);
   assert.match(component, /\["Project", "Budget", "Inspiration", "Estimate", "Next steps"\]/);
   assert.match(component, /Something else/);
-  assert.match(component, /Skip for now — show a rough range/);
-  assert.match(component, /Most full \{serviceWord\} projects land in the \$25,000–\$40,000 range/);
+  assert.doesNotMatch(component, /Skip for now — show a rough range/);
+  assert.match(component, /budgetGuidanceCopy\(selectedService\)/);
+  assert.match(component, /serviceLabelLower\(selectedService\)/);
+  assert.match(component, /See what’s possible for \$\{serviceName\}/);
+  assert.match(component, /Your planning estimate for this \$\{serviceName\} direction/);
+  assert.doesNotMatch(component, /Most full \{serviceWord\} projects land in the \$25,000–\$40,000 range/);
 });
 
 test("V5 derives its whole palette from the tenant's design config", () => {
@@ -160,8 +164,9 @@ test("V5 keeps V4's inspiration gallery: dense wall, locked pricing, V4 copy", (
   assert.match(css, /\.lookMeta \{[\s\S]*?position: absolute;/);
   assert.match(css, /\.lookTeaser \{[\s\S]*?filter: blur\(/);
   assert.match(css, /\.stickyCta \{[\s\S]*?position: sticky;/);
-  // Gallery copy, and one shared header component across every step.
-  assert.match(component, /title="See what’s possible at your budget"/);
+  // Gallery copy stays service-aware, with a shared header component across every step.
+  assert.match(component, /See what’s possible for \$\{serviceName\}/);
+  assert.match(component, /See what’s possible at your budget/);
   assert.match(component, /body="Choose the direction you love—your range can evolve from there\."/);
   assert.match(css, /\.stage\[data-stage="gallery"\] \.stepHead \{/);
 });
@@ -191,19 +196,23 @@ test("V5 keeps each step's action above the fold", () => {
   assert.match(css, /--v5-block-gap: clamp\(\d+px, [\d.]+vh/);
   assert.match(css, /\.step \{[\s\S]*?gap: var\(--v5-step-gap\);/);
   // Media is capped so the price and its action stay on screen.
-  assert.match(css, /\.hero img \{[\s\S]*?height: clamp\([^)]*dvh/);
   assert.match(css, /\.canvas > img \{[\s\S]*?max-height: \d+dvh;/);
   assert.match(css, /\.compare img \{[\s\S]*?max-height: \d+dvh;/);
   /*
-   * The price reveal stops stacking: image and estimate share a row from 900px
-   * up, which is what keeps Customize and "See your version" on the first screen.
+   * Price reveal stays a stacked mobile-style composition; customize widens
+   * into side-by-side from 900px so direction tools keep the studio shell.
    */
-  assert.match(component, /className=\{css\.revealPanel\}/);
-  assert.match(css, /\.reveal \{[\s\S]*?display: grid;/);
-  assert.match(css, /@media \(min-width: 860px\)[\s\S]*?\.reveal \{[\s\S]*?grid-template-columns: minmax\(0, 1\.6fr\) minmax\(300px, 0\.9fr\)/);
+  assert.match(component, /stage === "details"[\s\S]*?className=\{css\.split\}/);
+  assert.match(component, /stage === "customize"[\s\S]*?className=\{css\.split\}/);
+  assert.match(css, /\.stage\[data-stage="details"\] \.split,\s*\.stage\[data-stage="customize"\] \.split/);
+  assert.match(css, /\.stage\[data-stage="details"\] \.step \{[\s\S]*?max-width: 680px;/);
+  assert.match(component, /stage === "details"[\s\S]*?<StepHead[\s\S]*?title=\{selectedProject\.title\}/);
+  assert.match(css, /@media \(min-width: 900px\)[\s\S]*?\.stage\[data-stage="details"\] \.split \{[\s\S]*?grid-template-columns: 1fr;/);
+  assert.match(css, /@media \(min-width: 900px\)[\s\S]*?\.stage\[data-stage="customize"\] \.split \{[\s\S]*?grid-template-columns: minmax\(0, 1\.35fr\) minmax\(300px, 0\.9fr\)/);
+  assert.match(css, /@media \(min-width: 900px\)[\s\S]*?\.stage\[data-stage="customize"\] \.canvas \{[\s\S]*?aspect-ratio: 1 \/ 1;/);
   // Short viewports tighten instead of overflowing.
   assert.match(css, /@media \(max-height: 820px\)[\s\S]*?--v5-step-gap:/);
-  assert.match(css, /@media \(max-height: 820px\)[\s\S]*?\.dirOption \{ min-height: 52px/);
+  assert.match(css, /@media \(max-height: 820px\)[\s\S]*?\.dirOption \{[\s\S]*?min-height: 44px/);
   // Choice rows and direction rows share one set of metrics.
   assert.match(css, /\.choice \{[\s\S]*?min-height: 60px/);
   assert.match(css, /\.dirOption \{[\s\S]*?min-height: 60px/);
@@ -249,8 +258,9 @@ test("V5 avoids SaaS chrome and keeps one primary action per step", () => {
   // Headlines are centered and constrained; hierarchy comes from type, not boxes.
   assert.match(css, /\.stepHead \{[\s\S]*?text-align: center/);
   assert.match(css, /\.stepHead h1 \{[\s\S]*?font-size: var\(--v5-t-display\)/);
-  // Frosted chrome is reserved for the sticky bar and media overlays.
-  assert.match(css, /\.chrome \{[\s\S]*?backdrop-filter: blur\(20px\) saturate\(180%\)/);
+  // Chrome stays borderless and transparent so it doesn’t read as a header bar.
+  assert.match(css, /\.chrome \{[\s\S]*?border-bottom: none;/);
+  assert.match(css, /\.chrome \{[\s\S]*?background: transparent;/);
 });
 
 test("V5 is responsive and respects touch, safe areas, and reduced motion", () => {
@@ -345,14 +355,13 @@ test("V5 speaks entirely in the previous version's copy", () => {
     "Common at this level",
     "Estimated price hidden",
     "We couldn’t load the project gallery.",
-    "Estimated project range",
+    "Your estimate",
     "Planning range, not a quote",
     "What’s covered",
     "See your version in your space",
     "See pricing",
     "Keep customizing your project",
     "Unlock continued refinements",
-    "Your estimate updates as you make each choice.",
     "Preview this direction",
     "Try another project direction",
     "See this direction in your own space.",
@@ -376,11 +385,12 @@ test("V5 speaks entirely in the previous version's copy", () => {
     "Get a free contractor review",
     "Most popular",
     "Something else",
-    "Skip for now — show a rough range",
     "Email to unlock full estimate",
   ]) {
     assert.ok(component.includes(line), `V5 missing conversion copy: ${line}`);
   }
+
+  assert.ok(!component.includes("Skip for now — show a rough range"), "V5 should not allow skipping email");
 
   for (const invented of [
     "See your estimate",

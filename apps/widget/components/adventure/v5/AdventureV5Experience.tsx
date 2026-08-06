@@ -5,32 +5,23 @@ import { flushSync } from "react-dom";
 import {
   ArrowLeft,
   ArrowRight,
-  Car,
   Check,
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
   Download,
-  Droplets,
-  Flower2,
   Heart,
-  Home,
   ImagePlus,
-  Layers3,
-  Lightbulb,
   LoaderCircle,
   LockKeyhole,
   Mail,
   Maximize2,
-  Paintbrush,
   Phone,
   RotateCcw,
   Sparkles,
-  TreePine,
   Upload,
   WandSparkles,
   X,
-  type LucideIcon,
 } from "lucide-react";
 
 import { BrandHeader } from "@/components/widget/BrandHeader";
@@ -57,6 +48,8 @@ import {
   configuredProjectRange,
   DEFAULT_ESTIMATE_CONFIG,
   personalizedProjectRange,
+  priceDetailsForService,
+  projectDesignSummary,
   refreshProjectCoverage,
 } from "../v3/visual-pricing";
 import type {
@@ -83,7 +76,7 @@ type Props = {
 };
 
 const PERSONALIZATION_MODEL_ID = "black-forest-labs/flux-2-pro";
-const VISUAL_CATALOG_REVISION = "2026-08-05-coverage-v4";
+const VISUAL_CATALOG_REVISION = "2026-08-05-budget-fit-v5";
 // V4 economics: refining the reference design stays open, while personalizing
 // the customer's own photo is what the phone number unlocks.
 const PROJECT_REFINEMENT_LIMIT = Number.POSITIVE_INFINITY;
@@ -118,16 +111,58 @@ function personalizedRangeAt(snapshot: VisualPricingSnapshot, conceptIndex: numb
   return range;
 }
 
+function serviceSearchText(service: ServiceOption | null | undefined, extra = ""): string {
+  return `${service?.label || ""} ${service?.serviceName || ""} ${service?.serviceSummary || ""} ${extra}`.trim();
+}
+
+function serviceLabelLower(service: ServiceOption | null | undefined, fallback = "project"): string {
+  const label = service?.label?.trim();
+  return label ? label.toLowerCase() : fallback;
+}
+
+function isLandscapeServiceOption(service: ServiceOption | null | undefined): boolean {
+  return /landscap|outdoor|garden|patio|lawn|tree|shrub|hardscape|irrigation/i.test(serviceSearchText(service));
+}
+
+function isBathroomServiceOption(service: ServiceOption | null | undefined, extra = ""): boolean {
+  return /bath|shower|tub|vanity|powder room/i.test(serviceSearchText(service, extra));
+}
+
+function isKitchenServiceOption(service: ServiceOption | null | undefined, extra = ""): boolean {
+  return /kitchen|cabinet|countertop|pantry/i.test(serviceSearchText(service, extra));
+}
+
+function componentLabelsFor(service: ServiceOption | null | undefined, limit = 3): string[] {
+  return (service?.subcategoryComponents || [])
+    .slice()
+    .sort((a, b) => a.priority - b.priority)
+    .map((component) => String(component.label || "").trim())
+    .filter(Boolean)
+    .slice(0, limit);
+}
+
 function personalizedRefinementOptions(project: VisualPricingProject): PersonalizedRefinementOption[] {
-  const bathroom = /bath|shower|tub|vanity/i.test(`${project.serviceLabel} ${project.scope}`);
+  const bathroom = isBathroomServiceOption(null, `${project.serviceLabel} ${project.scope}`);
+  const kitchen = isKitchenServiceOption(null, `${project.serviceLabel} ${project.scope}`);
+  const landscape = /landscap|outdoor|garden|patio|lawn|hardscape/i.test(`${project.serviceLabel} ${project.scope}`);
+  const upgrade = bathroom
+    ? { id: "upgrade-feature", label: "Upgrade the shower", instruction: "Upgrade the shower with more premium glass, fixtures, waterproofing details, and finish materials.", priceImpact: 0.12 }
+    : kitchen
+      ? { id: "upgrade-feature", label: "Upgrade the island and counters", instruction: "Upgrade the island, counters, and hardware with more premium materials and detailing.", priceImpact: 0.12 }
+      : landscape
+        ? { id: "upgrade-feature", label: "Upgrade the focal outdoor feature", instruction: "Upgrade the primary outdoor focal feature with more premium materials and detailing.", priceImpact: 0.12 }
+        : { id: "upgrade-feature", label: "Upgrade the focal feature", instruction: "Upgrade the primary focal feature with more premium materials and detailing.", priceImpact: 0.12 };
+  const keepExisting = bathroom
+    ? { id: "keep-existing", label: "Keep the existing vanity", instruction: "Keep and reuse the existing vanity while coordinating the surrounding design around it.", priceImpact: -0.06 }
+    : kitchen
+      ? { id: "keep-existing", label: "Keep existing cabinets", instruction: "Keep and reuse the existing cabinets while coordinating new surfaces and finishes around them.", priceImpact: -0.06 }
+      : landscape
+        ? { id: "keep-existing", label: "Keep mature planting", instruction: "Keep mature trees and planting where they fit while coordinating the new hardscape around them.", priceImpact: -0.06 }
+        : { id: "keep-existing", label: "Keep existing built-ins", instruction: "Keep and reuse the existing built-ins while coordinating the surrounding design around them.", priceImpact: -0.06 };
   return [
     { id: "modern", label: "Make it more modern", instruction: "Make the design more modern with cleaner lines and restrained detailing.", priceImpact: 0.03 },
-    bathroom
-      ? { id: "upgrade-feature", label: "Upgrade the shower", instruction: "Upgrade the shower with more premium glass, fixtures, waterproofing details, and finish materials.", priceImpact: 0.12 }
-      : { id: "upgrade-feature", label: "Upgrade the focal feature", instruction: "Upgrade the primary focal feature with more premium materials and detailing.", priceImpact: 0.12 },
-    bathroom
-      ? { id: "keep-existing", label: "Keep the existing vanity", instruction: "Keep and reuse the existing vanity while coordinating the surrounding design around it.", priceImpact: -0.06 }
-      : { id: "keep-existing", label: "Keep existing built-ins", instruction: "Keep and reuse the existing built-ins while coordinating the surrounding design around them.", priceImpact: -0.06 },
+    upgrade,
+    keepExisting,
     { id: "affordable", label: "Use more affordable finishes", instruction: "Use attractive, readily available value-conscious finishes while preserving the overall design direction.", priceImpact: -0.1 },
     { id: "budget", label: "Stay within my budget", instruction: "Simplify secondary details and material allowances so the project stays within the selected budget.", priceImpact: -0.08 },
   ];
@@ -194,19 +229,6 @@ function partialPriceTeaser(project: VisualPricingProject): string {
   return `${formatCurrency(low, project.currency)}–${formatCurrency(high, project.currency)}`;
 }
 
-function choiceIconFor(label: string): LucideIcon {
-  const value = label.toLowerCase();
-  if (/full|renovat|complete/.test(value)) return Home;
-  if (/patio|walkway|hardscape/.test(value)) return Layers3;
-  if (/lawn|garden|plant/.test(value)) return Flower2;
-  if (/driveway/.test(value)) return Car;
-  if (/light/.test(value)) return Lightbulb;
-  if (/irrigat|water/.test(value)) return Droplets;
-  if (/tree|shrub|prun/.test(value)) return TreePine;
-  if (/color|paint|refresh|cosmetic/.test(value)) return Paintbrush;
-  return Sparkles;
-}
-
 function rangeText(range: { totalMin: number; totalMax: number; currency: string }): string {
   return `${formatCurrency(range.totalMin, range.currency)}–${formatCurrency(range.totalMax, range.currency)}`;
 }
@@ -227,59 +249,141 @@ type VisionPath = {
   priceImpact: number;
 };
 
-const LANDSCAPE_VISION_PATHS: VisionPath[] = [
-  {
-    id: "starting-range",
-    label: "Closer to starting range",
-    details: ["Smaller patio", "Standard materials", "Simplified planting"],
-    instruction: "Keep the selected design direction while using a smaller patio, standard materials, and a simplified planting plan.",
-    priceImpact: -0.1,
-  },
-  {
-    id: "more-impact",
-    label: "Add more impact",
-    details: ["Premium stone", "Landscape lighting", "Fire feature"],
-    instruction: "Add visual impact with premium stone, a landscape lighting package, and one focal fire feature.",
-    priceImpact: 0.1,
-  },
-  {
-    id: "luxury-version",
-    label: "Luxury version",
-    details: ["Pergola", "Outdoor kitchen", "Entertainment area"],
-    instruction: "Create a luxury outdoor retreat with a pergola, outdoor kitchen, and a dedicated entertainment area.",
-    priceImpact: 0.22,
-  },
-];
-
-const GENERAL_VISION_PATHS: VisionPath[] = [
-  {
-    id: "starting-range",
-    label: "Closer to starting range",
-    details: ["Simpler scope", "Standard materials", "Priority finishes"],
-    instruction: "Keep the selected design direction with a simpler scope, standard materials, and the highest-impact finishes prioritized.",
-    priceImpact: -0.1,
-  },
-  {
-    id: "more-impact",
-    label: "Add more impact",
-    details: ["Elevated materials", "Statement lighting", "Focal feature"],
-    instruction: "Add more visual impact through elevated materials, statement lighting, and one focal feature.",
-    priceImpact: 0.1,
-  },
-  {
-    id: "luxury-version",
-    label: "Luxury version",
-    details: ["Custom details", "Premium finishes", "Expanded scope"],
-    instruction: "Create a luxury version with custom details, premium finishes, and an expanded project scope.",
-    priceImpact: 0.22,
-  },
-];
-
 function visionPathsFor(service: ServiceOption | null): VisionPath[] {
-  const serviceText = `${service?.label || ""} ${service?.serviceName || ""} ${service?.serviceSummary || ""}`;
-  return /landscap|outdoor|garden|patio|lawn|tree|shrub|hardscape|irrigation/i.test(serviceText)
-    ? LANDSCAPE_VISION_PATHS
-    : GENERAL_VISION_PATHS;
+  const components = componentLabelsFor(service, 3);
+  const serviceName = serviceLabelLower(service, "this project");
+
+  if (isLandscapeServiceOption(service)) {
+    return [
+      {
+        id: "starting-range",
+        label: "Closer to starting range",
+        details: components.length >= 2
+          ? [components[0], "Standard materials", "Simplified planting"]
+          : ["Smaller patio", "Standard materials", "Simplified planting"],
+        instruction: `Keep the selected ${serviceName} direction while using a simpler outdoor scope, standard materials, and a simplified planting plan.`,
+        priceImpact: -0.1,
+      },
+      {
+        id: "more-impact",
+        label: "Add more impact",
+        details: components.length >= 3
+          ? [components[0], components[1], components[2]]
+          : ["Premium stone", "Landscape lighting", "Fire feature"],
+        instruction: `Add more impact to this ${serviceName} concept with elevated hardscape, landscape lighting, and one focal outdoor feature.`,
+        priceImpact: 0.1,
+      },
+      {
+        id: "luxury-version",
+        label: "Luxury version",
+        details: components.length >= 2
+          ? ["Custom details", components[0], "Premium finishes"]
+          : ["Pergola", "Outdoor kitchen", "Entertainment area"],
+        instruction: `Create a luxury ${serviceName} version with custom outdoor details, premium finishes, and an expanded scope.`,
+        priceImpact: 0.22,
+      },
+    ];
+  }
+
+  if (isBathroomServiceOption(service)) {
+    return [
+      {
+        id: "starting-range",
+        label: "Closer to starting range",
+        details: components.length >= 2
+          ? [components[0], "Standard materials", "Focused scope"]
+          : ["Simpler scope", "Standard tile", "Priority fixtures"],
+        instruction: `Keep the selected ${serviceName} direction with a simpler scope, standard materials, and the highest-impact finishes prioritized.`,
+        priceImpact: -0.1,
+      },
+      {
+        id: "more-impact",
+        label: "Add more impact",
+        details: components.length >= 3
+          ? [components[0], components[1], components[2]]
+          : ["Elevated tile", "Better fixtures", "Statement vanity"],
+        instruction: `Add more impact to this ${serviceName} concept through elevated materials, upgraded fixtures, and one stronger focal feature.`,
+        priceImpact: 0.1,
+      },
+      {
+        id: "luxury-version",
+        label: "Luxury version",
+        details: components.length >= 2
+          ? ["Custom details", components[0], "Premium finishes"]
+          : ["Custom tilework", "Premium fixtures", "Expanded scope"],
+        instruction: `Create a luxury ${serviceName} version with custom details, premium finishes, and an expanded project scope.`,
+        priceImpact: 0.22,
+      },
+    ];
+  }
+
+  if (isKitchenServiceOption(service)) {
+    return [
+      {
+        id: "starting-range",
+        label: "Closer to starting range",
+        details: components.length >= 2
+          ? [components[0], "Standard materials", "Focused scope"]
+          : ["Simpler scope", "Standard cabinets", "Priority surfaces"],
+        instruction: `Keep the selected ${serviceName} direction with a simpler scope, standard materials, and the highest-impact surfaces prioritized.`,
+        priceImpact: -0.1,
+      },
+      {
+        id: "more-impact",
+        label: "Add more impact",
+        details: components.length >= 3
+          ? [components[0], components[1], components[2]]
+          : ["Better counters", "Upgraded hardware", "Statement lighting"],
+        instruction: `Add more impact to this ${serviceName} concept through elevated counters, hardware, and one stronger focal feature.`,
+        priceImpact: 0.1,
+      },
+      {
+        id: "luxury-version",
+        label: "Luxury version",
+        details: components.length >= 2
+          ? ["Custom details", components[0], "Premium finishes"]
+          : ["Custom cabinetry", "Premium counters", "Expanded scope"],
+        instruction: `Create a luxury ${serviceName} version with custom cabinetry details, premium finishes, and an expanded project scope.`,
+        priceImpact: 0.22,
+      },
+    ];
+  }
+
+  return [
+    {
+      id: "starting-range",
+      label: "Closer to starting range",
+      details: components.length >= 2
+        ? [components[0], "Standard materials", "Focused scope"]
+        : ["Simpler scope", "Standard materials", "Priority finishes"],
+      instruction: `Keep the selected ${serviceName} direction with a simpler scope, standard materials, and the highest-impact finishes prioritized.`,
+      priceImpact: -0.1,
+    },
+    {
+      id: "more-impact",
+      label: "Add more impact",
+      details: components.length >= 3
+        ? [components[0], components[1], components[2]]
+        : ["Elevated materials", "Stronger focal detail", "Finish upgrades"],
+      instruction: `Add more impact to this ${serviceName} concept through elevated materials and one stronger focal detail.`,
+      priceImpact: 0.1,
+    },
+    {
+      id: "luxury-version",
+      label: "Luxury version",
+      details: components.length >= 2
+        ? ["Custom details", components[0], "Premium finishes"]
+        : ["Custom details", "Premium finishes", "Expanded scope"],
+      instruction: `Create a luxury ${serviceName} version with custom details, premium finishes, and an expanded project scope.`,
+      priceImpact: 0.22,
+    },
+  ];
+}
+
+function budgetGuidanceCopy(service: ServiceOption | null): string {
+  const name = service?.label?.trim();
+  if (!name) return "Choose the range that feels closest. You can refine it as you go.";
+  return `Choose the range that feels closest for ${name.toLowerCase()}. You can refine it as you go.`;
 }
 
 function readFileAsDataUrl(file: File): Promise<string> {
@@ -425,7 +529,6 @@ function EmailSheet(props: {
   initialEmail?: string | null;
   onClose: () => void;
   onSubmit: (email: string) => void;
-  onSkip?: () => void;
 }) {
   const [email, setEmail] = useState(props.initialEmail || "");
   useEffect(() => {
@@ -442,7 +545,7 @@ function EmailSheet(props: {
       </figure>
       <h2 id="v5-email-title" className={css.sheetTitle}>Unlock {props.project.title} pricing</h2>
       <p className={css.sheetBody}>
-        See the planning range and what’s typically included for this direction.
+        See the planning range and what’s typically included for this {props.project.serviceLabel.toLowerCase()} direction.
       </p>
       <form
         className={css.sheetForm}
@@ -470,11 +573,6 @@ function EmailSheet(props: {
           See pricing
         </button>
       </form>
-      {props.onSkip ? (
-        <button type="button" className={css.sheetSkip} onClick={props.onSkip} disabled={props.busy}>
-          Skip for now — show a rough range
-        </button>
-      ) : null}
       <small className={css.sheetNote}>We’ll email your estimate. Unsubscribe anytime.</small>
     </Sheet>
   );
@@ -553,23 +651,15 @@ function ChoiceRow(props: {
   label: string;
   hint?: string | null;
   quiet?: boolean;
-  icon?: LucideIcon | null;
   onClick: () => void;
 }) {
-  const Icon = props.icon || null;
   return (
     <button
       type="button"
       className={css.choice}
       data-quiet={props.quiet ? "true" : "false"}
-      data-icon={Icon ? "true" : "false"}
       onClick={props.onClick}
     >
-      {Icon ? (
-        <span className={css.choiceThumb} aria-hidden="true">
-          <Icon size={18} />
-        </span>
-      ) : null}
       <span className={css.choiceCopy}>
         <strong>{props.label}</strong>
         {props.hint ? <small>{props.hint}</small> : null}
@@ -942,6 +1032,7 @@ export function AdventureV5Experience({ instanceId, initialInstanceData, initial
     setError(null);
     const params = new URLSearchParams({ serviceId: selectedService.value });
     params.append("scope", scope);
+    params.set("budgetBandId", selectedBudget.id);
     params.set("catalogRevision", VISUAL_CATALOG_REVISION);
     const catalogUrl = `/api/v3/ai-form/${encodeURIComponent(instanceId)}/visual-projects?${params.toString()}`;
     const loadCatalog = async () => {
@@ -1025,7 +1116,7 @@ export function AdventureV5Experience({ instanceId, initialInstanceData, initial
   const selectProject = useCallback((project: VisualPricingProject) => {
     if (!snapshot) return;
     setSelectedRefinementCategoryId(null);
-    const pricingOpen = Boolean(snapshot.lead.emailCaptured || snapshot.lead.previewUnlocked);
+    const pricingOpen = Boolean(snapshot.lead.emailCaptured);
     track("adventure_v3_visual_project_selected", {
       assetId: project.assetId,
       scope: project.scope,
@@ -1055,21 +1146,6 @@ export function AdventureV5Experience({ instanceId, initialInstanceData, initial
     }
     setEmailOpen(true);
   }, [patchSnapshot, snapshot, track]);
-
-  const skipEmailForPartialRange = useCallback(() => {
-    if (!snapshot || !selectedProject) return;
-    setEmailOpen(false);
-    setEmailError(null);
-    patchSnapshot({
-      selectedProjectId: selectedProject.assetId,
-      stage: "details",
-      lead: {
-        ...snapshot.lead,
-        previewUnlocked: true,
-      },
-    });
-    track("adventure_v5_pricing_preview_skipped", { projectId: selectedProject.assetId });
-  }, [patchSnapshot, selectedProject, snapshot, track]);
 
   const toggleFavorite = useCallback((projectId: string) => {
     if (!snapshot?.lead.emailCaptured) return;
@@ -1716,8 +1792,8 @@ export function AdventureV5Experience({ instanceId, initialInstanceData, initial
           : 4;
   const entryStage = firstQuestionStage(selectedService);
   const canGoBack = snapshot.stage !== "intro" && snapshot.stage !== entryStage;
-  const serviceWord = selectedService?.label.toLowerCase() || "project";
-  const pricingVisible = Boolean(snapshot.lead.emailCaptured || snapshot.lead.previewUnlocked);
+  const serviceName = serviceLabelLower(selectedService);
+  const pricingVisible = Boolean(snapshot.lead.emailCaptured);
   const brandConfigured = Boolean(
     (design.logo_enabled && design.logo_url)
     || ((design.brand_name_enabled !== false) && design.brand_name)
@@ -1866,12 +1942,15 @@ export function AdventureV5Experience({ instanceId, initialInstanceData, initial
           aria-valuenow={progressIndex + 1}
           aria-label={`Step ${progressIndex + 1} of ${progressSteps.length}: ${progressSteps[progressIndex]}`}
         >
-          {progressSteps.map((label, index) => (
-            <span
-              key={label}
-              data-state={index < progressIndex ? "done" : index === progressIndex ? "current" : "todo"}
-            />
-          ))}
+          <div className={css.progressTrack}>
+            {progressSteps.map((label, index) => (
+              <span
+                key={label}
+                data-state={index < progressIndex ? "done" : index === progressIndex ? "current" : "todo"}
+              />
+            ))}
+          </div>
+          <span className={css.progressLabel}>{progressSteps[progressIndex]}</span>
         </div>
       </header>
 
@@ -1888,10 +1967,26 @@ export function AdventureV5Experience({ instanceId, initialInstanceData, initial
           }}
         />
 
+        {snapshot.stage !== "details"
+          && (selectedService?.label || snapshot.selectedScope || (selectedBudget && selectedBudget.id !== "not-sure")) ? (
+          <div className={css.selectionBar}>
+            <div className={css.selectionChips} aria-label="Your selections">
+              {selectedService?.label ? (
+                <span className={css.selectionChip}>{selectedService.label}</span>
+              ) : null}
+              {snapshot.selectedScope ? (
+                <span className={css.selectionChip}>{snapshot.selectedScope}</span>
+              ) : null}
+              {selectedBudget && selectedBudget.id !== "not-sure" ? (
+                <span className={css.selectionChip}>{selectedBudget.galleryLabel}</span>
+              ) : null}
+            </div>
+          </div>
+        ) : null}
+
         {snapshot.stage === "project" ? (
           <section className={css.step} key="project">
             <StepHead
-              kicker="Your project"
               title="What are you planning?"
               body="Choose the closest option to see relevant examples and pricing."
             />
@@ -1900,7 +1995,6 @@ export function AdventureV5Experience({ instanceId, initialInstanceData, initial
                 <ChoiceRow
                   key={service.value}
                   label={service.label}
-                  icon={choiceIconFor(service.label)}
                   onClick={() => chooseService(service)}
                 />
               ))}
@@ -1919,17 +2013,16 @@ export function AdventureV5Experience({ instanceId, initialInstanceData, initial
         {snapshot.stage === "scope" ? (
           <section className={css.step} key="scope">
             <StepHead
-              kicker="Your project"
               title="What do you need?"
-              body="Choose the closest option."
-              context={[selectedService?.label]}
+              body={selectedService
+                ? `Choose the closest option for ${serviceName}.`
+                : "Choose the closest option."}
             />
             <div className={css.choices}>
               {visibleScopes.map((scope) => (
                 <ChoiceRow
                   key={scope}
                   label={scope}
-                  icon={choiceIconFor(scope)}
                   onClick={() => chooseScope(scope)}
                 />
               ))}
@@ -1948,24 +2041,26 @@ export function AdventureV5Experience({ instanceId, initialInstanceData, initial
         {snapshot.stage === "budget" ? (
           <section className={css.step} key="budget">
             <StepHead
-              kicker="Budget"
               title="What’s your budget?"
-              body="This helps us curate inspiration. It does not cap your project."
-              context={[selectedService?.label, snapshot.selectedScope]}
+              body={selectedService
+                ? `This helps us curate ${serviceName} inspiration. It does not cap your project.`
+                : "This helps us curate inspiration. It does not cap your project."}
             />
             <div className={css.choices}>
               {BUDGET_BANDS.map((band) => (
                 <ChoiceRow
                   key={band.id}
                   label={band.label}
-                  hint={band.id === "not-sure" ? "We’ll show typical projects instead" : null}
+                  hint={band.id === "not-sure"
+                    ? (selectedService ? `We’ll show typical ${serviceName} projects instead` : "We’ll show typical projects instead")
+                    : null}
                   quiet={band.id === "not-sure"}
                   onClick={() => chooseBudget(band)}
                 />
               ))}
             </div>
             <p className={css.socialProof}>
-              Most full {serviceWord} projects land in the $25,000–$40,000 range.
+              {budgetGuidanceCopy(selectedService)}
             </p>
           </section>
         ) : null}
@@ -1973,21 +2068,16 @@ export function AdventureV5Experience({ instanceId, initialInstanceData, initial
         {snapshot.stage === "gallery" ? (
           <section className={css.step} key="gallery">
             <StepHead
-              kicker="Inspiration"
-              title="See what’s possible at your budget"
+              title={selectedService
+                ? `See what’s possible for ${serviceName}`
+                : "See what’s possible at your budget"}
               body="Choose the direction you love—your range can evolve from there."
-              context={[
-                selectedService?.label,
-                snapshot.selectedScope,
-                selectedBudget?.galleryLabel,
-                snapshot.projects.length > 6 ? `${snapshot.projects.length} ideas` : null,
-              ]}
             />
             {pricingVisible ? (
               <div className={css.wallMeta}>
                 <span className={css.wallUnlocked}>
                   <CheckCircle2 size={14} />
-                  {snapshot.lead.emailCaptured ? "Pricing unlocked" : "Rough range unlocked"}
+                  Pricing unlocked
                 </span>
               </div>
             ) : null}
@@ -2031,66 +2121,60 @@ export function AdventureV5Experience({ instanceId, initialInstanceData, initial
 
         {snapshot.stage === "details" && selectedProject ? (
           <section className={css.step} key="details" data-compact="true">
-            {/*
-              Image-led reveal: big picture, one price, one primary action.
-              Coverage stays collapsed so curiosity doesn’t bury the CTA.
-            */}
-            <div className={css.reveal}>
-              <figure className={css.hero}>
-                <img src={activeProjectImageUrl} alt={selectedProject.title} />
-                <button
-                  type="button"
-                  className={css.heroSave}
-                  data-on={favorited ? "true" : "false"}
-                  aria-label={favorited ? "Remove from saved" : "Save this design"}
-                  onClick={() => toggleFavorite(selectedProject.assetId)}
-                >
-                  <Heart size={17} fill={favorited ? "currentColor" : "none"} />
-                </button>
-              </figure>
-              <div className={css.revealPanel}>
-                <header className={css.revealHead}>
-                  <span className={css.kicker}>Your estimate</span>
-                  <h1>{selectedProject.title}</h1>
-                </header>
-                <div className={css.revealPrice}>
-                  <span className={css.kicker}>
-                    {snapshot.lead.emailCaptured ? "Estimated project range" : "Rough planning range"}
-                  </span>
-                  <p className={css.priceValue} data-partial={!snapshot.lead.emailCaptured ? "true" : "false"}>
-                    {displayedEstimateRange}
-                  </p>
-                  <p className={css.priceContext}>
-                    <span className={css.priceBadge}><Check size={12} /> Planning range, not a quote</span>
-                    <span>
-                      {!snapshot.lead.emailCaptured
-                        ? "Email unlocks the tighter range and customize tools."
-                        : selectedBudget && selectedBudget.id !== "not-sure"
-                          ? `Based on your ${selectedBudget.galleryLabel} starting point.`
-                          : "Based on this design direction."}
-                    </span>
-                  </p>
-                  {snapshot.lead.emailStatus === "sent" ? (
-                    <p className={css.sentNote}><CheckCircle2 size={14} /> Pricing sent to your email</p>
-                  ) : null}
-                </div>
-                <div className={css.revealActions}>
-                  <button type="button" className={css.primaryAction} onClick={openCustomize}>
-                    {snapshot.lead.emailCaptured ? "Customize this design" : "Email to unlock full estimate"}
-                    <ArrowRight size={16} />
-                  </button>
-                  <p className={css.context}>
-                    {snapshot.lead.emailCaptured
-                      ? "Adjust this estimate as you go."
-                      : "Unlock customize tools and the tightened planning range."}
-                  </p>
-                </div>
-                <div className={css.revealMeta}>
+            <StepHead
+              title={selectedProject.title}
+              body={selectedService
+                ? `Your planning estimate for this ${serviceName} direction.`
+                : "Your planning estimate for this direction."}
+            />
+            <div className={css.split}>
+              <div className={css.splitMedia}>
+                <figure className={css.canvas}>
+                  <img src={activeProjectImageUrl} alt={selectedProject.title} />
+                  <div className={css.canvasTools}>
+                    <button
+                      type="button"
+                      data-on={favorited ? "true" : "false"}
+                      aria-label={favorited ? "Remove from saved" : "Save this design"}
+                      onClick={() => toggleFavorite(selectedProject.assetId)}
+                    >
+                      <Heart size={15} fill={favorited ? "currentColor" : "none"} />
+                    </button>
+                  </div>
+                </figure>
+              </div>
+              <div className={css.splitPanel}>
+                <div className={css.customizeStack}>
+                  <header className={css.customizeHead}>
+                    <PriceBlock
+                      label="Your estimate"
+                      value={displayedEstimateRange}
+                      note="Planning range, not a quote"
+                    />
+                    {snapshot.lead.emailStatus === "sent" ? (
+                      <p className={css.sentNote}><CheckCircle2 size={14} /> Pricing sent to your email</p>
+                    ) : null}
+                  </header>
+                  <div className={css.customizeActions}>
+                    <button type="button" className={css.primaryAction} onClick={openCustomize}>
+                      {snapshot.lead.emailCaptured ? "Customize this design" : "Email to unlock full estimate"}
+                      <ArrowRight size={16} />
+                    </button>
+                    <p className={css.context}>
+                      {snapshot.lead.emailCaptured
+                        ? "Adjust this estimate as you go."
+                        : "Unlock customize tools and the tightened planning range."}
+                    </p>
+                  </div>
                   <details className={css.disclosure}>
                     <summary>What’s covered <ChevronRight size={14} /></summary>
                     <div className={css.disclosureBody}>
                       <section>
-                        <h3>This direction typically includes</h3>
+                        <h3>
+                          {selectedService
+                            ? `This ${serviceName} direction typically includes`
+                            : "This direction typically includes"}
+                        </h3>
                         <ul>
                           {selectedProject.inclusions.slice(0, 5).map((item) => (
                             <li key={item}>
@@ -2103,12 +2187,16 @@ export function AdventureV5Experience({ instanceId, initialInstanceData, initial
                       <section>
                         <h3>Final price depends on</h3>
                         <ul>
-                          {(selectedProject.priceIncreases.length > 0 ? selectedProject.priceIncreases : [
-                            "Square footage and the overall scale of the work",
-                            "Standard selections versus premium stone and finishes",
-                            "Focal elements, utilities, and custom details",
-                            "Access, grading, drainage, and existing removal",
-                          ]).slice(0, 3).map((item) => (
+                          {(selectedProject.priceIncreases.length > 0
+                            ? selectedProject.priceIncreases
+                            : (selectedService
+                              ? priceDetailsForService(selectedService).increases
+                              : [
+                                  "Expanded scope or structural changes",
+                                  "Custom fabrication or premium materials",
+                                  "Hidden damage, permit changes, or difficult access",
+                                ])
+                          ).slice(0, 3).map((item) => (
                             <li key={item}>
                               <Check size={13} />
                               <span>{item}</span>
@@ -2118,19 +2206,22 @@ export function AdventureV5Experience({ instanceId, initialInstanceData, initial
                       </section>
                     </div>
                   </details>
-                  <button
-                    type="button"
-                    className={css.linkAction}
-                    onClick={() => {
-                      if (!snapshot.lead.emailCaptured) {
-                        setEmailOpen(true);
-                        return;
-                      }
-                      patchSnapshot({ stage: "personalize" });
-                    }}
-                  >
-                    See your version in your space
-                  </button>
+                  <footer className={css.revealDesign}>
+                    {(selectedService?.label || snapshot.selectedScope || (selectedBudget && selectedBudget.id !== "not-sure")) ? (
+                      <div className={css.selectionChips} aria-label="Your selections">
+                        {selectedService?.label ? (
+                          <span className={css.selectionChip}>{selectedService.label}</span>
+                        ) : null}
+                        {snapshot.selectedScope ? (
+                          <span className={css.selectionChip}>{snapshot.selectedScope}</span>
+                        ) : null}
+                        {selectedBudget && selectedBudget.id !== "not-sure" ? (
+                          <span className={css.selectionChip}>{selectedBudget.galleryLabel}</span>
+                        ) : null}
+                      </div>
+                    ) : null}
+                    <p>{projectDesignSummary(selectedProject)}</p>
+                  </footer>
                 </div>
               </div>
             </div>
@@ -2212,16 +2303,15 @@ export function AdventureV5Experience({ instanceId, initialInstanceData, initial
               <div className={css.splitPanel}>
                 <div className={css.customizeStack}>
                   <header className={css.customizeHead}>
-                    <span className={css.kicker}>Make it yours</span>
                     <PriceBlock
-                      label="Estimated project range"
+                      label="Your estimate"
                       value={displayedPriceRange}
                       delta={hasPendingRefinement && liveRange
                         ? { amount: pendingProjectDelta, currency: liveRange.currency }
                         : null}
                       note={hasPendingRefinement && liveRange && Math.round(pendingProjectDelta) !== 0
                         ? `About ${signedDeltaText(pendingProjectDelta, liveRange.currency)} from this choice`
-                        : "Your estimate updates as you make each choice."}
+                        : "Planning range, not a quote"}
                     />
                   </header>
 
@@ -2432,10 +2522,10 @@ export function AdventureV5Experience({ instanceId, initialInstanceData, initial
           <section className={css.step} key="personalize">
             <div className={css.personalize}>
               <StepHead
-                kicker="Your space"
-                title="See this direction in your own space."
+                title={selectedService
+                  ? `See this ${serviceName} direction in your own space.`
+                  : "See this direction in your own space."}
                 body="Upload a photo and we’ll create a version using your actual setting. Your budget and selections carry forward automatically."
-                context={[snapshot.selectedScope, selectedBudget?.galleryLabel, selectedProject.title]}
               />
               {!snapshot.sourceAsset ? (
                 <button type="button" className={css.dropzone} onClick={() => uploadRef.current?.click()} disabled={uploadBusy}>
@@ -2526,12 +2616,12 @@ export function AdventureV5Experience({ instanceId, initialInstanceData, initial
           && selectedProject && selectedPreview ? (
           <section className={css.step} key="personalized">
             <StepHead
-              kicker="Your space"
-              title="This look, in your space."
+              title={selectedService
+                ? `This ${serviceName} look, in your space.`
+                : "This look, in your space."}
               body={personalizedUnlocked
                 ? "Keep shaping the design. Every revision updates the image and planning price together."
                 : "Your concept is ready. Make one refinement and see the image and estimate change together."}
-              context={[snapshot.selectedScope, selectedProject.title]}
             />
 
             <div className={css.split}>
@@ -2774,7 +2864,6 @@ export function AdventureV5Experience({ instanceId, initialInstanceData, initial
         initialEmail={snapshot.lead.email}
         onClose={() => { setEmailOpen(false); setEmailError(null); }}
         onSubmit={(email) => void captureEmail(email, "")}
-        onSkip={skipEmailForPartialRange}
       />
       <PhoneSheet
         open={phoneOpen}

@@ -123,10 +123,8 @@
 /* ------------------------------------------------------------------ chrome */
 
 .chrome {
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-  background: var(--v5-glass);
-  border-bottom: 1px solid var(--v5-hair);
+  background: transparent;
+  border-bottom: none;
   flex: none;
   position: relative;
   width: 100%;
@@ -143,8 +141,12 @@
   grid-template-columns: 40px minmax(0, 1fr) 40px;
   margin: 0 auto;
   max-width: 1180px;
-  padding: calc(6px + env(safe-area-inset-top)) var(--v5-gutter) 6px;
+  padding: calc(4px + env(safe-area-inset-top)) var(--v5-gutter) 0;
   width: 100%;
+}
+
+.chromeInner > .iconAction:last-child {
+  justify-self: end;
 }
 
 .brand {
@@ -153,6 +155,45 @@
   justify-content: center;
   min-width: 0;
   overflow: hidden;
+}
+
+.selectionBar {
+  display: flex;
+  flex: none;
+  justify-content: flex-end;
+  margin: 0 0 clamp(12px, 1.8vh, 20px);
+  max-width: none;
+  padding: 0 var(--v5-gutter);
+  width: 100%;
+}
+
+.selectionChips {
+  align-items: center;
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+.selectionChip {
+  background: color-mix(in oklab, var(--v5-ink) 7%, var(--v5-bg));
+  border-radius: 999px;
+  color: var(--v5-muted);
+  font-size: var(--v5-t-micro);
+  font-weight: 550;
+  letter-spacing: 0.01em;
+  line-height: 1.2;
+  max-width: 14rem;
+  overflow: hidden;
+  padding: 5px 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 720px) {
+  .selectionChip:nth-child(n + 3) {
+    display: none;
+  }
 }
 
 .brand > * {
@@ -197,19 +238,27 @@
 }
 
 /*
- * Progress rides the bottom edge of the bar rather than taking a row of its
- * own: five beats read as one hairline, so the chrome stays a single line.
+ * Progress sits under the chrome: a thin track plus the current step name,
+ * so stage labels don’t need a separate kicker on each screen.
  */
 .progress {
-  bottom: 0;
+  align-items: center;
   display: flex;
-  gap: 3px;
-  left: 0;
-  position: absolute;
-  right: 0;
+  gap: 10px;
+  margin: 0 auto;
+  max-width: 1180px;
+  padding: 2px var(--v5-gutter) 4px;
+  width: 100%;
 }
 
-.progress span {
+.progressTrack {
+  display: flex;
+  flex: 1;
+  gap: 3px;
+  min-width: 0;
+}
+
+.progressTrack span {
   background: var(--v5-hair);
   flex: 1;
   height: 3px;
@@ -217,7 +266,7 @@
   position: relative;
 }
 
-.progress span::after {
+.progressTrack span::after {
   background: var(--v5-accent);
   border-radius: inherit;
   content: "";
@@ -228,13 +277,24 @@
   transition: transform var(--v5-slow) var(--v5-ease);
 }
 
-.progress span[data-state="done"]::after,
-.progress span[data-state="current"]::after {
+.progressTrack span[data-state="done"]::after,
+.progressTrack span[data-state="current"]::after {
   transform: scaleX(1);
 }
 
-.progress span[data-state="done"]::after {
+.progressTrack span[data-state="done"]::after {
   opacity: 0.45;
+}
+
+.progressLabel {
+  color: var(--v5-faint);
+  flex: none;
+  font-size: var(--v5-t-micro);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  line-height: 1;
+  text-transform: uppercase;
+  white-space: nowrap;
 }
 
 /* ------------------------------------------------------- stage + transitions */
@@ -251,17 +311,62 @@
   width: 100%;
 }
 
-.stage[data-stage="details"] {
+/*
+ * Details + customize share chrome padding and estimate header treatment.
+ * Price reveal (details) stays a stacked mobile-style composition on every
+ * width; customize keeps the wider side-by-side studio shell on desktop.
+ */
+.stage[data-stage="details"],
+.stage[data-stage="customize"] {
   display: flex;
   flex-direction: column;
-  padding-bottom: calc(16px + env(safe-area-inset-bottom));
-  padding-top: clamp(10px, 1.6vh, 18px);
+  overflow: hidden;
+  padding-bottom: calc(12px + env(safe-area-inset-bottom));
+  padding-top: clamp(8px, 1.2vh, 14px);
+}
+
+.stage[data-stage="customize"] .selectionBar {
+  align-self: center;
+  margin-bottom: clamp(12px, 1.6vh, 18px);
+  margin-inline: auto;
+  max-width: 1060px;
+  padding-inline: 0;
+  width: 100%;
+}
+
+.stage[data-stage="details"] .step,
+.stage[data-stage="customize"] .step {
+  flex: 1;
+  gap: 0;
+  min-height: 0;
+  width: 100%;
 }
 
 .stage[data-stage="details"] .step {
-  flex: 1;
+  align-self: center;
+  gap: clamp(10px, 1.4vh, 16px);
+  max-width: 680px;
+}
+
+.stage[data-stage="details"] .stepHead {
+  gap: 4px;
   max-width: none;
-  min-height: 0;
+}
+
+.stage[data-stage="details"] .stepHead h1 {
+  font-size: var(--v5-t-title);
+  max-width: none;
+}
+
+.stage[data-stage="details"] .stepHead p {
+  font-size: var(--v5-t-meta);
+  max-width: 36ch;
+}
+
+
+.stage[data-stage="customize"] .step {
+  align-self: center;
+  max-width: 1060px;
 }
 
 /*
@@ -286,11 +391,15 @@
  */
 .stage[data-stage="gallery"] {
   padding-bottom: calc(56px + env(safe-area-inset-bottom));
-  padding-top: clamp(14px, 2vh, 24px);
+  padding-top: clamp(8px, 1.2vh, 14px);
+}
+
+.stage[data-stage="gallery"] .selectionBar {
+  margin-bottom: clamp(14px, 2vh, 22px);
 }
 
 .stage[data-stage="gallery"] .step {
-  gap: clamp(12px, 1.4vh, 16px);
+  gap: clamp(10px, 1.4vh, 16px);
 }
 
 /*
@@ -299,7 +408,7 @@
  * pushed the first row of cards off the screen.
  */
 .stage[data-stage="gallery"] .stepHead {
-  gap: 4px;
+  gap: 6px;
   max-width: none;
 }
 
@@ -796,14 +905,17 @@
   font-weight: 550;
   gap: 12px;
   justify-content: center;
-  margin: calc(-1 * clamp(14px, 2.2vw, 24px)) 0 0;
+  margin: 0;
 }
 
 .wallUnlocked {
   align-items: center;
   color: var(--v5-positive);
   display: inline-flex;
+  font-size: var(--v5-t-meta);
+  font-weight: 550;
   gap: 5px;
+  line-height: 1.2;
 }
 
 .empty {
@@ -858,20 +970,12 @@
   width: 100%;
 }
 
-.revealHead {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  margin-bottom: 14px;
-}
-
-.revealHead h1 {
-  font-size: var(--v5-t-display);
+.estimateLabel {
+  color: var(--v5-ink);
+  font-size: var(--v5-t-lead);
   font-weight: 600;
-  letter-spacing: -0.032em;
-  line-height: 1.08;
-  margin: 0;
-  text-wrap: balance;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
 }
 
 .hero {
@@ -975,7 +1079,7 @@
 }
 
 .revealActions {
-  align-items: stretch;
+  align-items: center;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -984,7 +1088,7 @@
 
 .revealActions .primaryAction {
   margin: 0;
-  max-width: none;
+  max-width: 320px;
   min-height: 52px;
   padding: 14px 28px;
 }
@@ -994,41 +1098,49 @@
   text-align: center;
 }
 
-.revealMeta {
-  align-items: center;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  margin-top: 14px;
-  width: 100%;
-}
-
-.revealMeta .disclosure {
+.revealPanel .disclosure {
   border-top: none;
-  margin: 0;
+  margin: 16px auto 0;
   max-width: none;
   padding-top: 0;
   width: 100%;
 }
 
-.revealMeta .disclosure summary {
+.revealPanel .disclosure summary {
   color: var(--v5-ink);
   font-size: var(--v5-t-meta);
   justify-content: center;
   min-height: 40px;
 }
 
-.revealMeta .linkAction {
-  color: var(--v5-muted);
-  font-size: var(--v5-t-meta);
-  justify-content: center;
-  min-height: 40px;
-  width: 100%;
-}
-
-.revealMeta .disclosureBody {
+.revealPanel .disclosureBody {
   padding-top: 14px;
   text-align: left;
+}
+
+.revealDesign {
+  border-top: 1px solid var(--v5-hair);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 18px;
+  padding-top: 16px;
+  text-align: center;
+}
+
+.revealDesign strong {
+  font-size: var(--v5-t-body);
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  line-height: 1.3;
+}
+
+.revealDesign p {
+  color: var(--v5-muted);
+  font-size: var(--v5-t-meta);
+  line-height: 1.45;
+  margin: 0;
+  text-wrap: balance;
 }
 
 @media (min-width: 860px) {
@@ -1039,14 +1151,14 @@
     gap: clamp(28px, 3.4vw, 44px);
     grid-template-columns: minmax(0, 1.6fr) minmax(300px, 0.9fr);
     height: 100%;
-    max-height: calc(100dvh - 148px);
+    max-height: calc(100dvh - 196px);
   }
 
   .hero {
     align-self: stretch;
     height: 100%;
-    max-height: min(68dvh, 620px);
-    min-height: 420px;
+    max-height: min(64dvh, 600px);
+    min-height: 360px;
   }
 
   .hero img {
@@ -1055,42 +1167,26 @@
   }
 
   .revealPanel {
-    align-items: flex-start;
+    align-items: center;
     justify-content: center;
     margin: 0;
     max-width: 360px;
     padding-block: 4px;
-    text-align: left;
-  }
-
-  .revealHead {
-    margin-bottom: 16px;
+    text-align: center;
   }
 
   .revealPrice {
-    align-items: flex-start;
+    align-items: center;
     margin-bottom: 22px;
-    text-align: left;
-  }
-
-  .priceContext {
-    align-items: flex-start;
-    max-width: none;
+    text-align: center;
   }
 
   .revealActions .context {
-    text-align: left;
+    text-align: center;
   }
 
-  .revealMeta {
-    align-items: flex-start;
-    margin-top: 16px;
-  }
-
-  .revealMeta .disclosure summary,
-  .revealMeta .linkAction {
-    justify-content: flex-start;
-    width: auto;
+  .revealDesign {
+    text-align: center;
   }
 }
 
@@ -1292,40 +1388,32 @@
 }
 
 /*
- * Customize: image fills the left; the right panel is a tight content stack
- * (no middle dead zone, no stretch-to-bottom CTA). Extra tools overlay.
+ * Studio shell defaults to a single stacked column (the mobile price-reveal
+ * composition). Customize widens into side-by-side from 900px up.
  */
-.stage[data-stage="customize"] {
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  padding-bottom: calc(12px + env(safe-area-inset-bottom));
-  padding-top: clamp(8px, 1.2vh, 14px);
-}
-
-.stage[data-stage="customize"] .step {
-  flex: 1;
-  gap: 0;
-  max-width: none;
-  min-height: 0;
-}
-
+.stage[data-stage="details"] .split,
 .stage[data-stage="customize"] .split {
   flex: 1;
-  gap: clamp(16px, 2vw, 28px);
+  gap: clamp(12px, 1.8vh, 22px);
   grid-template-columns: 1fr;
   min-height: 0;
+  width: 100%;
 }
 
+.stage[data-stage="details"] .splitPanel,
 .stage[data-stage="customize"] .splitPanel {
   align-items: stretch;
   display: flex;
   flex-direction: column;
   height: 100%;
-  justify-content: center;
+  justify-content: flex-start;
   min-height: 0;
   overflow: hidden;
   position: relative;
+}
+
+.stage[data-stage="customize"] .splitPanel {
+  justify-content: center;
 }
 
 .customizeStack {
@@ -1348,17 +1436,58 @@
   margin: 0;
 }
 
+.stage[data-stage="details"] .priceBlock,
 .stage[data-stage="customize"] .priceBlock {
-  gap: 2px;
+  gap: 6px;
 }
 
+.stage[data-stage="details"] .priceBlock > span,
+.stage[data-stage="customize"] .priceBlock > span {
+  color: var(--v5-ink);
+  font-size: var(--v5-t-lead);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  text-transform: none;
+}
+
+.stage[data-stage="details"] .priceRow strong,
 .stage[data-stage="customize"] .priceRow strong {
-  font-size: var(--v5-t-title);
+  font-size: var(--v5-t-hero);
+  letter-spacing: -0.045em;
+  line-height: 1;
 }
 
+.stage[data-stage="details"] .priceBlock small,
 .stage[data-stage="customize"] .priceBlock small {
   font-size: var(--v5-t-micro);
   line-height: 1.35;
+}
+
+.stage[data-stage="details"] .disclosure {
+  border-top: none;
+  margin: 0;
+  padding-top: 0;
+}
+
+.stage[data-stage="details"] .disclosure summary {
+  font-size: var(--v5-t-meta);
+  justify-content: flex-start;
+  min-height: 32px;
+}
+
+.stage[data-stage="details"] .revealDesign {
+  gap: 10px;
+  margin-top: 4px;
+  text-align: left;
+}
+
+.stage[data-stage="details"] .revealDesign .selectionChips {
+  justify-content: flex-start;
+}
+
+.stage[data-stage="details"] .revealDesign .selectionChip {
+  background: color-mix(in oklab, var(--v5-ink) 5%, var(--v5-bg));
+  padding: 4px 8px;
 }
 
 .stage[data-stage="customize"] .dirOption {
@@ -1482,26 +1611,28 @@
 }
 
 @media (max-width: 899px) {
+  .stage[data-stage="details"] .split,
   .stage[data-stage="customize"] .split {
     gap: 10px;
-    grid-template-rows: minmax(140px, 34%) minmax(0, 1fr);
+    grid-template-rows: minmax(160px, 38%) minmax(0, 1fr);
     height: 100%;
   }
 
+  .stage[data-stage="details"] .splitMedia,
+  .stage[data-stage="details"] .canvas,
   .stage[data-stage="customize"] .splitMedia,
   .stage[data-stage="customize"] .canvas {
     height: 100%;
     min-height: 0;
   }
 
+  .stage[data-stage="details"] .canvas > img,
   .stage[data-stage="customize"] .canvas > img {
     aspect-ratio: auto;
     height: 100%;
     max-height: none;
-  }
-
-  .stage[data-stage="customize"] .splitPanel {
-    justify-content: flex-start;
+    object-fit: cover;
+    object-position: center;
   }
 
   .customizeStack {
@@ -1518,22 +1649,90 @@
 }
 
 @media (min-width: 900px) {
-  .stage[data-stage="customize"] .split {
-    align-items: stretch;
-    grid-template-columns: minmax(0, 1.65fr) minmax(320px, 0.78fr);
-  }
-
-  .stage[data-stage="customize"] .splitMedia,
-  .stage[data-stage="customize"] .canvas {
-    height: 100%;
+  /*
+   * Price reveal keeps the mobile stack: hero image on top, estimate below,
+   * centered in a phone-like measure so the reveal stays clean on wide frames.
+   */
+  .stage[data-stage="details"] .split {
+    align-content: start;
+    gap: clamp(14px, 2vh, 22px);
+    grid-template-columns: 1fr;
+    grid-template-rows: minmax(220px, min(40vh, 400px)) auto;
+    height: auto;
+    justify-content: center;
     min-height: 0;
   }
 
-  .stage[data-stage="customize"] .canvas > img {
+  .stage[data-stage="details"] .splitMedia,
+  .stage[data-stage="details"] .canvas {
+    height: 100%;
+    min-height: 0;
+    width: 100%;
+  }
+
+  .stage[data-stage="details"] .canvas > img {
     aspect-ratio: auto;
     height: 100%;
     max-height: none;
     object-fit: cover;
+    object-position: center;
+  }
+
+  .stage[data-stage="details"] .splitPanel {
+    height: auto;
+    justify-content: flex-start;
+  }
+
+  .stage[data-stage="details"] .customizeStack {
+    gap: 14px;
+    max-width: none;
+    width: 100%;
+  }
+
+  .stage[data-stage="details"] .priceRow strong {
+    --v5-t-hero: clamp(36px, 4vw, 48px);
+  }
+
+  .stage[data-stage="details"] .customizeActions .context {
+    text-align: left;
+  }
+
+  /* Customize: side-by-side, square image — large, not a tall strip. */
+  .stage[data-stage="customize"] .split {
+    align-items: center;
+    gap: clamp(22px, 2.6vw, 40px);
+    grid-template-columns: minmax(0, 1.35fr) minmax(300px, 0.9fr);
+    justify-content: center;
+  }
+
+  .stage[data-stage="customize"] .splitMedia {
+    align-items: center;
+    display: flex;
+    height: auto;
+    justify-content: center;
+    min-height: 0;
+    width: 100%;
+  }
+
+  .stage[data-stage="customize"] .canvas {
+    aspect-ratio: 1 / 1;
+    height: auto;
+    max-height: min(82vh, 720px);
+    min-height: 0;
+    width: 100%;
+  }
+
+  .stage[data-stage="customize"] .canvas > img {
+    aspect-ratio: 1 / 1;
+    height: 100%;
+    max-height: none;
+    object-fit: cover;
+    object-position: center;
+    width: 100%;
+  }
+
+  .stage[data-stage="customize"] .priceRow strong {
+    --v5-t-hero: clamp(34px, 3.4vw, 46px);
   }
 
   .customizeActions .context {
@@ -1544,6 +1743,11 @@
 @media (max-height: 820px) {
   .customizeStack {
     gap: 8px;
+  }
+
+  .stage[data-stage="details"] .priceRow strong,
+  .stage[data-stage="customize"] .priceRow strong {
+    font-size: var(--v5-t-display);
   }
 
   .stage[data-stage="customize"] .dirOption {

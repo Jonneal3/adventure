@@ -86,7 +86,7 @@ test("budget-matched projects stay inside the selected band and personalization 
 
   assert.ok(project.priceMin >= 25_000);
   assert.ok(project.priceMax <= 40_000);
-  assert.equal(project.title, "Warm modern");
+  assert.equal(project.title, "Warm Modern");
   assert.match(project.fitLabel, /\$25K–\$40K/);
   const personalized = personalizedProjectRange(project, true);
   assert.ok(personalized.totalMax - personalized.totalMin < project.priceMax - project.priceMin);
@@ -147,6 +147,81 @@ test("budget-matched projects stay inside the selected band and personalization 
   const titles = duplicateLabels.map((project) => project.title);
   assert.equal(new Set(titles).size, titles.length);
   assert.ok(duplicateLabels.every((project) => project.priceMax - project.priceMin <= 20_000));
+
+  const mixedCatalog = [
+    {
+      assetId: "cosmetic-1",
+      imageUrl: "https://example.com/cosmetic.png",
+      storagePath: "cosmetic.png",
+      label: "Simple Fresh",
+      scope: "Cosmetic refresh (paint, lighting, hardware)",
+      priceTier: "$",
+      createdAt: Date.now(),
+    },
+    {
+      assetId: "shower-1",
+      imageUrl: "https://example.com/shower.png",
+      storagePath: "shower.png",
+      label: "Warm Contemporary",
+      scope: "Shower or tub area only",
+      priceTier: "$$",
+      createdAt: Date.now(),
+    },
+    {
+      assetId: "full-1",
+      imageUrl: "https://example.com/full.png",
+      storagePath: "full.png",
+      label: "Luxury Spa",
+      scope: "Full bathroom renovation",
+      priceTier: "$$$$",
+      createdAt: Date.now(),
+    },
+    {
+      assetId: "layout-1",
+      imageUrl: "https://example.com/layout.png",
+      storagePath: "layout.png",
+      label: "Premium Elegant",
+      scope: "Layout or plumbing changes",
+      priceTier: "$$$",
+      createdAt: Date.now(),
+    },
+  ];
+  const lowBand = BUDGET_BANDS.find((band) => band.id === "under-15");
+  const highBand = BUDGET_BANDS.find((band) => band.id === "60-plus");
+  assert.ok(lowBand && highBand);
+  const lowGallery = buildVisualProjects({
+    rawProjects: mixedCatalog,
+    service: { value: "bath", label: "Bathroom Remodeling" },
+    budgetBand: lowBand,
+    bounds: { min: 12_000, max: 55_000, currency: "USD" },
+    budgetMode: "lens",
+  });
+  const highGallery = buildVisualProjects({
+    rawProjects: mixedCatalog,
+    service: { value: "bath", label: "Bathroom Remodeling" },
+    budgetBand: highBand,
+    bounds: { min: 12_000, max: 55_000, currency: "USD" },
+    budgetMode: "lens",
+  });
+  assert.ok(lowGallery.some((project) => /cosmetic|simple/i.test(`${project.scope} ${project.title}`)));
+  assert.ok(highGallery.some((project) => /full|layout|luxury|premium/i.test(`${project.scope} ${project.title}`)));
+  const lowMids = lowGallery.map((project) => (project.priceMin + project.priceMax) / 2);
+  const highMids = highGallery.map((project) => (project.priceMin + project.priceMax) / 2);
+  assert.ok(Math.max(...lowMids) < Math.min(...highMids));
+
+  const midGallery = buildVisualProjects({
+    rawProjects: mixedCatalog,
+    service: { value: "bath", label: "Bathroom Remodeling" },
+    budgetBand: budget,
+    bounds: { min: 12_000, max: 55_000, currency: "USD" },
+    budgetMode: "lens",
+  });
+  const byAsset = Object.fromEntries(midGallery.map((project) => [project.assetId, project]));
+  if (byAsset["cosmetic-1"] && byAsset["full-1"]) {
+    const cosmeticMid = (byAsset["cosmetic-1"].priceMin + byAsset["cosmetic-1"].priceMax) / 2;
+    const fullMid = (byAsset["full-1"].priceMin + byAsset["full-1"].priceMax) / 2;
+    assert.ok(fullMid > cosmeticMid + 3_000, "full reno should price meaningfully above cosmetic in the same band");
+  }
 
   const [landscapeProject] = buildVisualProjects({
     rawProjects: [{

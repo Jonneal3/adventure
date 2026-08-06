@@ -35,6 +35,8 @@ export type RawVisualProject = {
   storagePath: string;
   label: string;
   scope: string;
+  /** Optional catalog tier from asset metadata ($ / $$ / premium / luxury, etc.). */
+  priceTier?: string | null;
   modelId?: string | null;
   createdAt: number;
 };

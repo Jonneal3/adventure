@@ -238,12 +238,17 @@ export async function listV2ScopeStarters(params: {
     .slice(0, Math.max(1, Math.min(50, params.limit ?? 6)));
 }
 
+export type V2ScopeGalleryOption = V2ScopeStarterOption & {
+  /** The actual starter scope this image was generated for (not the requested filter scope). */
+  sceneScope: string;
+};
+
 export async function listV2ScopeGalleryOptions(params: {
   supabase: SupabaseClient<any, "public", any>;
   subcategoryId: string;
   scope: string;
   limit?: number;
-}): Promise<V2ScopeStarterOption[]> {
+}): Promise<V2ScopeGalleryOption[]> {
   const limit = Math.max(1, Math.min(50, params.limit ?? 50));
   const sceneScopes = [params.scope, ...compatibleSceneScopesForScope(params.scope)];
   const collectionResults = await Promise.allSettled(
@@ -255,11 +260,18 @@ export async function listV2ScopeGalleryOptions(params: {
       })
     )
   );
-  const collections = collectionResults
-    .filter((result): result is PromiseFulfilledResult<V2ScopeStarterOption[]> => result.status === "fulfilled")
-    .map((result) => result.value);
 
-  if (collections.length === 0) {
+  const tagged: V2ScopeGalleryOption[] = [];
+  for (let index = 0; index < sceneScopes.length; index += 1) {
+    const result = collectionResults[index];
+    if (result.status !== "fulfilled") continue;
+    const sceneScope = sceneScopes[index];
+    for (const row of result.value) {
+      tagged.push({ ...row, sceneScope });
+    }
+  }
+
+  if (tagged.length === 0) {
     const firstError = collectionResults.find(
       (result): result is PromiseRejectedResult => result.status === "rejected"
     );
@@ -269,7 +281,7 @@ export async function listV2ScopeGalleryOptions(params: {
   }
 
   const seen = new Set<string>();
-  return collections.flat()
+  return tagged
     .filter((row) => {
       if (seen.has(row.id)) return false;
       seen.add(row.id);
