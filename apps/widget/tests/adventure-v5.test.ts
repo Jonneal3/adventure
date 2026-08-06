@@ -44,6 +44,7 @@ test("V5 owns its markup and stylesheet instead of skinning V3/V4", () => {
 
 test("V5 inherits V4's flow: primer skipped, curated budget, and V4 refinement economics", () => {
   const component = experience();
+  const css = v5Css();
 
   // Primer is retired: fresh sessions land on the first real question.
   assert.match(component, /function defaultSnapshot\([\s\S]*?showPrimer = false/);
@@ -63,6 +64,11 @@ test("V5 inherits V4's flow: primer skipped, curated budget, and V4 refinement e
   assert.match(component, /See what’s possible for \$\{serviceName\}/);
   assert.match(component, /Your planning estimate for this \$\{serviceName\} direction/);
   assert.doesNotMatch(component, /Most full \{serviceWord\} projects land in the \$25,000–\$40,000 range/);
+  // Answers accumulate in a vertical rail with clear actions, not top-right chips.
+  assert.match(component, /className=\{css\.answerRail\}/);
+  assert.match(component, /clearBudgetAnswer/);
+  assert.match(css, /\.answerRail \{/);
+  assert.doesNotMatch(component, /className=\{css\.selectionBar\}/);
 });
 
 test("V5 derives its whole palette from the tenant's design config", () => {

@@ -1724,6 +1724,80 @@ export function AdventureV5Experience({ instanceId, initialInstanceData, initial
     }
   }, [instanceId, patchSnapshot, snapshot, track]);
 
+  const resetFromBudget = useCallback(() => ({
+    projects: [] as VisualPricingProject[],
+    selectedProjectId: null as string | null,
+    personalizedConcepts: [] as VisualPricingSnapshot["personalizedConcepts"],
+    personalizedBaseRange: null,
+    personalizedRange: null,
+    personalizedRefinements: [] as VisualPricingSnapshot["personalizedRefinements"],
+    personalizedRefinementChoiceId: null,
+    personalizedRefinementPrompt: "",
+    personalizedActiveConceptIndex: 0,
+    sourceAsset: null,
+    estimateConfig: { ...DEFAULT_ESTIMATE_CONFIG },
+    refinementPrompt: "",
+    refinementSuggestions: [] as string[],
+    refinementPriceImpact: 0,
+    projectRefinementHistory: [] as VisualPricingSnapshot["projectRefinementHistory"],
+    projectActiveRefinementIndex: 0,
+  }), []);
+
+  const clearServiceAnswer = useCallback(() => {
+    if (!snapshot || services.length <= 1) return;
+    const next = defaultSnapshot(snapshot.sessionId, null, false);
+    setSnapshot({
+      ...next,
+      lead: snapshot.lead,
+      favoriteProjectIds: snapshot.favoriteProjectIds,
+      stage: "project",
+    });
+    track("adventure_v5_answer_cleared", { field: "service" });
+  }, [services.length, snapshot, track]);
+
+  const clearScopeAnswer = useCallback(() => {
+    if (!snapshot || !selectedService || selectedScopes.length <= 1) return;
+    patchSnapshot({
+      selectedScope: null,
+      budgetBandId: null,
+      ...resetFromBudget(),
+      stage: "scope",
+    });
+    track("adventure_v5_answer_cleared", { field: "scope" });
+  }, [patchSnapshot, resetFromBudget, selectedScopes.length, selectedService, snapshot, track]);
+
+  const clearBudgetAnswer = useCallback(() => {
+    if (!snapshot) return;
+    patchSnapshot({
+      budgetBandId: null,
+      ...resetFromBudget(),
+      stage: "budget",
+    });
+    track("adventure_v5_answer_cleared", { field: "budget" });
+  }, [patchSnapshot, resetFromBudget, snapshot, track]);
+
+  const clearDesignAnswer = useCallback(() => {
+    if (!snapshot) return;
+    patchSnapshot({
+      selectedProjectId: null,
+      projectRefinementHistory: [],
+      projectActiveRefinementIndex: 0,
+      refinementPrompt: "",
+      refinementSuggestions: [],
+      refinementPriceImpact: 0,
+      personalizedConcepts: [],
+      personalizedBaseRange: null,
+      personalizedRange: null,
+      personalizedRefinements: [],
+      personalizedRefinementChoiceId: null,
+      personalizedRefinementPrompt: "",
+      personalizedActiveConceptIndex: 0,
+      sourceAsset: null,
+      stage: "gallery",
+    });
+    track("adventure_v5_answer_cleared", { field: "design" });
+  }, [patchSnapshot, snapshot, track]);
+
   const goBack = useCallback(() => {
     if (!snapshot) return;
     const entry = firstQuestionStage(selectedService);
@@ -1906,9 +1980,50 @@ export function AdventureV5Experience({ instanceId, initialInstanceData, initial
   const personalizedGateWillOpen = !personalizedUnlocked
     && snapshot.personalizedRefinements.length >= PERSONALIZED_REFINEMENT_LIMIT;
   const favorited = selectedProject ? snapshot.favoriteProjectIds.includes(selectedProject.assetId) : false;
+  const answerItems = [
+    selectedService?.label && (services.length > 1 || snapshot.stage !== "project")
+      ? {
+          id: "service",
+          question: "Project",
+          value: selectedService.label,
+          onClear: services.length > 1 ? clearServiceAnswer : null,
+        }
+      : null,
+    snapshot.selectedScope
+      ? {
+          id: "scope",
+          question: "Scope",
+          value: snapshot.selectedScope,
+          onClear: selectedScopes.length > 1 ? clearScopeAnswer : null,
+        }
+      : null,
+    selectedBudget
+      ? {
+          id: "budget",
+          question: "Budget",
+          value: selectedBudget.id === "not-sure" ? selectedBudget.label : selectedBudget.galleryLabel,
+          onClear: clearBudgetAnswer,
+        }
+      : null,
+    selectedProject && snapshot.stage !== "gallery"
+      ? {
+          id: "design",
+          question: "Design",
+          value: selectedProject.title,
+          onClear: clearDesignAnswer,
+        }
+      : null,
+  ].filter((item): item is { id: string; question: string; value: string; onClear: (() => void) | null } => Boolean(item));
 
   return (
-    <div ref={rootRef} className={css.root} style={rootStyle} data-adventure-version="v5" data-v3-funnel="visual-pricing">
+    <div
+      ref={rootRef}
+      className={css.root}
+      style={rootStyle}
+      data-adventure-version="v5"
+      data-v3-funnel="visual-pricing"
+      data-has-answers={answerItems.length > 0 ? "true" : "false"}
+    >
       <header className={css.chrome}>
         <div className={css.chromeInner}>
           <button
@@ -1954,6 +2069,29 @@ export function AdventureV5Experience({ instanceId, initialInstanceData, initial
         </div>
       </header>
 
+      {answerItems.length > 0 ? (
+        <aside className={css.answerRail} aria-label="Your answers so far">
+          {answerItems.map((item) => (
+            <div key={item.id} className={css.answerItem}>
+              <div className={css.answerCopy}>
+                <span className={css.answerQuestion}>{item.question}</span>
+                <strong className={css.answerValue}>{item.value}</strong>
+              </div>
+              {item.onClear ? (
+                <button
+                  type="button"
+                  className={css.answerClear}
+                  aria-label={`Change ${item.question.toLowerCase()}`}
+                  onClick={item.onClear}
+                >
+                  <X size={13} />
+                </button>
+              ) : null}
+            </div>
+          ))}
+        </aside>
+      ) : null}
+
       <main ref={stageRef} className={css.stage} data-stage={snapshot.stage} data-direction={stageDirection}>
         <input
           ref={uploadRef}
@@ -1966,23 +2104,6 @@ export function AdventureV5Experience({ instanceId, initialInstanceData, initial
             if (file) void uploadRoom(file, snapshot.stage !== "personalize");
           }}
         />
-
-        {snapshot.stage !== "details"
-          && (selectedService?.label || snapshot.selectedScope || (selectedBudget && selectedBudget.id !== "not-sure")) ? (
-          <div className={css.selectionBar}>
-            <div className={css.selectionChips} aria-label="Your selections">
-              {selectedService?.label ? (
-                <span className={css.selectionChip}>{selectedService.label}</span>
-              ) : null}
-              {snapshot.selectedScope ? (
-                <span className={css.selectionChip}>{snapshot.selectedScope}</span>
-              ) : null}
-              {selectedBudget && selectedBudget.id !== "not-sure" ? (
-                <span className={css.selectionChip}>{selectedBudget.galleryLabel}</span>
-              ) : null}
-            </div>
-          </div>
-        ) : null}
 
         {snapshot.stage === "project" ? (
           <section className={css.step} key="project">
@@ -2207,19 +2328,6 @@ export function AdventureV5Experience({ instanceId, initialInstanceData, initial
                     </div>
                   </details>
                   <footer className={css.revealDesign}>
-                    {(selectedService?.label || snapshot.selectedScope || (selectedBudget && selectedBudget.id !== "not-sure")) ? (
-                      <div className={css.selectionChips} aria-label="Your selections">
-                        {selectedService?.label ? (
-                          <span className={css.selectionChip}>{selectedService.label}</span>
-                        ) : null}
-                        {snapshot.selectedScope ? (
-                          <span className={css.selectionChip}>{snapshot.selectedScope}</span>
-                        ) : null}
-                        {selectedBudget && selectedBudget.id !== "not-sure" ? (
-                          <span className={css.selectionChip}>{selectedBudget.galleryLabel}</span>
-                        ) : null}
-                      </div>
-                    ) : null}
                     <p>{projectDesignSummary(selectedProject)}</p>
                   </footer>
                 </div>
