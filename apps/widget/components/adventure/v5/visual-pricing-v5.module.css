@@ -160,8 +160,8 @@
 }
 
 /*
- * Desktop-only answer bubbles. Hidden on mobile — the flow stays clean there.
- * Quiet pills stacked on the left, value-first, tiny clear control.
+ * Desktop-only answer bubbles. Hidden on mobile.
+ * Sits just to the right of the centered question column — not the far edge.
  */
 .answerRail {
   display: none;
@@ -223,22 +223,37 @@
 }
 
 @media (min-width: 1100px) {
-  .root[data-has-answers="true"] .stage {
-    padding-left: calc(var(--v5-gutter) + 148px);
-  }
-
   .answerRail {
     align-items: flex-start;
     display: flex;
     flex-direction: column;
     gap: 6px;
-    left: clamp(16px, 2vw, 28px);
+    /*
+     * Choices are 560px and centered. Park the bubbles just past that
+     * column so they read as part of the question, not a screen-edge rail.
+     */
+    left: calc(50% + 300px);
     margin: 0;
-    max-width: 140px;
+    max-width: 168px;
     position: absolute;
-    top: clamp(96px, 13vh, 128px);
-    width: 140px;
+    top: clamp(148px, 22vh, 210px);
+    width: 168px;
     z-index: 28;
+  }
+}
+
+/* Studio steps are wider — keep the same “just past the question” idea. */
+@media (min-width: 1100px) {
+  .root[data-has-answers="true"]:has(.stage[data-stage="gallery"]) .answerRail,
+  .root[data-has-answers="true"]:has(.stage[data-stage="details"]) .answerRail,
+  .root[data-has-answers="true"]:has(.stage[data-stage="customize"]) .answerRail,
+  .root[data-has-answers="true"]:has(.stage[data-stage="personalize"]) .answerRail,
+  .root[data-has-answers="true"]:has(.stage[data-stage="personalized-preview"]) .answerRail,
+  .root[data-has-answers="true"]:has(.stage[data-stage="personalized-result"]) .answerRail {
+    left: calc(50% + 220px);
+    right: auto;
+    top: clamp(120px, 16vh, 168px);
+    width: 156px;
   }
 }
 
