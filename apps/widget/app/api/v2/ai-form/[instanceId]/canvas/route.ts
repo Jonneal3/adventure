@@ -23,8 +23,9 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const MAX_PROMPT_LENGTH = 800;
-const V3_EDIT_MODEL_ID = "black-forest-labs/flux-2-pro";
-const V3_EDIT_FALLBACK_MODEL_ID = "prunaai/p-image-edit";
+/** Fast edit model for concept drafts — flux-2-pro is the quality fallback. */
+const V3_EDIT_MODEL_ID = "prunaai/p-image-edit";
+const V3_EDIT_FALLBACK_MODEL_ID = "black-forest-labs/flux-2-pro";
 
 function normalizeMode(raw: unknown): ExperienceMode | null {
   const value = String(raw || "").trim().toLowerCase().replace(/_/g, "-");
@@ -147,6 +148,14 @@ export async function POST(
     const sourceAssets = body?.sourceAssets && typeof body.sourceAssets === "object" ? body.sourceAssets : {};
     const currentCanvasUrl = sourceUrl(body?.currentCanvasUrl);
     const referenceProjectImageUrl = sourceUrl(body?.referenceProjectImageUrl);
+    const referenceImageUrls = Array.isArray(body?.referenceImageUrls)
+      ? body.referenceImageUrls.map((value: unknown) => sourceUrl(value)).filter(Boolean)
+      : [];
+    const conceptBlendMode = text(body?.conceptBlendMode, 20).toLowerCase() === "inspire"
+      ? "inspire"
+      : text(body?.conceptBlendMode, 20).toLowerCase() === "revise"
+        ? "revise"
+        : null;
 
     if (!params.instanceId || !sessionId || !serviceId || !serviceName || !scope || !budget || !mode) {
       return NextResponse.json(
@@ -185,7 +194,12 @@ export async function POST(
 
     const prompt =
       action === "edit"
-        ? buildV2IterativeEditPrompt({
+        ? isV3PersonalizedPreview
+          // Concept drafts need the client's blend/direction prompt as-is.
+          // The iterative "preserve this exact image" wrapper collapses every
+          // variant into the same near-clone of the base catalog photo.
+          ? requestedChange
+          : buildV2IterativeEditPrompt({
             serviceName,
             scope,
             budget,
@@ -322,23 +336,34 @@ export async function POST(
       generationBody.referenceImages = [action === "edit" ? currentCanvasUrl : sceneUrl, productUrl].filter(Boolean);
       generationBody.aspectRatio = "match_input_image";
     } else if (action === "edit") {
-      useCase = "scene-refinement";
+      // Inspiration concepts: treat as reference-guided scene generation so the
+      // model invents a new room. Upload revise stays a true preserve-and-edit.
+      const inspireBlend = isV3PersonalizedPreview && conceptBlendMode !== "revise";
+      useCase = inspireBlend ? "scene" : "scene-refinement";
       modelId = isV3Concept || isV3PersonalizedPreview
         ? V3_EDIT_MODEL_ID
         : "black-forest-labs/flux-2-pro";
       generationBody.sceneImage = currentCanvasUrl;
-      if (isV3PersonalizedPreview && referenceProjectImageUrl) {
-        generationBody.referenceImages = [currentCanvasUrl, referenceProjectImageUrl];
-      } else {
-        generationBody.referenceImages = [currentCanvasUrl];
-      }
-      generationBody.aspectRatio = "match_input_image";
-      generationBody.outputFormat = "png";
+      const refs = Array.from(
+        new Set(
+          [currentCanvasUrl, referenceProjectImageUrl, ...referenceImageUrls].filter(Boolean)
+        )
+      );
+      generationBody.referenceImages = refs.length > 0 ? refs : [currentCanvasUrl];
+      generationBody.aspectRatio = inspireBlend ? "4:3" : "match_input_image";
+      generationBody.outputFormat = modelId === "prunaai/p-image-edit" ? "jpg" : "png";
       generationBody.previousPrompt = priorChanges.join(" | ");
       generationBody.refinementNotes = requestedChange;
       if (isV3Concept || isV3PersonalizedPreview) {
         generationBody.goFast = true;
         generationBody.numInferenceSteps = 12;
+      }
+      if (inspireBlend) {
+        // Let the prompt + references drive the look instead of locking to the
+        // base photo (default scene-refinement is ~0.92 image strength).
+        generationBody.imagePromptStrength = 0.4;
+        generationBody.promptStrength = 0.9;
+        generationBody.generationIntent = "initial";
       }
     } else {
       useCase = "scene";
@@ -348,13 +373,15 @@ export async function POST(
     }
     generationBody.useCase = useCase;
     generationBody.modelId = modelId;
-    generationBody.generationIntent = action === "concept"
-      ? "concept_preview"
-      : action === "edit"
-        ? isV3PersonalizedPreview
-          ? "v3_personalized_preview"
-          : "small_improvement"
-        : "initial";
+    if (!generationBody.generationIntent) {
+      generationBody.generationIntent = action === "concept"
+        ? "concept_preview"
+        : action === "edit"
+          ? isV3PersonalizedPreview
+            ? "v3_personalized_preview"
+            : "small_improvement"
+          : "initial";
+    }
 
     const generateUrl = new URL("/api/generate", request.url);
     const requestGeneration = async (payload: Record<string, unknown>) => {

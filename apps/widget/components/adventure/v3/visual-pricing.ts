@@ -16,7 +16,7 @@ export const DEFAULT_ESTIMATE_CONFIG: VisualPricingEstimateConfig = {
   sourcing: "standard",
 };
 
-export const BUDGET_BANDS: BudgetBand[] = [
+export const DEFAULT_BUDGET_BANDS: BudgetBand[] = [
   { id: "under-15", label: "Under $15,000", galleryLabel: "under $15K", min: 7_500, max: 15_000 },
   { id: "15-25", label: "$15,000–$25,000", galleryLabel: "$15K–$25K", min: 15_000, max: 25_000 },
   { id: "25-40", label: "$25,000–$40,000", galleryLabel: "$25K–$40K", min: 25_000, max: 40_000 },
@@ -25,8 +25,74 @@ export const BUDGET_BANDS: BudgetBand[] = [
   { id: "not-sure", label: "Not sure yet", galleryLabel: "typical projects", min: null, max: null },
 ];
 
-export function budgetBandById(id: BudgetBandId | null): BudgetBand | null {
-  return BUDGET_BANDS.find((band) => band.id === id) || null;
+/** Cosmetic refresh / partial bath work often starts around a few thousand. */
+export const BATHROOM_BUDGET_BANDS: BudgetBand[] = [
+  { id: "bath-under-5", label: "Under $5,000", galleryLabel: "under $5K", min: 2_500, max: 5_000 },
+  { id: "bath-5-10", label: "$5,000–$10,000", galleryLabel: "$5K–$10K", min: 5_000, max: 10_000 },
+  { id: "bath-10-20", label: "$10,000–$20,000", galleryLabel: "$10K–$20K", min: 10_000, max: 20_000 },
+  { id: "bath-20-35", label: "$20,000–$35,000", galleryLabel: "$20K–$35K", min: 20_000, max: 35_000 },
+  { id: "bath-35-55", label: "$35,000–$55,000", galleryLabel: "$35K–$55K", min: 35_000, max: 55_000 },
+  { id: "bath-55-plus", label: "$55,000+", galleryLabel: "$55K+", min: 55_000, max: null },
+  { id: "not-sure", label: "Not sure yet", galleryLabel: "typical projects", min: null, max: null },
+];
+
+/** Full outdoor work regularly reaches mid–high five figures. */
+export const LANDSCAPE_BUDGET_BANDS: BudgetBand[] = [
+  { id: "yard-under-10", label: "Under $10,000", galleryLabel: "under $10K", min: 4_000, max: 10_000 },
+  { id: "yard-10-25", label: "$10,000–$25,000", galleryLabel: "$10K–$25K", min: 10_000, max: 25_000 },
+  { id: "yard-25-50", label: "$25,000–$50,000", galleryLabel: "$25K–$50K", min: 25_000, max: 50_000 },
+  { id: "yard-50-100", label: "$50,000–$100,000", galleryLabel: "$50K–$100K", min: 50_000, max: 100_000 },
+  { id: "yard-100-plus", label: "$100,000+", galleryLabel: "$100K+", min: 100_000, max: null },
+  { id: "not-sure", label: "Not sure yet", galleryLabel: "typical projects", min: null, max: null },
+];
+
+export const KITCHEN_BUDGET_BANDS: BudgetBand[] = [
+  { id: "kit-under-15", label: "Under $15,000", galleryLabel: "under $15K", min: 8_000, max: 15_000 },
+  { id: "kit-15-30", label: "$15,000–$30,000", galleryLabel: "$15K–$30K", min: 15_000, max: 30_000 },
+  { id: "kit-30-50", label: "$30,000–$50,000", galleryLabel: "$30K–$50K", min: 30_000, max: 50_000 },
+  { id: "kit-50-80", label: "$50,000–$80,000", galleryLabel: "$50K–$80K", min: 50_000, max: 80_000 },
+  { id: "kit-80-plus", label: "$80,000+", galleryLabel: "$80K+", min: 80_000, max: null },
+  { id: "not-sure", label: "Not sure yet", galleryLabel: "typical projects", min: null, max: null },
+];
+
+/** @deprecated Prefer budgetBandsForService — kept for older callers/tests. */
+export const BUDGET_BANDS = DEFAULT_BUDGET_BANDS;
+
+const ALL_BUDGET_BANDS: BudgetBand[] = [
+  ...BATHROOM_BUDGET_BANDS,
+  ...LANDSCAPE_BUDGET_BANDS,
+  ...KITCHEN_BUDGET_BANDS,
+  ...DEFAULT_BUDGET_BANDS,
+];
+
+function serviceBudgetSearchText(service: ServiceOption | null | undefined): string {
+  return `${service?.label || ""} ${service?.serviceName || ""} ${
+    (service as { service_name?: string } | null | undefined)?.service_name || ""
+  } ${service?.serviceSummary || ""}`.trim();
+}
+
+/** Industry-appropriate ranges — a bath refresh is not a backyard rebuild. */
+export function budgetBandsForService(service: ServiceOption | null | undefined): BudgetBand[] {
+  const text = serviceBudgetSearchText(service);
+  if (/bath|shower|tub|vanity|powder room/i.test(text)) return BATHROOM_BUDGET_BANDS;
+  if (/landscap|outdoor|garden|patio|lawn|hardscape|irrigation|driveway/i.test(text)) {
+    return LANDSCAPE_BUDGET_BANDS;
+  }
+  if (/kitchen|cabinet|countertop|pantry/i.test(text)) return KITCHEN_BUDGET_BANDS;
+  return DEFAULT_BUDGET_BANDS;
+}
+
+export function budgetBandById(
+  id: BudgetBandId | null,
+  service?: ServiceOption | null
+): BudgetBand | null {
+  if (!id) return null;
+  const preferred = service ? budgetBandsForService(service) : null;
+  return (
+    preferred?.find((band) => band.id === id) ||
+    ALL_BUDGET_BANDS.find((band) => band.id === id) ||
+    null
+  );
 }
 
 function stableHash(value: string): number {
@@ -70,59 +136,19 @@ function conciseProjectTitle(label: string, scope: string): string {
   const fallback = scope.trim().replace(/\s+/g, " ");
   const value = normalized && !/^project\s+\d+$/i.test(normalized) ? normalized : fallback;
   if (!value) return "Project Inspiration";
-  return titleCaseLabel(value).slice(0, 48);
+  // One format only: the style name. Drop any "Style · Tag" leftovers.
+  const styleOnly = value.split("·")[0]?.trim() || value;
+  return titleCaseLabel(styleOnly).slice(0, 48);
 }
 
-/** Short tags used to differentiate duplicate API style labels in the gallery. */
-const DISTINCTIVE_STYLE_TAGS = [
-  "courtyard",
-  "terrace",
-  "evening light",
-  "stone path",
-  "fire lounge",
-  "garden dining",
-  "shaded retreat",
-  "entry garden",
-  "lawn lounge",
-  "poolside",
-  "grove edge",
-  "patio boardwalk",
-  "meadow edge",
-  "boardwalk",
-  "lantern walk",
-  "olive court",
-  "cedar border",
-  "slate terrace",
-  "gravel garden",
-  "sunken patio",
-  "hillside steps",
-  "water feature",
-  "dining court",
-  "morning light",
-  "twilight patio",
-  "orchard path",
-  "bamboo screen",
-  "river stone",
-  "pergola court",
-  "bloom border",
-  "hearth patio",
-  "canopy walk",
-  "desert court",
-  "coastal path",
-  "zen pocket",
-  "family lawn",
-  "secret garden",
-  "rooftop feel",
-  "villa court",
-  "cabin edge",
-  "atelier patio",
-  "festival lawn",
-] as const;
-
+/**
+ * Same style name everywhere. Duplicates become "Modern Organic 2", never
+ * "Modern Organic · Courtyard" — mixed formats read like a bug on demos.
+ */
 function assignUniqueProjectTitle(
   label: string,
   scope: string,
-  assetId: string,
+  _assetId: string,
   used: Set<string>
 ): string {
   const base = conciseProjectTitle(label, scope);
@@ -132,17 +158,15 @@ function assignUniqueProjectTitle(
     return base;
   }
 
-  const start = stableHash(assetId || `${label}:${scope}`) % DISTINCTIVE_STYLE_TAGS.length;
-  for (let offset = 0; offset < DISTINCTIVE_STYLE_TAGS.length; offset += 1) {
-    const tag = DISTINCTIVE_STYLE_TAGS[(start + offset) % DISTINCTIVE_STYLE_TAGS.length];
-    const candidate = titleCaseLabel(`${base} · ${tag}`).slice(0, 56);
+  for (let index = 2; index < 200; index += 1) {
+    const candidate = `${base} ${index}`;
     if (!used.has(normalize(candidate))) {
       used.add(normalize(candidate));
       return candidate;
     }
   }
 
-  const fallback = titleCaseLabel(`${base} ${used.size + 1}`).slice(0, 56);
+  const fallback = `${base} ${used.size + 1}`;
   used.add(normalize(fallback));
   return fallback;
 }
@@ -167,11 +191,27 @@ function scopeWeight(scope: string): number {
 /** Style labels that read more expensive or more value-oriented. */
 function styleTierScore(label: string): number {
   const value = label.toLowerCase();
-  if (/luxury|marble|spa|resort|bespoke|statement|opal|gilt|palace/.test(value)) return 0.94;
-  if (/premium|elegant|refined|luxe|hotel|polished|designer|sculptural/.test(value)) return 0.8;
-  if (/contemporary|transitional|organic|warm|classic|modern|atelier|villa/.test(value)) return 0.56;
-  if (/simple|minimal|basic|fresh|clean|compact|practical|bright|airy/.test(value)) return 0.3;
-  return 0.5;
+  if (
+    /luxury|marble|spa|resort|bespoke|statement|opal|gilt|palace|art deco|drama|boutique|champagne|mediterranean|monochrome|indigo|espresso|noir|moody|hotel/.test(
+      value
+    )
+  ) {
+    return 0.93;
+  }
+  if (/premium|elegant|refined|luxe|polished|designer|sculptural|gold|bronze|walnut|slate canyon/.test(value)) {
+    return 0.8;
+  }
+  if (/contemporary|transitional|organic|warm|classic|modern|atelier|villa|travertine|herringbone|zellige/.test(value)) {
+    return 0.52;
+  }
+  if (
+    /scandinavian|nordic|coastal|natural|soft|clay|simple|minimal|basic|fresh|clean|compact|practical|bright|airy|ivory|cloud|fog|pale oak|cosmetic/.test(
+      value
+    )
+  ) {
+    return 0.26;
+  }
+  return 0.45;
 }
 
 function explicitTierScore(priceTier: string | null | undefined): number | null {
@@ -231,19 +271,63 @@ function bandTargetWindow(band: BudgetBand): { low: number; high: number; mid: n
   return null;
 }
 
-/** How well an image belongs in the selected budget. Higher is better; ≤0 is a mismatch. */
-function budgetFitScore(intrinsicMid: number, band: BudgetBand): number {
+/** Finish level the selected budget should look like (0 = value, 1 = luxury). */
+function targetQualityForBand(band: BudgetBand): number | null {
+  const window = bandTargetWindow(band);
+  if (!window) return null;
+  const mid = window.mid;
+  if (mid <= 5_000) return 0.16;
+  if (mid <= 10_000) return 0.26;
+  if (mid <= 20_000) return 0.4;
+  if (mid <= 35_000) return 0.52;
+  if (mid <= 55_000) return 0.66;
+  if (mid <= 100_000) return 0.8;
+  return 0.9;
+}
+
+/**
+ * How well an image belongs in the selected budget. Higher is better; ≤0 is a
+ * mismatch. Visual finish level matters more than raw price math — a marble spa
+ * should not lead a $5K wall even if we can invent a low price label for it.
+ */
+function budgetFitScore(intrinsicMid: number, quality: number, band: BudgetBand): number {
   const window = bandTargetWindow(band);
   if (!window) return 0.75; // not-sure: keep everything, mild preference for mid-range
+  const targetQ = targetQualityForBand(band) ?? 0.5;
+
+  // Hard exclusions: luxury looks out of light budgets, bargain looks out of high ones.
+  if (window.mid <= 8_000 && quality >= 0.6) return 0;
+  if (window.mid <= 15_000 && quality >= 0.78) return 0;
+  if (window.mid >= 70_000 && quality <= 0.34) return 0;
+
+  const qualityFit = 1 - Math.min(1, Math.abs(quality - targetQ) / 0.55);
   const { low, high, mid } = window;
-  const width = Math.max(4_000, high - low);
-  if (intrinsicMid >= low * 0.88 && intrinsicMid <= high * 1.12) {
-    return 1 - Math.min(0.55, Math.abs(intrinsicMid - mid) / width);
+  const width = Math.max(2_500, high - low);
+  let priceFit = 0;
+  if (intrinsicMid >= low * 0.75 && intrinsicMid <= high * 1.25) {
+    priceFit = 1 - Math.min(0.55, Math.abs(intrinsicMid - mid) / width);
+  } else if (intrinsicMid >= low * 0.45 && intrinsicMid <= high * 1.7) {
+    priceFit = 0.38 - Math.min(0.28, Math.abs(intrinsicMid - mid) / (width * 2.4));
   }
-  if (intrinsicMid >= low * 0.7 && intrinsicMid <= high * 1.35) {
-    return 0.42 - Math.min(0.3, Math.abs(intrinsicMid - mid) / (width * 2.4));
+
+  return Math.max(0, qualityFit * 0.78 + priceFit * 0.22);
+}
+
+function compareBudgetEntries(
+  a: { fit: number; quality: number; raw: RawVisualProject },
+  b: { fit: number; quality: number; raw: RawVisualProject },
+  band: BudgetBand
+): number {
+  if (b.fit !== a.fit) return b.fit - a.fit;
+  const targetQ = targetQualityForBand(band);
+  if (targetQ !== null) {
+    const aDist = Math.abs(a.quality - targetQ);
+    const bDist = Math.abs(b.quality - targetQ);
+    if (aDist !== bDist) return aDist - bDist;
   }
-  return 0;
+  const labelCmp = String(a.raw.label || "").localeCompare(String(b.raw.label || ""));
+  if (labelCmp !== 0) return labelCmp;
+  return a.raw.assetId.localeCompare(b.raw.assetId);
 }
 
 function projectRange(
@@ -580,20 +664,26 @@ export function refreshProjectCoverage(
   };
 }
 
-function scopeFitsBudget(scope: string, budgetBandId: BudgetBandId): boolean {
+function scopeFitsBudget(scope: string, band: BudgetBand): boolean {
+  if (band.min === null && band.max === null) return true;
   const value = scope.toLowerCase();
-  if (budgetBandId === "not-sure" || budgetBandId === "25-40") return true;
-  if (budgetBandId === "under-15") {
-    return !/full|complete|primary|layout|plumbing|addition/.test(value);
+  const mid = bandTargetWindow(band)?.mid ?? 25_000;
+  // Light cosmetic / partial work fits the low end.
+  if (mid <= 12_000) {
+    return (
+      !/full bathroom|full outdoor|complete renovation|layout|plumbing|addition/.test(value) ||
+      /cosmetic|paint|hardware|refresh|tile|vanity|pruning|lighting|irrigation/.test(value)
+    );
   }
-  if (budgetBandId === "15-25") {
-    return !/layout|plumbing|addition/.test(value);
+  if (mid <= 28_000) {
+    return !/layout|plumbing|addition/.test(value) || /shower|vanity|tile|patio|lawn|garden/.test(value);
   }
-  if (budgetBandId === "40-60") {
-    return !/cosmetic|paint|hardware|refresh/.test(value) || /full|shower|vanity|tile/.test(value);
-  }
-  if (budgetBandId === "60-plus") {
-    return /full|complete|primary|layout|plumbing|addition|shower|tub|patio|outdoor/.test(value);
+  // High end prefers full / structural scopes.
+  if (mid >= 70_000) {
+    return (
+      /full|complete|primary|layout|plumbing|addition|renovation|outdoor|patio/.test(value) ||
+      !/cosmetic|paint|hardware|refresh|pruning/.test(value)
+    );
   }
   return true;
 }
@@ -616,31 +706,39 @@ export function buildVisualProjects(params: {
 
   const ranked = params.rawProjects
     .map((raw) => {
+      const quality = projectQualityScore(raw);
       const intrinsicMid = intrinsicProjectMidpoint(raw, params.bounds);
       const fit = budgetMode === "lens"
-        ? budgetFitScore(intrinsicMid, params.budgetBand)
-        : scopeFitsBudget(raw.scope, params.budgetBand.id) ? 1 : 0;
-      return { raw, intrinsicMid, fit, quality: projectQualityScore(raw) };
+        ? budgetFitScore(intrinsicMid, quality, params.budgetBand)
+        : scopeFitsBudget(raw.scope, params.budgetBand) ? 1 : 0;
+      return { raw, intrinsicMid, fit, quality };
     })
     .filter((entry) => entry.fit > 0)
-    .sort((a, b) => {
-      if (b.fit !== a.fit) return b.fit - a.fit;
-      // Prefer a spread of qualities near the band, then stable id.
-      return a.raw.assetId.localeCompare(b.raw.assetId);
-    });
+    .sort((a, b) => compareBudgetEntries(a, b, params.budgetBand));
 
-  // If the band is too strict for a thin catalog, relax to the next-best fits.
+  // If the band is thin on matches, fill with the closest finish levels — never
+  // by blindly re-including luxury into a light budget at a token score.
+  const window = bandTargetWindow(params.budgetBand);
+  const targetQ = targetQualityForBand(params.budgetBand);
   const pool = ranked.length >= 6
     ? ranked
     : params.rawProjects
       .map((raw) => {
+        const quality = projectQualityScore(raw);
         const intrinsicMid = intrinsicProjectMidpoint(raw, params.bounds);
-        const fit = budgetMode === "lens"
-          ? Math.max(0.05, budgetFitScore(intrinsicMid, params.budgetBand))
-          : scopeFitsBudget(raw.scope, params.budgetBand.id) ? 1 : 0.15;
-        return { raw, intrinsicMid, fit, quality: projectQualityScore(raw) };
+        let fit = budgetMode === "lens"
+          ? budgetFitScore(intrinsicMid, quality, params.budgetBand)
+          : scopeFitsBudget(raw.scope, params.budgetBand) ? 1 : 0.15;
+        if (budgetMode === "lens" && fit <= 0 && targetQ !== null) {
+          // Soft fallback: distance to the band's finish target only.
+          fit = Math.max(0.02, 0.55 - Math.abs(quality - targetQ));
+          if (window && window.mid <= 10_000 && quality >= 0.7) fit = 0;
+          if (window && window.mid >= 70_000 && quality <= 0.3) fit = 0;
+        }
+        return { raw, intrinsicMid, fit, quality };
       })
-      .sort((a, b) => b.fit - a.fit || a.raw.assetId.localeCompare(b.raw.assetId));
+      .filter((entry) => entry.fit > 0)
+      .sort((a, b) => compareBudgetEntries(a, b, params.budgetBand));
 
   return pool
     .slice(0, 50)

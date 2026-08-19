@@ -49,6 +49,7 @@ from api.routers import execute_function as execute_router  # noqa: E402
 from api.routers import form as form_router  # noqa: E402
 from api.routers import image as image_router  # noqa: E402
 from api.routers import pricing as pricing_router  # noqa: E402
+from api.routers import adventure as adventure_router  # noqa: E402
 from api.utils import now_ms  # noqa: E402
 
 
@@ -119,6 +120,7 @@ def create_app() -> FastAPI:
     form_router.register(router, compat_router)
     pricing_router.register(router, compat_router)
     image_router.register(router, compat_router)
+    adventure_router.register(router, compat_router)
     execute_router.register(
         router,
         compat_router,

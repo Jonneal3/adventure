@@ -1,4 +1,4 @@
-import { AdventureV5Experience } from "@/components/adventure/v5";
+import { AdventureV8Experience } from "@/components/adventure/v8";
 import { prefetchWidgetInstance } from "@/lib/server/widget-prefetch";
 import { notFound } from "next/navigation";
 
@@ -13,7 +13,7 @@ export default async function AdventurePage({ params }: Props) {
   if (!prefetched?.instance) notFound();
 
   return (
-    <AdventureV5Experience
+    <AdventureV8Experience
       instanceId={params.instanceId}
       initialInstanceData={prefetched.instance}
       initialDesignConfig={prefetched.designConfig}

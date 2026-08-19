@@ -189,3 +189,38 @@ def test_fast_schnell_scene_prompt_respects_dspy_env(monkeypatch) -> None:
         "modelId": "black-forest-labs/flux-schnell",
     }
     assert orchestrator._use_fast_schnell_scene_prompt(payload) is False
+
+
+def test_resolve_prompt_phase_uses_long_step_prompt_input() -> None:
+    authored = (
+        "Photoreal residential bathroom for a bathroom remodel project. "
+        "This is a ROUGH STARTER meant to be changed — a whitewashed blank canvas, not a finished design. "
+        "Typical US 5x8 hall bath with an alcove tub/shower combo on the back wall."
+    )
+    prompt, _neg, err = orchestrator._resolve_prompt_phase(
+        {
+            "useCase": "scene",
+            "modelId": "black-forest-labs/flux-schnell",
+            "stepDataSoFar": {"step-promptInput": authored, "service": "Bathroom remodel"},
+            "refinementNotes": authored,
+        }
+    )
+    assert err is None
+    assert prompt == authored
+    assert "whitewashed blank canvas" in (prompt or "")
+
+
+def test_resolve_prompt_phase_ignores_short_step_prompt_input(monkeypatch) -> None:
+    monkeypatch.delenv("IMAGE_SCENE_USE_DSPY_PROMPT", raising=False)
+    prompt, _neg, err = orchestrator._resolve_prompt_phase(
+        {
+            "useCase": "scene",
+            "modelId": "black-forest-labs/flux-schnell",
+            "stepDataSoFar": {"step-promptInput": "modern bathroom"},
+            "instanceContext": {"service": {"name": "Bathroom Remodeling"}},
+        }
+    )
+    assert err is None
+    assert prompt
+    assert "finished installation" in prompt.lower() or "photorealistic" in prompt.lower()
+    assert prompt != "modern bathroom"

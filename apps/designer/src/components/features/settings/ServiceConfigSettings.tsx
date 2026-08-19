@@ -3,9 +3,10 @@
 import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, Save, Cog, Zap } from 'lucide-react';
+import { Loader2, Save, Cog } from 'lucide-react';
 import { useInstance } from '@/contexts/InstanceContext';
 import { PROVIDERS } from '@/shared-api/config/providers';
 
@@ -13,28 +14,58 @@ interface ServiceConfigSettingsProps {
   onSave?: () => void;
 }
 
+function readAdventureBudget(config: any): { enabled: boolean; min: string; max: string; step: string } {
+  const raw = config?.adventureBudget || config?.budgetBounds || null;
+  if (!raw || typeof raw !== 'object') {
+    return { enabled: false, min: '5000', max: '80000', step: '1000' };
+  }
+  return {
+    enabled: true,
+    min: String(Number(raw.min ?? raw.minBudget) || 5000),
+    max: String(Number(raw.max ?? raw.maxBudget) || 80000),
+    step: String(Number(raw.step) || 1000),
+  };
+}
+
 export function ServiceConfigSettings({ onSave }: ServiceConfigSettingsProps) {
   const { currentInstance, updateInstance } = useInstance();
   const [saving, setSaving] = React.useState(false);
+  const cfg =
+    typeof currentInstance?.config === 'object' && currentInstance?.config !== null
+      ? (currentInstance.config as any)
+      : {};
+  const budgetInit = readAdventureBudget(cfg);
   const [formData, setFormData] = React.useState({
-    provider: (typeof currentInstance?.config === 'object' && currentInstance?.config !== null ? (currentInstance.config as any).provider : 'replicate'),
-    modelId: (typeof currentInstance?.config === 'object' && currentInstance?.config !== null ? (currentInstance.config as any).modelId : 'google/nano-banana'),
-    generation_quality: (typeof currentInstance?.config === 'object' && currentInstance?.config !== null ? (currentInstance.config as any).generation_quality : 'quality'),
-    gallery_max_images: (typeof currentInstance?.config === 'object' && currentInstance?.config !== null ? (currentInstance.config as any).gallery_max_images : 4),
+    provider: cfg.provider || 'replicate',
+    modelId: cfg.modelId || 'google/nano-banana',
+    generation_quality: cfg.generation_quality || 'quality',
+    gallery_max_images: cfg.gallery_max_images || 4,
+    budgetEnabled: budgetInit.enabled,
+    budgetMin: budgetInit.min,
+    budgetMax: budgetInit.max,
+    budgetStep: budgetInit.step,
   });
 
   const handleSave = async () => {
     setSaving(true);
     try {
-      await updateInstance({
-        config: {
-          ...(typeof currentInstance?.config === 'object' && currentInstance?.config !== null ? currentInstance.config : {}),
-          provider: formData.provider,
-          modelId: formData.modelId,
-          generation_quality: formData.generation_quality,
-          gallery_max_images: formData.gallery_max_images,
-        }
-      });
+      const nextConfig: Record<string, unknown> = {
+        ...cfg,
+        provider: formData.provider,
+        modelId: formData.modelId,
+        generation_quality: formData.generation_quality,
+        gallery_max_images: formData.gallery_max_images,
+      };
+      if (formData.budgetEnabled) {
+        const min = Math.max(500, Number(formData.budgetMin) || 5000);
+        const max = Math.max(min + 1000, Number(formData.budgetMax) || 80000);
+        const step = Math.max(100, Number(formData.budgetStep) || 1000);
+        nextConfig.adventureBudget = { min, max, step, currency: 'USD' };
+      } else {
+        delete nextConfig.adventureBudget;
+        delete nextConfig.budgetBounds;
+      }
+      await updateInstance({ config: nextConfig });
       onSave?.();
     } catch (error) {} finally {
       setSaving(false);
@@ -124,6 +155,63 @@ export function ServiceConfigSettings({ onSave }: ServiceConfigSettingsProps) {
           <p className="text-xs text-muted-foreground">
             Number of images generated per request
           </p>
+        </div>
+
+        <div className="rounded-md border p-4 space-y-3">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <Label>Adventure budget slider override</Label>
+              <p className="text-xs text-muted-foreground mt-1">
+                When enabled, replaces platform service+scope ranges in the Adventure budget step.
+              </p>
+            </div>
+            <Select
+              value={formData.budgetEnabled ? 'on' : 'off'}
+              onValueChange={(value) => setFormData({ ...formData, budgetEnabled: value === 'on' })}
+            >
+              <SelectTrigger className="w-[120px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="off">Platform</SelectItem>
+                <SelectItem value="on">Override</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          {formData.budgetEnabled ? (
+            <div className="grid grid-cols-3 gap-3">
+              <div className="space-y-1">
+                <Label htmlFor="budget_min">Min ($)</Label>
+                <Input
+                  id="budget_min"
+                  type="number"
+                  min={500}
+                  value={formData.budgetMin}
+                  onChange={(e) => setFormData({ ...formData, budgetMin: e.target.value })}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="budget_max">Max ($)</Label>
+                <Input
+                  id="budget_max"
+                  type="number"
+                  min={1000}
+                  value={formData.budgetMax}
+                  onChange={(e) => setFormData({ ...formData, budgetMax: e.target.value })}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="budget_step">Step ($)</Label>
+                <Input
+                  id="budget_step"
+                  type="number"
+                  min={100}
+                  value={formData.budgetStep}
+                  onChange={(e) => setFormData({ ...formData, budgetStep: e.target.value })}
+                />
+              </div>
+            </div>
+          ) : null}
         </div>
 
         <Button onClick={handleSave} disabled={saving} className="w-full">

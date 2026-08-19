@@ -206,3 +206,34 @@ def test_generate_image_resolves_model_before_provider_call(monkeypatch) -> None
     assert resp["ok"] is True
     assert captured["model_id"] == "black-forest-labs/flux-1.1-pro"
     assert captured["output_format"] == "png"
+
+
+def test_explicit_imagen_4_fast_is_preserved() -> None:
+    resolved = resolve_image_request(
+        {
+            "instanceId": "instance-discovery",
+            "useCase": "scene",
+            "modelId": "google/imagen-4-fast",
+            "prompt": "Photoreal bathroom, vanity and flooring visible.",
+        }
+    )
+
+    assert resolved["modelId"] == "google/imagen-4-fast"
+
+
+def test_build_replicate_request_uses_imagen_shape() -> None:
+    request = build_replicate_request(
+        prompt="Photoreal bathroom, vanity and flooring visible, warm modern.",
+        model_id="google/imagen-4-fast",
+        aspect_ratio="1:1",
+        output_format="jpg",
+        num_outputs=1,
+    )
+
+    assert request["modelId"] == "google/imagen-4-fast"
+    assert request["input"] == {
+        "prompt": "Photoreal bathroom, vanity and flooring visible, warm modern.",
+        "aspect_ratio": "1:1",
+        "output_format": "jpg",
+        "safety_filter_level": "block_only_high",
+    }

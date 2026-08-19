@@ -24,16 +24,17 @@ class SubcategoryScopeSuggesterSignature(dspy.Signature):
 
 
 SCOPE_SUGGESTER_INSTRUCTIONS = """
-You generate checklist labels for the FIRST step of a home-services or similar intake flow.
+You generate a SELECT-ALL-THAT-APPLY parts checklist for a home-services intake Focus step.
 
 Rules:
 - Output ONLY valid JSON: an object with a single key "scopes" whose value is an array of strings.
-- Between min_scope_count and max_scope_count items (inclusive).
-- Each string is 2–6 words: a common way customers carve up THIS service (what they might want done).
-- Must be realistic for the given industry and service; use the refinement components as hints for how the trade is decomposed.
-- Examples of intent: "Full remodel" vs "Vanity only" for bathrooms; "Outdoor kitchen" vs "Lawn + beds" for landscape — not generic filler.
-- No duplicates; no "Other", "Not sure", or administrative options.
-- No pricing, timelines, or questions — only scope-of-work phrases.
+- Between min_scope_count and max_scope_count items (inclusive). Prefer 12–18 when allowed.
+- Each string is a concrete PROJECT ELEMENT / PART the customer might include (2–5 words).
+- Examples: "Outdoor grill", "Patio / terrace", "Vanity", "Floor tile", "Fire pit", "Lighting" —
+  NOT coarse buckets like "Full remodel", "Backyard only", or "Cosmetic refresh".
+- Must be realistic for the given industry and service; use refinement components as decomposition hints.
+- No duplicates; no "Other", "Full renovation", "Not sure", or administrative options.
+- No pricing, timelines, or questions — only includable parts of the job.
 """
 
 

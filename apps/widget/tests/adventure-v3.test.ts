@@ -23,12 +23,12 @@ function read(relativePath: string): string {
   return readFileSync(resolve(widgetRoot, relativePath), "utf8");
 }
 
-test("V3 keeps its pricing-first route after V5 becomes the default", () => {
+test("V3 keeps its pricing-first route after V6 becomes the default", () => {
   const unversioned = read("app/adventure/[instanceId]/page.tsx");
   const v2 = read("app/adventure/v2/[instanceId]/page.tsx");
   const v3 = read("app/adventure/v3/[instanceId]/page.tsx");
 
-  assert.match(unversioned, /AdventureV5Experience/);
+  assert.match(unversioned, /AdventureV8Experience/);
   assert.match(v2, /AdventureV2Experience/);
   assert.match(v3, /AdventureV3Experience/);
 });
@@ -146,6 +146,12 @@ test("budget-matched projects stay inside the selected band and personalization 
   });
   const titles = duplicateLabels.map((project) => project.title);
   assert.equal(new Set(titles).size, titles.length);
+  // One naming format: style name, or "Style 2" for dupes — never "Style · Tag".
+  assert.ok(titles.every((title) => !title.includes("·")));
+  assert.ok(titles.includes("Warm Contemporary"));
+  assert.ok(titles.includes("Modern Organic"));
+  assert.ok(titles.includes("Warm Contemporary 2"));
+  assert.ok(titles.includes("Modern Organic 2"));
   assert.ok(duplicateLabels.every((project) => project.priceMax - project.priceMin <= 20_000));
 
   const mixedCatalog = [
@@ -208,6 +214,56 @@ test("budget-matched projects stay inside the selected band and personalization 
   const lowMids = lowGallery.map((project) => (project.priceMin + project.priceMax) / 2);
   const highMids = highGallery.map((project) => (project.priceMin + project.priceMax) / 2);
   assert.ok(Math.max(...lowMids) < Math.min(...highMids));
+
+  const lowFinishGallery = buildVisualProjects({
+    rawProjects: [
+      {
+        assetId: "deco",
+        imageUrl: "https://example.com/deco.png",
+        storagePath: "deco.png",
+        label: "Art Deco Gold",
+        scope: "Shower or tub area only",
+        createdAt: Date.now(),
+      },
+      {
+        assetId: "soft",
+        imageUrl: "https://example.com/soft.png",
+        storagePath: "soft.png",
+        label: "Soft Scandinavian",
+        scope: "Shower or tub area only",
+        createdAt: Date.now(),
+      },
+      {
+        assetId: "marble",
+        imageUrl: "https://example.com/marble.png",
+        storagePath: "marble.png",
+        label: "Black Marble Drama",
+        scope: "Shower or tub area only",
+        createdAt: Date.now(),
+      },
+      {
+        assetId: "coastal",
+        imageUrl: "https://example.com/coastal.png",
+        storagePath: "coastal.png",
+        label: "Coastal Natural",
+        scope: "Shower or tub area only",
+        createdAt: Date.now(),
+      },
+    ],
+    service: { value: "bath", label: "Bathroom Remodels" },
+    budgetBand: {
+      id: "bath-under-5",
+      label: "Under $5,000",
+      galleryLabel: "under $5K",
+      min: 2_500,
+      max: 5_000,
+    },
+    bounds: { min: 8_000, max: 45_000, currency: "USD" },
+    budgetMode: "lens",
+  });
+  const lowTitles = lowFinishGallery.map((project) => project.title).join(" ");
+  assert.match(lowTitles, /Scandinavian|Coastal/i);
+  assert.doesNotMatch(lowTitles, /Art Deco|Marble Drama/i);
 
   const midGallery = buildVisualProjects({
     rawProjects: mixedCatalog,
@@ -363,7 +419,7 @@ test("V3 implements visual pricing before email and own-room value before phone"
   assert.match(experience, /cache: "no-store"/);
   assert.match(experience, /rootRef\.current\?\.scrollTo\(\{ top: 0/);
   assert.match(visualRoute, /listV2ScopeGalleryOptions/);
-  assert.match(visualRoute, /interleaved\.length < 50/);
+  assert.match(visualRoute, /interleaved\.length < targetCount/);
   assert.match(visualRoute, /stored_scope_catalog/);
   assert.match(leadRoute, /experienceVersion: "v3"/);
   assert.match(leadRoute, /personalizedPlanUnlockedAt/);

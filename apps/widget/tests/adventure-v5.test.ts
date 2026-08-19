@@ -14,13 +14,11 @@ const experience = () => read("components/adventure/v5/AdventureV5Experience.tsx
 const v5Css = () => read("components/adventure/v5/visual-pricing-v5.module.css");
 
 test("V5 ships as its own experience behind an isolated route and storage namespace", () => {
-  const unversioned = read("app/adventure/[instanceId]/page.tsx");
   const route = read("app/adventure/v5/[instanceId]/page.tsx");
   const wrapper = read("components/adventure/v5/index.ts");
   const storage = read("components/adventure/v3/visual-storage.ts");
   const component = experience();
 
-  assert.match(unversioned, /AdventureV5Experience/);
   assert.match(route, /AdventureV5Experience/);
   assert.match(wrapper, /AdventureV5Experience/);
   assert.match(component, /export function AdventureV5Experience/);
@@ -42,32 +40,39 @@ test("V5 owns its markup and stylesheet instead of skinning V3/V4", () => {
   assert.doesNotMatch(legacyCss, /data-adventure-version="v5"/);
 });
 
-test("V5 inherits V4's flow: primer skipped, curated budget, and V4 refinement economics", () => {
+test("V5 inherits V4's flow: primer skipped, inspire-first (no budget ask), and V4 refinement economics", () => {
   const component = experience();
   const css = v5Css();
 
   // Primer is retired: fresh sessions land on the first real question.
   assert.match(component, /function defaultSnapshot\([\s\S]*?showPrimer = false/);
   assert.match(component, /defaultSnapshot\(sessionId, implicit\)/);
-  // Budget curates rather than constrains.
+  // Budget step is skipped — open lens via silent not-sure, no dollar ask up front.
   assert.match(component, /budgetMode: "lens"/);
+  assert.match(component, /budgetBandId: "not-sure"/);
+  assert.match(component, /DEMO_SESSION_ID|v5-demo-locked/);
+  assert.match(component, /forceVisualPricingSession/);
+  assert.match(component, /return scopesForService\(service\)\.length > 1 \? "scope" : "gallery"/);
+  assert.doesNotMatch(component, /stage: "budget"/);
+  assert.doesNotMatch(component, /What’s your budget\?/);
   // Refining the reference design is open; personalizing the customer's own
   // photo is what the phone gate unlocks.
   assert.match(component, /const PROJECT_REFINEMENT_LIMIT = Number\.POSITIVE_INFINITY/);
   assert.match(component, /const PERSONALIZED_REFINEMENT_LIMIT = 0/);
   assert.match(component, /personalize: "customize"/);
-  assert.match(component, /\["Project", "Budget", "Inspiration", "Estimate", "Next steps"\]/);
+  assert.match(component, /\["Project", "Inspiration", "Estimate", "Next steps"\]/);
   assert.match(component, /Something else/);
+  assert.match(component, /label="Other"/);
+  assert.match(component, /choiceOther/);
+  assert.match(component, /Describe what you need/);
   assert.doesNotMatch(component, /Skip for now — show a rough range/);
-  assert.match(component, /budgetGuidanceCopy\(selectedService\)/);
   assert.match(component, /serviceLabelLower\(selectedService\)/);
   assert.match(component, /See what’s possible for \$\{serviceName\}/);
   assert.match(component, /Your planning estimate for this \$\{serviceName\} direction/);
   assert.doesNotMatch(component, /Most full \{serviceWord\} projects land in the \$25,000–\$40,000 range/);
-  // Answers accumulate in a vertical rail with clear actions, not top-right chips.
-  assert.match(component, /className=\{css\.answerRail\}/);
-  assert.match(component, /clearBudgetAnswer/);
-  assert.match(css, /\.answerRail \{/);
+  // No floating answer chips — they read as unfinished debug UI on demos.
+  assert.doesNotMatch(component, /className=\{css\.answerRail\}/);
+  assert.doesNotMatch(component, /clearBudgetAnswer/);
   assert.doesNotMatch(component, /className=\{css\.selectionBar\}/);
 });
 
@@ -162,7 +167,7 @@ test("V5 keeps V4's inspiration gallery: dense wall, locked pricing, V4 copy", (
   assert.match(css, /\.look\[data-shape="square"\] \{ grid-row-end: span 357; height: 340px; \}/);
   assert.match(css, /\.look\[data-shape="portrait"\] \{ grid-row-end: span 437; height: 420px; \}/);
   // Card: fit badge, caption on the image, and a blurred directional price teaser.
-  assert.match(component, /className=\{css\.lookBadge\}[\s\S]*?Common at this level/);
+  assert.match(component, /className=\{css\.lookBadge\}[\s\S]*?Most popular/);
   assert.match(component, /className=\{css\.lookLocked\}[\s\S]*?Est\. price/);
   assert.match(component, /className=\{css\.lookTeaser\}/);
   assert.match(component, /partialPriceTeaser\(/);
@@ -172,7 +177,8 @@ test("V5 keeps V4's inspiration gallery: dense wall, locked pricing, V4 copy", (
   assert.match(css, /\.stickyCta \{[\s\S]*?position: sticky;/);
   // Gallery copy stays service-aware, with a shared header component across every step.
   assert.match(component, /See what’s possible for \$\{serviceName\}/);
-  assert.match(component, /See what’s possible at your budget/);
+  assert.match(component, /See what’s possible"/);
+  assert.doesNotMatch(component, /See what’s possible at your budget/);
   assert.match(component, /body="Choose the direction you love—your range can evolve from there\."/);
   assert.match(css, /\.stage\[data-stage="gallery"\] \.stepHead \{/);
 });
@@ -220,7 +226,7 @@ test("V5 keeps each step's action above the fold", () => {
   assert.match(css, /@media \(max-height: 820px\)[\s\S]*?--v5-step-gap:/);
   assert.match(css, /@media \(max-height: 820px\)[\s\S]*?\.dirOption \{[\s\S]*?min-height: 44px/);
   // Choice rows and direction rows share one set of metrics.
-  assert.match(css, /\.choice \{[\s\S]*?min-height: 60px/);
+  assert.match(css, /\.choice \{[\s\S]*?min-height: 48px/);
   assert.match(css, /\.dirOption \{[\s\S]*?min-height: 60px/);
 });
 
@@ -257,9 +263,10 @@ test("V5 choreographs stage changes with a real transition, not a swap", () => {
 test("V5 avoids SaaS chrome and keeps one primary action per step", () => {
   const css = v5Css();
 
-  // Grouped rows carry a single shadow and inset hairlines, never per-row borders.
-  assert.match(css, /\.choice \{[\s\S]*?border: none;/);
-  assert.match(css, /\.choice \+ \.choice \{\s*box-shadow: inset 0 1px 0 var\(--v5-hair\);/);
+  // Choice lists stay unboxed — hairline rows, no card chrome.
+  assert.match(css, /\.choices \{\n  display: flex;\n  flex-direction: column;\n  margin: 0 auto;\n  max-width: 420px;/);
+  assert.doesNotMatch(css, /\.choices \{[^}]*box-shadow:/);
+  assert.match(css, /\.choice \{[\s\S]*?border-bottom: 1px solid var\(--v5-hair\);/);
   assert.match(css, /\.dirOption \+ \.dirOption \{\s*box-shadow: inset 0 1px 0 var\(--v5-hair\);/);
   // Headlines are centered and constrained; hierarchy comes from type, not boxes.
   assert.match(css, /\.stepHead \{[\s\S]*?text-align: center/);
@@ -283,7 +290,7 @@ test("V5 is responsive and respects touch, safe areas, and reduced motion", () =
   // Touch targets, safe areas, motion preference, focus ring.
   assert.match(css, /\.primaryAction \{[\s\S]*?min-height: 54px/);
   assert.match(css, /\.secondaryAction \{[\s\S]*?min-height: 50px/);
-  assert.match(css, /\.choice \{[\s\S]*?min-height: 60px/);
+  assert.match(css, /\.choice \{[\s\S]*?min-height: 48px/);
   assert.match(css, /env\(safe-area-inset-bottom\)/);
   assert.match(css, /env\(safe-area-inset-top\)/);
   assert.match(css, /@media \(prefers-reduced-motion: reduce\)/);
@@ -318,15 +325,16 @@ test("V5 keeps the conversion gates and their wiring intact", () => {
   const component = experience();
   const css = v5Css();
 
-  assert.match(component, /Unlock \{props\.project\.title\} pricing/);
+  assert.match(component, /Unlock pricing for every design/);
   assert.match(component, /See pricing/);
-  assert.match(component, /We’ll email your estimate\. Unsubscribe anytime\./);
+  assert.match(component, /Pricing unlocks instantly on this screen/);
   assert.match(component, /Keep customizing your project/);
   assert.match(component, /Unlock continued refinements/);
   assert.match(component, /This unlocks your project workspace\. It does not request a consultation\./);
-  assert.match(component, /Pricing unlocked/);
+  assert.doesNotMatch(component, /Pricing unlocked/);
+  assert.match(component, /Book a consultation/);
+  assert.match(component, /bookConsultation/);
   assert.match(component, /Customize this design/);
-  assert.match(component, /Adjust this estimate/);
   assert.match(component, /See this direction in your own space/);
   assert.match(component, /Get a free pro review of this plan/);
   assert.match(component, /Get a free contractor review/);
@@ -351,14 +359,11 @@ test("V5 speaks entirely in the previous version's copy", () => {
   const legacy = read("components/adventure/v3/AdventureV3VisualPricingExperience.tsx");
 
   // Shared foundation still matches the previous funnel's language.
+  // Budget-first copy is intentionally retired in V5 (inspire before anchoring).
   const sharedCopy = [
     "Loading visual pricing…",
     "What are you planning?",
     "What do you need?",
-    "What’s your budget?",
-    "This helps us curate inspiration. It does not cap your project.",
-    "See what’s possible at your budget",
-    "Common at this level",
     "Estimated price hidden",
     "We couldn’t load the project gallery.",
     "Your estimate",
@@ -382,11 +387,21 @@ test("V5 speaks entirely in the previous version's copy", () => {
     assert.ok(component.includes(line), `V5 dropped shared copy: ${line}`);
   }
 
+  for (const retired of [
+    "What’s your budget?",
+    "This helps us curate inspiration. It does not cap your project.",
+    "See what’s possible at your budget",
+    "Common at this level",
+  ]) {
+    assert.ok(legacy.includes(retired), `not legacy copy: ${retired}`);
+    assert.ok(!component.includes(retired), `V5 should not keep retired copy: ${retired}`);
+  }
+
   // Conversion-tuned lines that intentionally diverge from legacy phrasing.
   for (const line of [
-    "Unlock {props.project.title} pricing",
-    "We’ll email your estimate. Unsubscribe anytime.",
-    "Adjust this estimate",
+    "Unlock pricing for every design",
+    "Pricing unlocks instantly on this screen. We’ll also email a copy — unsubscribe anytime.",
+    "Book a consultation",
     "Get a free pro review of this plan",
     "Get a free contractor review",
     "Most popular",

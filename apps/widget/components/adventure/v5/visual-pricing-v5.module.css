@@ -595,14 +595,10 @@
 /* ------------------------------------------------------------ choice rows */
 
 .choices {
-  background: var(--v5-card);
-  border-radius: var(--v5-r-lg);
-  box-shadow: var(--v5-shadow);
   display: flex;
   flex-direction: column;
   margin: 0 auto;
-  max-width: 560px;
-  overflow: hidden;
+  max-width: 420px;
   width: 100%;
 }
 
@@ -610,15 +606,19 @@
   align-items: center;
   background: none;
   border: none;
+  border-bottom: 1px solid var(--v5-hair);
   cursor: pointer;
   display: flex;
-  gap: 14px;
-  justify-content: space-between;
-  min-height: 60px;
-  padding: 14px 22px;
+  justify-content: flex-start;
+  min-height: 48px;
+  padding: 12px 2px;
   text-align: left;
-  transition: background var(--v5-fast) var(--v5-ease);
+  transition: color var(--v5-fast) var(--v5-ease), opacity var(--v5-fast) var(--v5-ease);
   width: 100%;
+}
+
+.choice:first-child {
+  border-top: 1px solid var(--v5-hair);
 }
 
 .choiceThumb {
@@ -638,10 +638,6 @@
   min-width: 0;
 }
 
-.choice + .choice {
-  box-shadow: inset 0 1px 0 var(--v5-hair);
-}
-
 /*
  * Short viewports — laptops and phones in landscape — tighten the rhythm
  * instead of pushing the last option below the fold.
@@ -656,7 +652,7 @@
 
   .stepHead { gap: 5px; }
   .choice,
-  .dirOption { min-height: 52px; padding: 10px 18px; }
+  .dirOption { min-height: 44px; padding: 10px 2px; }
   .reveal .hero img { height: clamp(168px, 28dvh, 240px); }
   .reveal {
     --v5-t-hero: clamp(28px, 7vw, 40px);
@@ -665,18 +661,18 @@
 }
 
 .choice:hover {
-  background: var(--v5-tint);
+  color: color-mix(in oklab, var(--v5-ink) 72%, var(--v5-bg));
 }
 
 .choice:active {
-  background: var(--v5-tint-strong);
+  opacity: 0.72;
 }
 
 .choice strong {
-  font-size: var(--v5-t-lead);
+  font-size: var(--v5-t-body);
   font-weight: 550;
-  letter-spacing: -0.02em;
-  line-height: 1.3;
+  letter-spacing: -0.015em;
+  line-height: 1.35;
 }
 
 .choice small {
@@ -688,21 +684,59 @@
   padding-top: 2px;
 }
 
-.choice svg {
-  color: var(--v5-faint);
-  flex: none;
-  transition: transform var(--v5-mid) var(--v5-ease), color var(--v5-fast) var(--v5-ease);
-}
-
-.choice:hover svg {
-  color: var(--v5-ink);
-  transform: translateX(3px);
-}
-
 .choice[data-quiet="true"] strong {
   color: var(--v5-muted);
   font-size: var(--v5-t-body);
   font-weight: 550;
+}
+
+.choiceOther {
+  align-items: center;
+  border-bottom: 1px solid var(--v5-hair);
+  display: flex;
+  gap: 10px;
+  min-height: 48px;
+  padding: 8px 2px;
+  width: 100%;
+}
+
+.choiceOtherInput {
+  background: transparent;
+  border: none;
+  color: var(--v5-ink);
+  flex: 1;
+  font: inherit;
+  font-size: var(--v5-t-body);
+  font-weight: 550;
+  letter-spacing: -0.015em;
+  min-width: 0;
+  outline: none;
+  padding: 6px 0;
+}
+
+.choiceOtherInput::placeholder {
+  color: var(--v5-faint);
+  font-weight: 400;
+}
+
+.choiceOtherSubmit {
+  background: none;
+  border: none;
+  color: var(--v5-ink);
+  cursor: pointer;
+  flex: none;
+  font: inherit;
+  font-size: var(--v5-t-meta);
+  font-weight: 550;
+  letter-spacing: -0.01em;
+  opacity: 1;
+  padding: 6px 0;
+  transition: opacity var(--v5-fast) var(--v5-ease);
+}
+
+.choiceOtherSubmit:disabled {
+  cursor: default;
+  opacity: 0.35;
 }
 
 /* --------------------------------------------------------- inspiration flow */
@@ -924,7 +958,7 @@
 }
 
 .lookSkeleton {
-  animation: v5pulse 1600ms ease-in-out infinite;
+  animation: v5pulse 900ms ease-in-out infinite;
   background: var(--v5-tint-strong);
   border-radius: var(--v5-r-md);
   margin: 0;

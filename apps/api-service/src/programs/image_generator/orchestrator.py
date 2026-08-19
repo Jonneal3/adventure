@@ -842,8 +842,32 @@ def _normalize_generation_request(payload: Dict[str, Any]) -> Dict[str, Any]:
     return resolve_image_request(payload)
 
 
+def _authored_scene_prompt(payload: Dict[str, Any]) -> str:
+    """Use a complete client prompt when present.
+
+    `/generate/scene` copies `prompt` into `step-promptInput` and then drops
+    `payload.prompt`. V8 (and similar) send a full scene prompt there — do not
+    replace it with the generic Schnell "finished installation" template.
+    """
+    text = str(payload.get("prompt") or "").strip()
+    if text:
+        return text
+    step = payload.get("stepDataSoFar") or payload.get("step_data_so_far") or {}
+    if not isinstance(step, dict):
+        return ""
+    stored = str(step.get("step-promptInput") or "").strip()
+    notes = str(payload.get("refinementNotes") or payload.get("refinement_notes") or "").strip()
+    candidate = stored if len(stored) >= len(notes) else notes
+    use_case = str(payload.get("useCase") or payload.get("use_case") or "").strip().lower().replace("_", "-")
+    # Scene T2I needs a full prompt. Refinement notes are often one sentence.
+    min_len = 12 if use_case in {"scene-refinement", "scene-placement"} else 160
+    if len(candidate) >= min_len:
+        return candidate
+    return ""
+
+
 def _resolve_prompt_phase(payload: Dict[str, Any]) -> tuple[Optional[str], Optional[str], Optional[Dict[str, Any]]]:
-    prompt_text = str(payload.get("prompt") or "").strip()
+    prompt_text = _authored_scene_prompt(payload)
     negative_prompt = extract_negative_prompt(payload) or None
     if prompt_text:
         print(

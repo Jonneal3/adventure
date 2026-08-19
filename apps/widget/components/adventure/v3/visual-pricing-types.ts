@@ -11,15 +11,15 @@ export type VisualPricingStage =
   | "customize"
   | "personalize"
   | "personalized-preview"
-  | "personalized-result";
+  | "personalized-result"
+  /* V6 adds an explicit start-point fork, saved-inspiration input, and a
+   * generated-concepts step before pricing. Earlier versions never enter these. */
+  | "path"
+  | "inspiration"
+  | "concepts"
+  | "consultation";
 
-export type BudgetBandId =
-  | "under-15"
-  | "15-25"
-  | "25-40"
-  | "40-60"
-  | "60-plus"
-  | "not-sure";
+export type BudgetBandId = string;
 
 export type BudgetBand = {
   id: BudgetBandId;
@@ -94,7 +94,12 @@ export type VisualPricingSnapshot = {
   budgetBandId: BudgetBandId | null;
   projects: VisualPricingProject[];
   selectedProjectId: string | null;
+  /** V6: doubles as the saved-inspiration set fed into concept generation. */
   favoriteProjectIds: string[];
+  /** V6 only: whether concepts start from the visitor's own room or saved inspiration. */
+  startPath?: "upload" | "inspiration" | null;
+  /** V6 only: free-text answer to "What would you like to change?" on the upload path. */
+  uploadChangeNote?: string;
   lead: VisualPricingLead;
   estimateConfig: VisualPricingEstimateConfig;
   refinementPrompt: string;

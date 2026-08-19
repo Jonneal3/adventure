@@ -178,7 +178,7 @@ FLUX_SCHNELL = ModelCatalogEntry(
     speed="very_fast",
     quality="medium",
     max_reference_images=0,
-    best_for=("option_images", "thumbnails", "speed"),
+    best_for=("option_images", "thumbnails", "speed", "visual_discovery"),
     output_format="webp",
     aspect_ratio="1:1",
     guidance_scale=3.5,
@@ -186,7 +186,37 @@ FLUX_SCHNELL = ModelCatalogEntry(
     go_fast=True,
     provider_input_style="flux-schnell",
     priorities=("lowest_latency", "lowest_cost", "highest_quality"),
-    notes="Fastest acceptable model for option thumbnails and other speed-first image tasks.",
+    notes="Fastest acceptable model for option thumbnails, visual discovery, and other speed-first image tasks.",
+)
+
+IMAGEN_4 = ModelCatalogEntry(
+    key="imagen-4",
+    model_id="google/imagen-4",
+    label="Imagen 4",
+    speed="medium",
+    quality="high",
+    max_reference_images=0,
+    best_for=("scene_text_to_image", "photoreal_generation"),
+    output_format="jpg",
+    aspect_ratio="1:1",
+    provider_input_style="imagen",
+    traits=("high_prompt_adherence", "photoreal_generation"),
+    notes="Primary no-photo scene starter. Better fixture counting than Flux 1.1 Pro.",
+)
+
+IMAGEN_4_FAST = ModelCatalogEntry(
+    key="imagen-4-fast",
+    model_id="google/imagen-4-fast",
+    label="Imagen 4 Fast",
+    speed="very_fast",
+    quality="medium",
+    max_reference_images=0,
+    best_for=("visual_discovery", "fast_preview_generation", "speed"),
+    output_format="jpg",
+    aspect_ratio="1:1",
+    provider_input_style="imagen",
+    priorities=("lowest_latency", "lowest_cost", "highest_quality"),
+    notes="Fast text-to-image model for the no-photo visual discovery gallery split test.",
 )
 
 MODEL_CATALOG: Dict[str, ModelCatalogEntry] = {
@@ -200,6 +230,8 @@ MODEL_CATALOG: Dict[str, ModelCatalogEntry] = {
         GROK_IMAGINE_IMAGE,
         NANO_BANANA,
         FLUX_SCHNELL,
+        IMAGEN_4,
+        IMAGEN_4_FAST,
     )
 }
 
@@ -251,6 +283,7 @@ __all__ = [
     "FLUX_KONTEXT",
     "FLUX_PRO",
     "FLUX_SCHNELL",
+    "IMAGEN_4_FAST",
     "GROK_IMAGINE_IMAGE",
     "MODEL_CATALOG",
     "NANO_BANANA",

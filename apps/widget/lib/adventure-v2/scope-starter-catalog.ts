@@ -43,6 +43,9 @@ const compatibleSceneScopesByScope: Record<string, string[]> = {
   "cosmetic-refresh-paint-lighting-hardware": [
     "Full bathroom renovation",
     "Vanity, cabinets & fixtures",
+    "Shower or tub area only",
+    "Tile & flooring",
+    "Layout or plumbing changes",
   ],
   "layout-or-plumbing-changes": [
     "Full bathroom renovation",
@@ -214,7 +217,7 @@ export async function listV2ScopeStarters(params: {
     .eq("metadata->>generated_for", V2_SCOPE_STARTER_GENERATED_FOR)
     .eq("metadata->>starter_scope_key", scopeKey)
     .order("created_at", { ascending: false })
-    .limit(100);
+    .limit(Math.min(48, Math.max(12, (params.limit ?? 6) * 3)));
 
   if (result.error) {
     throw new Error(`Unable to load the scope starter catalog: ${result.error.message}`);
@@ -248,15 +251,26 @@ export async function listV2ScopeGalleryOptions(params: {
   subcategoryId: string;
   scope: string;
   limit?: number;
+  /** When true (default for inspiration walls), never mix in other scopes. */
+  strictScope?: boolean;
 }): Promise<V2ScopeGalleryOption[]> {
-  const limit = Math.max(1, Math.min(50, params.limit ?? 50));
-  const sceneScopes = [params.scope, ...compatibleSceneScopesForScope(params.scope)];
+  const limit = Math.max(1, Math.min(120, params.limit ?? 50));
+  const strict = params.strictScope !== false;
+  // Strict walls stay on the selected scope only. Compatible scopes are what
+  // put vanity shots on a "shower or tub" inspiration page.
+  const sceneScopes = strict
+    ? [params.scope]
+    : [params.scope, ...compatibleSceneScopesForScope(params.scope)];
+  const perScopeLimit = strict
+    ? limit
+    : Math.max(24, Math.ceil(limit / Math.max(1, sceneScopes.length)) * 2);
   const collectionResults = await Promise.allSettled(
     sceneScopes.map((scope) =>
-      listV2ScopeStarters({
-        ...params,
+      listV2ScopeGalleryStarters({
+        supabase: params.supabase,
+        subcategoryId: params.subcategoryId,
         scope,
-        limit,
+        limit: perScopeLimit,
       })
     )
   );
@@ -280,14 +294,82 @@ export async function listV2ScopeGalleryOptions(params: {
       : new Error("Unable to load any full-scene scope catalogs");
   }
 
-  const seen = new Set<string>();
-  return tagged
-    .filter((row) => {
+  if (strict) {
+    const seen = new Set<string>();
+    return tagged.filter((row) => {
       if (seen.has(row.id)) return false;
       seen.add(row.id);
       return true;
-    })
-    .slice(0, limit);
+    }).slice(0, limit);
+  }
+
+  // Interleave scopes so the wall doesn't dump one scope's batch first.
+  const byScope = new Map<string, V2ScopeGalleryOption[]>();
+  for (const row of tagged) {
+    const bucket = byScope.get(row.sceneScope) || [];
+    bucket.push(row);
+    byScope.set(row.sceneScope, bucket);
+  }
+  const buckets = Array.from(byScope.values());
+  const interleaved: V2ScopeGalleryOption[] = [];
+  const seen = new Set<string>();
+  const maxLen = Math.max(0, ...buckets.map((bucket) => bucket.length));
+  for (let i = 0; i < maxLen && interleaved.length < limit; i += 1) {
+    for (const bucket of buckets) {
+      const row = bucket[i];
+      if (!row || seen.has(row.id)) continue;
+      seen.add(row.id);
+      interleaved.push(row);
+      if (interleaved.length >= limit) break;
+    }
+  }
+  return interleaved;
+}
+
+/**
+ * Gallery listing — keep every unique image. Unlike listV2ScopeStarters, do not
+ * collapse to one row per starter_variant_index (that caps a wall at ~6–12 looks).
+ */
+async function listV2ScopeGalleryStarters(params: {
+  supabase: SupabaseClient<any, "public", any>;
+  subcategoryId: string;
+  scope: string;
+  limit?: number;
+}): Promise<V2ScopeStarterOption[]> {
+  const scopeKey = v2ScopeStarterKey(params.scope);
+  const limit = Math.max(1, Math.min(120, params.limit ?? 48));
+  const result = await params.supabase
+    .from("images")
+    .select("id, image_url, metadata, model_id, created_at")
+    .eq("subcategory_id", params.subcategoryId)
+    .is("account_id", null)
+    .eq("status", "completed")
+    .in("metadata->>generated_for", [
+      V2_SCOPE_STARTER_GENERATED_FOR,
+      V2_NEUTRAL_SCOPE_STARTER_GENERATED_FOR,
+    ])
+    .eq("metadata->>starter_scope_key", scopeKey)
+    .order("created_at", { ascending: false })
+    .limit(Math.min(200, limit * 2));
+
+  if (result.error) {
+    throw new Error(`Unable to load the scope gallery catalog: ${result.error.message}`);
+  }
+
+  const seen = new Set<string>();
+  const rows: V2ScopeStarterOption[] = [];
+  for (const rawRow of result.data || []) {
+    const row = rawRow as ScopeStarterRow;
+    if (!row.id || !row.image_url || seen.has(row.id)) continue;
+    seen.add(row.id);
+    rows.push({
+      ...row,
+      label: variantLabel(row),
+      variantIndex: variantIndex(row),
+    });
+    if (rows.length >= limit) break;
+  }
+  return rows;
 }
 
 export async function findV2ScopeStarter(params: {

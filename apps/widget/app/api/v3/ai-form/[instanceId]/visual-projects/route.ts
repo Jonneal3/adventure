@@ -26,6 +26,13 @@ export async function GET(
   { params }: { params: { instanceId: string } }
 ) {
   const serviceId = text(request.nextUrl.searchParams.get("serviceId"), 160);
+  const targetCount = Math.max(
+    6,
+    Math.min(120, Number(request.nextUrl.searchParams.get("limit")) || 50)
+  );
+  const strictScope = ["1", "true", "yes"].includes(
+    String(request.nextUrl.searchParams.get("strictScope") || "").trim().toLowerCase()
+  );
   const scopes = Array.from(
     new Set(
       request.nextUrl.searchParams
@@ -33,7 +40,7 @@ export async function GET(
         .map((scope) => text(scope))
         .filter(Boolean)
     )
-  ).slice(0, 12);
+  ).slice(0, targetCount <= 12 ? 2 : 12);
 
   if (!params.instanceId || !serviceId) {
     return NextResponse.json(
@@ -51,7 +58,8 @@ export async function GET(
             supabase,
             subcategoryId: serviceId,
             scope,
-            limit: 50,
+            limit: targetCount,
+            strictScope,
           });
           // Keep each image's real scene scope so pricing can differ by work type.
           return rows.map((row) => ({ row, scope: row.sceneScope || scope }));
@@ -69,11 +77,11 @@ export async function GET(
 
     const interleaved: Array<{ row: any; scope: string }> = [];
     const maxVariants = Math.max(0, ...scopedCollections.map((collection) => collection.length));
-    for (let variantIndex = 0; variantIndex < maxVariants && interleaved.length < 50; variantIndex += 1) {
+    for (let variantIndex = 0; variantIndex < maxVariants && interleaved.length < targetCount; variantIndex += 1) {
       for (const collection of scopedCollections) {
         const item = collection[variantIndex];
         if (item) interleaved.push(item);
-        if (interleaved.length >= 50) break;
+        if (interleaved.length >= targetCount) break;
       }
     }
 
@@ -89,7 +97,7 @@ export async function GET(
         seen.add(row.id);
         return true;
       })
-      .slice(0, 50)
+      .slice(0, targetCount)
       .map(({ row, scope }, index) => ({
         assetId: row.id,
         imageUrl: row.image_url,
@@ -111,8 +119,13 @@ export async function GET(
     }
 
     return NextResponse.json(
-      { ok: true, projects, source: "stored_scope_catalog", targetCount: 50 },
-      { headers: { "Cache-Control": "no-store" } }
+      { ok: true, projects, source: "stored_scope_catalog", targetCount },
+      {
+        headers: {
+          // Short browser/CDN cache — gallery payloads are read-heavy and change rarely.
+          "Cache-Control": "public, max-age=60, stale-while-revalidate=300",
+        },
+      }
     );
   } catch (error) {
     logger.error("[adventure-v3:visual-projects] catalog failed", {

@@ -41,7 +41,6 @@ import {
   refinementComponentsForProject,
 } from "../v3/refinement-component-library";
 import {
-  BUDGET_BANDS,
   adjustedPersonalizedRange,
   budgetBandById,
   buildVisualProjects,
@@ -54,7 +53,6 @@ import {
 } from "../v3/visual-pricing";
 import type {
   BudgetBand,
-  BudgetBandId,
   PersonalizedRefinementRecord,
   RawVisualProject,
   VisualPricingProject,
@@ -63,10 +61,14 @@ import type {
 } from "../v3/visual-pricing-types";
 import {
   clearVisualPricingSnapshot,
+  forceVisualPricingSession,
   getOrCreateVisualPricingSession,
   loadVisualPricingSnapshot,
   saveVisualPricingSnapshot,
 } from "../v3/visual-storage";
+
+/** Locked session for ?demo=1 — same walkthrough every recording. */
+const DEMO_SESSION_ID = "v5-demo-locked";
 import css from "./visual-pricing-v5.module.css";
 
 type Props = {
@@ -77,6 +79,8 @@ type Props = {
 
 const PERSONALIZATION_MODEL_ID = "black-forest-labs/flux-2-pro";
 const VISUAL_CATALOG_REVISION = "2026-08-05-budget-fit-v5";
+/** Curated wall size — fewer cards, faster fetch, more confidence. */
+const GALLERY_LIMIT = 9;
 // V4 economics: refining the reference design stays open, while personalizing
 // the customer's own photo is what the phone number unlocks.
 const PROJECT_REFINEMENT_LIMIT = Number.POSITIVE_INFINITY;
@@ -92,7 +96,7 @@ type PersonalizedRefinementOption = {
 type PlanningRange = { totalMin: number; totalMax: number; currency: string };
 type PricedCanvasHistoryEntry = CanvasHistoryEntry & { planningRange?: PlanningRange | null };
 type PendingPhoneAction =
-  | { kind: "project-refinement" | "personalized-refinement" }
+  | { kind: "project-refinement" | "personalized-refinement" | "consultation" }
   | { kind: "download" | "fullscreen"; imageUrl: string; label: string };
 
 function storedPlanningRange(entry: CanvasHistoryEntry | undefined): PlanningRange | null {
@@ -380,12 +384,6 @@ function visionPathsFor(service: ServiceOption | null): VisionPath[] {
   ];
 }
 
-function budgetGuidanceCopy(service: ServiceOption | null): string {
-  const name = service?.label?.trim();
-  if (!name) return "Choose the range that feels closest. You can refine it as you go.";
-  return `Choose the range that feels closest for ${name.toLowerCase()}. You can refine it as you go.`;
-}
-
 function readFileAsDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     if (!file.type.startsWith("image/")) {
@@ -409,7 +407,8 @@ function scopesForService(service: ServiceOption | null): string[] {
 
 function firstQuestionStage(service: ServiceOption | null): VisualPricingStage {
   if (!service) return "project";
-  return scopesForService(service).length > 1 ? "scope" : "budget";
+  // Skip budget: inspire first, price after emotional commitment.
+  return scopesForService(service).length > 1 ? "scope" : "gallery";
 }
 
 function defaultSnapshot(
@@ -418,14 +417,16 @@ function defaultSnapshot(
   showPrimer = false
 ): VisualPricingSnapshot {
   const scopes = scopesForService(service);
+  const stage = showPrimer ? "intro" : firstQuestionStage(service);
   return {
     version: 3,
     experiment: "visual_pricing_two_stage",
     sessionId,
-    stage: showPrimer ? "intro" : firstQuestionStage(service),
+    stage,
     selectedServiceId: service?.value || null,
     selectedScope: scopes.length === 1 ? scopes[0] : null,
-    budgetBandId: null,
+    // Silent open lens — no dollar band asked up front.
+    budgetBandId: stage === "gallery" ? "not-sure" : null,
     projects: [],
     selectedProjectId: null,
     favoriteProjectIds: [],
@@ -543,9 +544,9 @@ function EmailSheet(props: {
         <span className={css.sheetPreviewBadge} aria-hidden="true"><Mail size={16} /></span>
         <figcaption>{props.project.title}</figcaption>
       </figure>
-      <h2 id="v5-email-title" className={css.sheetTitle}>Unlock {props.project.title} pricing</h2>
+      <h2 id="v5-email-title" className={css.sheetTitle}>Unlock pricing for every design</h2>
       <p className={css.sheetBody}>
-        See the planning range and what’s typically included for this {props.project.serviceLabel.toLowerCase()} direction.
+        Enter your email to reveal planning ranges across the whole gallery instantly — not just {props.project.title}.
       </p>
       <form
         className={css.sheetForm}
@@ -573,7 +574,9 @@ function EmailSheet(props: {
           See pricing
         </button>
       </form>
-      <small className={css.sheetNote}>We’ll email your estimate. Unsubscribe anytime.</small>
+      <small className={css.sheetNote}>
+        Pricing unlocks instantly on this screen. We’ll also email a copy — unsubscribe anytime.
+      </small>
     </Sheet>
   );
 }
@@ -582,18 +585,24 @@ function PhoneSheet(props: {
   open: boolean;
   busy: boolean;
   error: string | null;
+  mode?: "refine" | "consultation";
   onClose: () => void;
   onSubmit: (phone: string) => void;
 }) {
   const [phone, setPhone] = useState("");
   if (!props.open) return null;
   const ready = phone.replace(/\D/g, "").length >= 10;
+  const consultation = props.mode === "consultation";
   return (
     <Sheet open={props.open} labelledBy="v5-phone-title" onClose={props.onClose}>
       <span className={css.sheetIcon} aria-hidden="true"><Phone size={20} /></span>
-      <h2 id="v5-phone-title" className={css.sheetTitle}>Keep customizing your project</h2>
+      <h2 id="v5-phone-title" className={css.sheetTitle}>
+        {consultation ? "Book a consultation" : "Keep customizing your project"}
+      </h2>
       <p className={css.sheetBody}>
-        Unlock more personalized concepts, continued refinements, and updated pricing as you make changes.
+        {consultation
+          ? "Leave your number and a local pro will follow up about this plan — usually within 1 business day."
+          : "Unlock more personalized concepts, continued refinements, and updated pricing as you make changes."}
       </p>
       <form
         className={css.sheetForm}
@@ -617,12 +626,16 @@ function PhoneSheet(props: {
         </label>
         {props.error ? <p className={css.fieldError}>{props.error}</p> : null}
         <button type="submit" className={css.primaryAction} disabled={props.busy || !ready}>
-          {props.busy ? <LoaderCircle className={css.spin} size={17} /> : <Sparkles size={16} />}
-          Unlock continued refinements
+          {props.busy
+            ? <LoaderCircle className={css.spin} size={17} />
+            : consultation ? <Phone size={16} /> : <Sparkles size={16} />}
+          {consultation ? "Request consultation" : "Unlock continued refinements"}
         </button>
       </form>
       <small className={css.sheetNote}>
-        This unlocks your project workspace. It does not request a consultation.
+        {consultation
+          ? "We’ll only use this number to schedule your review."
+          : "This unlocks your project workspace. It does not request a consultation."}
       </small>
     </Sheet>
   );
@@ -664,7 +677,6 @@ function ChoiceRow(props: {
         <strong>{props.label}</strong>
         {props.hint ? <small>{props.hint}</small> : null}
       </span>
-      <ChevronRight size={18} aria-hidden="true" />
     </button>
   );
 }
@@ -712,7 +724,7 @@ function LookCard(props: {
         <span className={css.lookFrame} data-shape={props.shape}>
           <img src={props.project.imageUrl} alt={props.project.title} loading="lazy" />
           {props.showFitBadge ? (
-            <span className={css.lookBadge}><Check size={12} /> Common at this level</span>
+            <span className={css.lookBadge}><Check size={12} /> Most popular</span>
           ) : null}
           {/* Caption rides on the image, with the locked price doing the selling. */}
           <span className={css.lookMeta}>
@@ -769,8 +781,9 @@ export function AdventureV5Experience({ instanceId, initialInstanceData, initial
   const [phoneOpen, setPhoneOpen] = useState(false);
   const [phoneBusy, setPhoneBusy] = useState(false);
   const [phoneError, setPhoneError] = useState<string | null>(null);
-  const [showAllScopes, setShowAllScopes] = useState(false);
   const [showAllServices, setShowAllServices] = useState(false);
+  const [otherScopeOpen, setOtherScopeOpen] = useState(false);
+  const [otherScopeText, setOtherScopeText] = useState("");
   const [pendingPhoneAction, setPendingPhoneAction] = useState<PendingPhoneAction | null>(null);
   const [fullscreenAsset, setFullscreenAsset] = useState<{ imageUrl: string; label: string } | null>(null);
   const [selectedRefinementCategoryId, setSelectedRefinementCategoryId] = useState<string | null>(null);
@@ -778,6 +791,8 @@ export function AdventureV5Experience({ instanceId, initialInstanceData, initial
   const rootRef = useRef<HTMLDivElement | null>(null);
   const stageRef = useRef<HTMLElement | null>(null);
   const uploadRef = useRef<HTMLInputElement | null>(null);
+  const catalogCacheRef = useRef(new Map<string, VisualPricingProject[]>());
+  const catalogInflightRef = useRef(new Map<string, Promise<VisualPricingProject[]>>());
   const selectedService = useMemo(
     () => services.find((service) => service.value === snapshot?.selectedServiceId) || null,
     [services, snapshot?.selectedServiceId]
@@ -888,10 +903,12 @@ export function AdventureV5Experience({ instanceId, initialInstanceData, initial
     let cancelled = false;
     async function bootstrap() {
       let shouldStartFresh = false;
+      let demoMode = false;
       let hintedServiceId = "";
       try {
         const params = new URLSearchParams(window.location.search);
         hintedServiceId = params.get("serviceId") || params.get("service_id") || "";
+        demoMode = params.get("demo") === "1" || params.get("demo") === "true";
         const freshRequested = params.get("fresh") === "1" || params.get("fresh") === "true";
         const freshNonce = params.get("freshNonce") || "";
         if (freshRequested && freshNonce) {
@@ -900,8 +917,15 @@ export function AdventureV5Experience({ instanceId, initialInstanceData, initial
           if (shouldStartFresh) window.sessionStorage.setItem(markerKey, freshNonce);
         }
       } catch {}
+      // Demo mode: wipe prior progress and pin the session so every take matches.
+      if (demoMode) {
+        shouldStartFresh = true;
+        clearVisualPricingSnapshot(instanceId, routeVersion);
+      }
       if (shouldStartFresh) clearVisualPricingSnapshot(instanceId, routeVersion);
-      const sessionId = getOrCreateVisualPricingSession(instanceId, routeVersion);
+      const sessionId = demoMode
+        ? forceVisualPricingSession(instanceId, DEMO_SESSION_ID, routeVersion)
+        : getOrCreateVisualPricingSession(instanceId, routeVersion);
       const saved = shouldStartFresh ? null : loadVisualPricingSnapshot(instanceId, routeVersion);
       try {
         const response = await fetch(`/api/widget/${encodeURIComponent(instanceId)}`, { cache: "no-store" });
@@ -928,7 +952,15 @@ export function AdventureV5Experience({ instanceId, initialInstanceData, initial
         const implicit = hinted || savedService || (normalizedServices.length === 1 ? normalizedServices[0] : null);
         setSnapshot(saved && savedService ? {
           ...saved,
-          stage: saved.stage === "intro" ? firstQuestionStage(savedService) : saved.stage,
+          // Budget step is retired — bounce anyone mid-question into inspiration.
+          stage: saved.stage === "intro"
+            ? firstQuestionStage(savedService)
+            : saved.stage === "budget"
+              ? "gallery"
+              : saved.stage,
+          budgetBandId: saved.stage === "budget" || !saved.budgetBandId
+            ? (saved.budgetBandId || "not-sure")
+            : saved.budgetBandId,
           lead: {
             ...saved.lead,
             previewUnlocked: Boolean(saved.lead?.previewUnlocked),
@@ -1020,46 +1052,106 @@ export function AdventureV5Experience({ instanceId, initialInstanceData, initial
     return () => observer.disconnect();
   }, [instanceId, routeVersion, snapshot?.stage]);
 
-  useEffect(() => {
-    if (
-      snapshot?.stage !== "gallery" ||
-      !selectedService ||
-      !selectedBudget
-    ) return;
-    const scope = snapshot.selectedScope || selectedScopes[0] || "Typical project";
-    let cancelled = false;
-    setCatalogBusy(snapshot.projects.length === 0);
-    setError(null);
-    const params = new URLSearchParams({ serviceId: selectedService.value });
-    params.append("scope", scope);
-    params.set("budgetBandId", selectedBudget.id);
-    params.set("catalogRevision", VISUAL_CATALOG_REVISION);
-    const catalogUrl = `/api/v3/ai-form/${encodeURIComponent(instanceId)}/visual-projects?${params.toString()}`;
-    const loadCatalog = async () => {
+  const resolveCatalogScope = useCallback((scope: string | null | undefined) => {
+    const requested = String(scope || "").trim();
+    if (requested && selectedScopes.includes(requested)) return requested;
+    return selectedScopes[0] || requested || "Typical project";
+  }, [selectedScopes]);
+
+  const loadCatalogForScope = useCallback(async (
+    service: ServiceOption,
+    scope: string,
+    budget: BudgetBand
+  ) => {
+    const catalogScope = resolveCatalogScope(scope);
+    const cacheKey = `${service.value}::${catalogScope}::${budget.id}::${VISUAL_CATALOG_REVISION}`;
+    const cached = catalogCacheRef.current.get(cacheKey);
+    if (cached?.length) return cached;
+    const inflight = catalogInflightRef.current.get(cacheKey);
+    if (inflight) return inflight;
+
+    const request = (async () => {
+      const params = new URLSearchParams({
+        serviceId: service.value,
+        limit: String(GALLERY_LIMIT),
+        budgetBandId: budget.id,
+        catalogRevision: VISUAL_CATALOG_REVISION,
+      });
+      params.append("scope", catalogScope);
+      const catalogUrl = `/api/v3/ai-form/${encodeURIComponent(instanceId)}/visual-projects?${params.toString()}`;
       let lastError: Error | null = null;
-      for (let attempt = 0; attempt < 3; attempt += 1) {
+      for (let attempt = 0; attempt < 2; attempt += 1) {
         try {
-          const response = await fetch(catalogUrl, { cache: "no-store" });
+          const response = await fetch(catalogUrl);
           const data = await response.json().catch(() => ({}));
           if (!response.ok) throw new Error(data?.error || "Unable to load projects.");
           const rawProjects = Array.isArray(data?.projects) ? data.projects as RawVisualProject[] : [];
           const projects = buildVisualProjects({
             rawProjects,
-            service: selectedService,
-            budgetBand: selectedBudget,
+            service,
+            budgetBand: budget,
             bounds,
             budgetMode: "lens",
-          });
+          }).slice(0, GALLERY_LIMIT);
           if (projects.length === 0) throw new Error("No visual projects are available for this service yet.");
+          catalogCacheRef.current.set(cacheKey, projects);
+          // Warm the first screen of images while the user is still choosing.
+          for (const project of projects.slice(0, 6)) {
+            const image = new Image();
+            image.decoding = "async";
+            image.src = project.imageUrl;
+          }
           return projects;
         } catch (catalogError) {
           lastError = catalogError instanceof Error ? catalogError : new Error("Unable to load projects.");
-          if (attempt < 2) await new Promise((resolve) => window.setTimeout(resolve, 250 * (attempt + 1)));
+          if (attempt < 1) await new Promise((resolve) => window.setTimeout(resolve, 180));
         }
       }
       throw lastError || new Error("Unable to load projects.");
-    };
-    void loadCatalog()
+    })();
+
+    catalogInflightRef.current.set(cacheKey, request);
+    try {
+      return await request;
+    } finally {
+      catalogInflightRef.current.delete(cacheKey);
+    }
+  }, [bounds, instanceId, resolveCatalogScope]);
+
+  // Prefetch catalogs as soon as the service is known — ideally before gallery.
+  useEffect(() => {
+    if (!selectedService || !bounds || !snapshot?.stage) return;
+    if (snapshot.stage === "loading" || snapshot.stage === "intro") return;
+    const budget = budgetBandById("not-sure");
+    if (!budget) return;
+    const scopesToWarm = (
+      selectedScopes.length > 0
+        ? selectedScopes
+        : [snapshot.selectedScope || "Typical project"]
+    ).filter(Boolean).slice(0, 6) as string[];
+    for (const scope of scopesToWarm) {
+      void loadCatalogForScope(selectedService, scope, budget).catch(() => {});
+    }
+  }, [bounds, loadCatalogForScope, selectedScopes, selectedService, snapshot?.selectedScope, snapshot?.stage]);
+
+  useEffect(() => {
+    if (snapshot?.stage !== "gallery" || !selectedService) return;
+    const budget = selectedBudget || budgetBandById("not-sure");
+    if (!budget) return;
+    const scope = snapshot.selectedScope || selectedScopes[0] || "Typical project";
+    const cacheKey = `${selectedService.value}::${resolveCatalogScope(scope)}::${budget.id}::${VISUAL_CATALOG_REVISION}`;
+    const cached = catalogCacheRef.current.get(cacheKey);
+    let cancelled = false;
+    setError(null);
+
+    if (cached?.length) {
+      if (snapshot.projects.length === 0) patchSnapshot({ projects: cached });
+      setCatalogBusy(false);
+      return;
+    }
+
+    setCatalogBusy(snapshot.projects.length === 0);
+    void loadCatalogForScope(selectedService, scope, budget)
       .then((projects) => {
         if (!cancelled) patchSnapshot({ projects });
       })
@@ -1068,31 +1160,49 @@ export function AdventureV5Experience({ instanceId, initialInstanceData, initial
       })
       .finally(() => { if (!cancelled) setCatalogBusy(false); });
     return () => { cancelled = true; };
-  }, [bounds, catalogNonce, instanceId, patchSnapshot, selectedBudget, selectedScopes, selectedService, snapshot?.selectedScope, snapshot?.stage]);
+  }, [
+    bounds,
+    catalogNonce,
+    loadCatalogForScope,
+    patchSnapshot,
+    resolveCatalogScope,
+    selectedBudget,
+    selectedScopes,
+    selectedService,
+    snapshot?.projects.length,
+    snapshot?.selectedScope,
+    snapshot?.stage,
+  ]);
 
   const chooseService = useCallback((service: ServiceOption) => {
     if (!snapshot) return;
-    setSnapshot(defaultSnapshot(snapshot.sessionId, service, false));
+    const next = defaultSnapshot(snapshot.sessionId, service, false);
+    const budget = budgetBandById("not-sure");
+    if (next.stage === "gallery" && next.selectedScope && budget) {
+      const cacheKey = `${service.value}::${next.selectedScope}::${budget.id}::${VISUAL_CATALOG_REVISION}`;
+      const prefetched = catalogCacheRef.current.get(cacheKey);
+      if (prefetched?.length) next.projects = prefetched;
+    }
+    setSnapshot(next);
     track("adventure_v3_project_selected", { serviceId: service.value, serviceName: service.label });
   }, [snapshot, track]);
 
   const chooseScope = useCallback((scope: string) => {
+    setOtherScopeOpen(false);
+    setOtherScopeText("");
+    const budget = budgetBandById("not-sure");
+    const catalogScope = selectedScopes.includes(scope)
+      ? scope
+      : (selectedScopes[0] || scope);
+    const cacheKey = selectedService && budget
+      ? `${selectedService.value}::${catalogScope}::${budget.id}::${VISUAL_CATALOG_REVISION}`
+      : "";
+    const prefetched = cacheKey ? catalogCacheRef.current.get(cacheKey) : null;
     patchSnapshot({
       selectedScope: scope,
-      budgetBandId: null,
-      projects: [],
-      selectedProjectId: null,
-      projectRefinementHistory: [],
-      projectActiveRefinementIndex: 0,
-      stage: "budget",
-    });
-    track("adventure_v3_scope_selected", { serviceId: selectedService?.value, scope });
-  }, [patchSnapshot, selectedService?.value, track]);
-
-  const chooseBudget = useCallback((band: BudgetBand) => {
-    patchSnapshot({
-      budgetBandId: band.id,
-      projects: [],
+      budgetBandId: "not-sure",
+      // Seed from prefetch so the gallery never waits on a shell if we warmed it.
+      projects: prefetched || [],
       selectedProjectId: null,
       stage: "gallery",
       personalizedConcepts: [],
@@ -1110,8 +1220,8 @@ export function AdventureV5Experience({ instanceId, initialInstanceData, initial
       projectRefinementHistory: [],
       projectActiveRefinementIndex: 0,
     });
-    track("adventure_v3_budget_selected", { budgetBandId: band.id, budgetLabel: band.label });
-  }, [patchSnapshot, track]);
+    track("adventure_v3_scope_selected", { serviceId: selectedService?.value, scope });
+  }, [patchSnapshot, selectedScopes, selectedService, track]);
 
   const selectProject = useCallback((project: VisualPricingProject) => {
     if (!snapshot) return;
@@ -1653,6 +1763,7 @@ export function AdventureV5Experience({ instanceId, initialInstanceData, initial
     if (!snapshot?.lead.submissionId) return;
     setPhoneBusy(true);
     setPhoneError(null);
+    const consultationIntent = pendingPhoneAction?.kind === "consultation";
     try {
       const response = await fetch("/api/v3/leads", {
         method: "PATCH",
@@ -1661,20 +1772,29 @@ export function AdventureV5Experience({ instanceId, initialInstanceData, initial
           instanceId,
           submissionId: snapshot.lead.submissionId,
           phone,
-          intent: "personalized_plan",
+          intent: consultationIntent ? "consultation" : "personalized_plan",
           refinementCount: pendingPhoneAction?.kind === "project-refinement"
             ? snapshot.projectRefinementHistory.length
             : snapshot.personalizedRefinements.length,
         }),
       });
       const data = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(data?.error || "Unable to unlock your personalized plan.");
+      if (!response.ok) {
+        throw new Error(data?.error || (consultationIntent
+          ? "Unable to request a consultation."
+          : "Unable to unlock your personalized plan."));
+      }
       setSnapshot((previous) => previous ? {
         ...previous,
         stage: previous.sourceAsset && previous.personalizedConcepts.length > 0
           ? "personalized-result"
           : previous.stage,
-        lead: { ...previous.lead, phone, phoneStatus: "unlocked" },
+        lead: {
+          ...previous.lead,
+          phone,
+          phoneStatus: "unlocked",
+          ...(consultationIntent ? { consultationStatus: "requested" as const } : {}),
+        },
         updatedAt: Date.now(),
       } : previous);
       setPhoneOpen(false);
@@ -1686,7 +1806,9 @@ export function AdventureV5Experience({ instanceId, initialInstanceData, initial
           ? snapshot.projectRefinementHistory.length
           : snapshot.personalizedRefinements.length,
       }, snapshot.lead.submissionId);
-      if (unlockedAction?.kind === "personalized-refinement") {
+      if (consultationIntent) {
+        track("adventure_v3_consultation_requested", {}, snapshot.lead.submissionId);
+      } else if (unlockedAction?.kind === "personalized-refinement") {
         void applyPersonalizedRefinement(true);
       } else if (unlockedAction?.kind === "project-refinement") {
         void refineSelectedProject(true);
@@ -1724,87 +1846,28 @@ export function AdventureV5Experience({ instanceId, initialInstanceData, initial
     }
   }, [instanceId, patchSnapshot, snapshot, track]);
 
-  const resetFromBudget = useCallback(() => ({
-    projects: [] as VisualPricingProject[],
-    selectedProjectId: null as string | null,
-    personalizedConcepts: [] as VisualPricingSnapshot["personalizedConcepts"],
-    personalizedBaseRange: null,
-    personalizedRange: null,
-    personalizedRefinements: [] as VisualPricingSnapshot["personalizedRefinements"],
-    personalizedRefinementChoiceId: null,
-    personalizedRefinementPrompt: "",
-    personalizedActiveConceptIndex: 0,
-    sourceAsset: null,
-    estimateConfig: { ...DEFAULT_ESTIMATE_CONFIG },
-    refinementPrompt: "",
-    refinementSuggestions: [] as string[],
-    refinementPriceImpact: 0,
-    projectRefinementHistory: [] as VisualPricingSnapshot["projectRefinementHistory"],
-    projectActiveRefinementIndex: 0,
-  }), []);
-
-  const clearServiceAnswer = useCallback(() => {
-    if (!snapshot || services.length <= 1) return;
-    const next = defaultSnapshot(snapshot.sessionId, null, false);
-    setSnapshot({
-      ...next,
-      lead: snapshot.lead,
-      favoriteProjectIds: snapshot.favoriteProjectIds,
-      stage: "project",
-    });
-    track("adventure_v5_answer_cleared", { field: "service" });
-  }, [services.length, snapshot, track]);
-
-  const clearScopeAnswer = useCallback(() => {
-    if (!snapshot || !selectedService || selectedScopes.length <= 1) return;
-    patchSnapshot({
-      selectedScope: null,
-      budgetBandId: null,
-      ...resetFromBudget(),
-      stage: "scope",
-    });
-    track("adventure_v5_answer_cleared", { field: "scope" });
-  }, [patchSnapshot, resetFromBudget, selectedScopes.length, selectedService, snapshot, track]);
-
-  const clearBudgetAnswer = useCallback(() => {
-    if (!snapshot) return;
-    patchSnapshot({
-      budgetBandId: null,
-      ...resetFromBudget(),
-      stage: "budget",
-    });
-    track("adventure_v5_answer_cleared", { field: "budget" });
-  }, [patchSnapshot, resetFromBudget, snapshot, track]);
-
-  const clearDesignAnswer = useCallback(() => {
-    if (!snapshot) return;
-    patchSnapshot({
-      selectedProjectId: null,
-      projectRefinementHistory: [],
-      projectActiveRefinementIndex: 0,
-      refinementPrompt: "",
-      refinementSuggestions: [],
-      refinementPriceImpact: 0,
-      personalizedConcepts: [],
-      personalizedBaseRange: null,
-      personalizedRange: null,
-      personalizedRefinements: [],
-      personalizedRefinementChoiceId: null,
-      personalizedRefinementPrompt: "",
-      personalizedActiveConceptIndex: 0,
-      sourceAsset: null,
-      stage: "gallery",
-    });
-    track("adventure_v5_answer_cleared", { field: "design" });
-  }, [patchSnapshot, snapshot, track]);
+  const bookConsultation = useCallback(() => {
+    if (!snapshot?.lead.emailCaptured) {
+      setEmailOpen(true);
+      return;
+    }
+    if (snapshot.lead.consultationStatus === "requested") return;
+    if (snapshot.lead.phone && snapshot.lead.phoneStatus === "unlocked") {
+      void requestConsultation();
+      return;
+    }
+    setPendingPhoneAction({ kind: "consultation" });
+    setPhoneError(null);
+    setPhoneOpen(true);
+    track("adventure_v5_consultation_cta_viewed", {}, snapshot.lead.submissionId);
+  }, [requestConsultation, snapshot, track]);
 
   const goBack = useCallback(() => {
     if (!snapshot) return;
     const entry = firstQuestionStage(selectedService);
     const fallback: Partial<Record<VisualPricingStage, VisualPricingStage>> = {
       scope: services.length > 1 ? "project" : entry,
-      budget: selectedScopes.length > 1 ? "scope" : services.length > 1 ? "project" : entry,
-      gallery: "budget",
+      gallery: selectedScopes.length > 1 ? "scope" : services.length > 1 ? "project" : entry,
       details: "gallery",
       customize: "details",
       personalize: "customize",
@@ -1854,16 +1917,14 @@ export function AdventureV5Experience({ instanceId, initialInstanceData, initial
     fontSize: design.base_font_size ? `${design.base_font_size}px` : undefined,
   } as React.CSSProperties;
 
-  const progressSteps = ["Project", "Budget", "Inspiration", "Estimate", "Next steps"];
+  const progressSteps = ["Project", "Inspiration", "Estimate", "Next steps"];
   const progressIndex = snapshot.stage === "intro" || snapshot.stage === "project" || snapshot.stage === "scope"
     ? 0
-    : snapshot.stage === "budget"
+    : snapshot.stage === "gallery" || snapshot.stage === "budget"
       ? 1
-      : snapshot.stage === "gallery"
+      : snapshot.stage === "details" || snapshot.stage === "customize"
         ? 2
-        : snapshot.stage === "details" || snapshot.stage === "customize"
-          ? 3
-          : 4;
+        : 3;
   const entryStage = firstQuestionStage(selectedService);
   const canGoBack = snapshot.stage !== "intro" && snapshot.stage !== entryStage;
   const serviceName = serviceLabelLower(selectedService);
@@ -1875,10 +1936,6 @@ export function AdventureV5Experience({ instanceId, initialInstanceData, initial
   const brandFallback = !brandConfigured
     ? String(design.brand_name || instance?.name || "").trim()
     : "";
-  const visibleScopes = showAllScopes || selectedScopes.length <= 4
-    ? selectedScopes
-    : selectedScopes.slice(0, 4);
-  const hiddenScopeCount = Math.max(0, selectedScopes.length - visibleScopes.length);
   const visibleServices = showAllServices || services.length <= 4
     ? services
     : services.slice(0, 4);
@@ -1980,40 +2037,6 @@ export function AdventureV5Experience({ instanceId, initialInstanceData, initial
   const personalizedGateWillOpen = !personalizedUnlocked
     && snapshot.personalizedRefinements.length >= PERSONALIZED_REFINEMENT_LIMIT;
   const favorited = selectedProject ? snapshot.favoriteProjectIds.includes(selectedProject.assetId) : false;
-  const answerItems = [
-    selectedService?.label && (services.length > 1 || snapshot.stage !== "project")
-      ? {
-          id: "service",
-          question: "Project",
-          value: selectedService.label,
-          onClear: services.length > 1 ? clearServiceAnswer : null,
-        }
-      : null,
-    snapshot.selectedScope
-      ? {
-          id: "scope",
-          question: "Scope",
-          value: snapshot.selectedScope,
-          onClear: selectedScopes.length > 1 ? clearScopeAnswer : null,
-        }
-      : null,
-    selectedBudget
-      ? {
-          id: "budget",
-          question: "Budget",
-          value: selectedBudget.id === "not-sure" ? selectedBudget.label : selectedBudget.galleryLabel,
-          onClear: clearBudgetAnswer,
-        }
-      : null,
-    selectedProject && snapshot.stage !== "gallery"
-      ? {
-          id: "design",
-          question: "Design",
-          value: selectedProject.title,
-          onClear: clearDesignAnswer,
-        }
-      : null,
-  ].filter((item): item is { id: string; question: string; value: string; onClear: (() => void) | null } => Boolean(item));
 
   return (
     <div
@@ -2022,7 +2045,6 @@ export function AdventureV5Experience({ instanceId, initialInstanceData, initial
       style={rootStyle}
       data-adventure-version="v5"
       data-v3-funnel="visual-pricing"
-      data-has-answers={answerItems.length > 0 ? "true" : "false"}
     >
       <header className={css.chrome}>
         <div className={css.chromeInner}>
@@ -2068,29 +2090,6 @@ export function AdventureV5Experience({ instanceId, initialInstanceData, initial
           <span className={css.progressLabel}>{progressSteps[progressIndex]}</span>
         </div>
       </header>
-
-      {answerItems.length > 0 ? (
-        <aside className={css.answerRail} aria-label="Your answers so far">
-          {answerItems.map((item) => (
-            <div key={item.id} className={css.answerItem}>
-              <div className={css.answerCopy}>
-                <span className={css.answerQuestion}>{item.question}</span>
-                <strong className={css.answerValue}>{item.value}</strong>
-              </div>
-              {item.onClear ? (
-                <button
-                  type="button"
-                  className={css.answerClear}
-                  aria-label={`Change ${item.question.toLowerCase()}`}
-                  onClick={item.onClear}
-                >
-                  <X size={13} />
-                </button>
-              ) : null}
-            </div>
-          ))}
-        </aside>
-      ) : null}
 
       <main ref={stageRef} className={css.stage} data-stage={snapshot.stage} data-direction={stageDirection}>
         <input
@@ -2140,49 +2139,48 @@ export function AdventureV5Experience({ instanceId, initialInstanceData, initial
                 : "Choose the closest option."}
             />
             <div className={css.choices}>
-              {visibleScopes.map((scope) => (
+              {selectedScopes.map((scope) => (
                 <ChoiceRow
                   key={scope}
                   label={scope}
                   onClick={() => chooseScope(scope)}
                 />
               ))}
-              {hiddenScopeCount > 0 ? (
+              {otherScopeOpen ? (
+                <form
+                  className={css.choiceOther}
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    const value = otherScopeText.trim();
+                    if (!value) return;
+                    chooseScope(value);
+                  }}
+                >
+                  <input
+                    className={css.choiceOtherInput}
+                    value={otherScopeText}
+                    onChange={(event) => setOtherScopeText(event.target.value)}
+                    placeholder="Describe what you need"
+                    aria-label="Describe what you need"
+                    autoFocus
+                    maxLength={120}
+                  />
+                  <button
+                    type="submit"
+                    className={css.choiceOtherSubmit}
+                    disabled={!otherScopeText.trim()}
+                  >
+                    Continue
+                  </button>
+                </form>
+              ) : (
                 <ChoiceRow
-                  label="Something else"
-                  hint={`Show ${hiddenScopeCount} more options`}
+                  label="Other"
                   quiet
-                  onClick={() => setShowAllScopes(true)}
+                  onClick={() => setOtherScopeOpen(true)}
                 />
-              ) : null}
+              )}
             </div>
-          </section>
-        ) : null}
-
-        {snapshot.stage === "budget" ? (
-          <section className={css.step} key="budget">
-            <StepHead
-              title="What’s your budget?"
-              body={selectedService
-                ? `This helps us curate ${serviceName} inspiration. It does not cap your project.`
-                : "This helps us curate inspiration. It does not cap your project."}
-            />
-            <div className={css.choices}>
-              {BUDGET_BANDS.map((band) => (
-                <ChoiceRow
-                  key={band.id}
-                  label={band.label}
-                  hint={band.id === "not-sure"
-                    ? (selectedService ? `We’ll show typical ${serviceName} projects instead` : "We’ll show typical projects instead")
-                    : null}
-                  quiet={band.id === "not-sure"}
-                  onClick={() => chooseBudget(band)}
-                />
-              ))}
-            </div>
-            <p className={css.socialProof}>
-              {budgetGuidanceCopy(selectedService)}
-            </p>
           </section>
         ) : null}
 
@@ -2191,20 +2189,12 @@ export function AdventureV5Experience({ instanceId, initialInstanceData, initial
             <StepHead
               title={selectedService
                 ? `See what’s possible for ${serviceName}`
-                : "See what’s possible at your budget"}
+                : "See what’s possible"}
               body="Choose the direction you love—your range can evolve from there."
             />
-            {pricingVisible ? (
-              <div className={css.wallMeta}>
-                <span className={css.wallUnlocked}>
-                  <CheckCircle2 size={14} />
-                  Pricing unlocked
-                </span>
-              </div>
-            ) : null}
             {catalogBusy ? (
               <div className={css.lookFlow} aria-hidden="true">
-                {Array.from({ length: 9 }, (_, index) => (
+                {Array.from({ length: 6 }, (_, index) => (
                   <div key={index} className={css.lookSkeleton} data-shape={lookShapeAt(index)} />
                 ))}
               </div>
@@ -2277,15 +2267,41 @@ export function AdventureV5Experience({ instanceId, initialInstanceData, initial
                     ) : null}
                   </header>
                   <div className={css.customizeActions}>
-                    <button type="button" className={css.primaryAction} onClick={openCustomize}>
-                      {snapshot.lead.emailCaptured ? "Customize this design" : "Email to unlock full estimate"}
-                      <ArrowRight size={16} />
-                    </button>
-                    <p className={css.context}>
-                      {snapshot.lead.emailCaptured
-                        ? "Adjust this estimate as you go."
-                        : "Unlock customize tools and the tightened planning range."}
-                    </p>
+                    {snapshot.lead.emailCaptured ? (
+                      <>
+                        {snapshot.lead.consultationStatus === "requested" ? (
+                          <p className={css.sentNote}><CheckCircle2 size={14} /> Consultation requested</p>
+                        ) : (
+                          <button
+                            type="button"
+                            className={css.primaryAction}
+                            onClick={bookConsultation}
+                            disabled={snapshot.lead.consultationStatus === "requesting"}
+                          >
+                            {snapshot.lead.consultationStatus === "requesting"
+                              ? "Requesting…"
+                              : "Book a consultation"}
+                            <ArrowRight size={16} />
+                          </button>
+                        )}
+                        <button type="button" className={css.secondaryAction} onClick={openCustomize}>
+                          Customize this design
+                        </button>
+                        <p className={css.context}>
+                          A local pro can confirm this range for your space.
+                        </p>
+                      </>
+                    ) : (
+                      <>
+                        <button type="button" className={css.primaryAction} onClick={openCustomize}>
+                          Email to unlock full estimate
+                          <ArrowRight size={16} />
+                        </button>
+                        <p className={css.context}>
+                          Unlock customize tools and the tightened planning range.
+                        </p>
+                      </>
+                    )}
                   </div>
                   <details className={css.disclosure}>
                     <summary>What’s covered <ChevronRight size={14} /></summary>
@@ -2633,7 +2649,7 @@ export function AdventureV5Experience({ instanceId, initialInstanceData, initial
                 title={selectedService
                   ? `See this ${serviceName} direction in your own space.`
                   : "See this direction in your own space."}
-                body="Upload a photo and we’ll create a version using your actual setting. Your budget and selections carry forward automatically."
+                body="Upload a photo and we’ll create a version using your actual setting. Your selections carry forward automatically."
               />
               {!snapshot.sourceAsset ? (
                 <button type="button" className={css.dropzone} onClick={() => uploadRef.current?.click()} disabled={uploadBusy}>
@@ -2977,6 +2993,7 @@ export function AdventureV5Experience({ instanceId, initialInstanceData, initial
         open={phoneOpen}
         busy={phoneBusy}
         error={phoneError}
+        mode={pendingPhoneAction?.kind === "consultation" ? "consultation" : "refine"}
         onClose={() => { setPhoneOpen(false); setPhoneError(null); setPendingPhoneAction(null); }}
         onSubmit={(phone) => void capturePhone(phone)}
       />

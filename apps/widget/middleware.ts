@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-const VERSIONED_ADVENTURE = /^\/adventure\/v(?:1|2|3|4|5)\/([^/]+)\/?$/;
+const VERSIONED_ADVENTURE = /^\/adventure\/v(?:1|2|3|4|5|6|7|8)\/([^/]+)\/?$/;
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;

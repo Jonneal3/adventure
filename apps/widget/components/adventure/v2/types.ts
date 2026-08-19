@@ -132,12 +132,40 @@ export type ServiceConfiguration = {
 export type ServiceOption = {
   value: string;
   label: string;
+  /** Business-facing name when label is customer-facing. */
+  businessLabel?: string | null;
+  /** Customer-facing card label (Adventure Step 1). */
+  customerLabel?: string | null;
   serviceName?: string | null;
   industryId?: string | null;
   industryName?: string | null;
   serviceSummary?: string | null;
+  /** When false, hide from visual Adventure service picker. */
+  visualEligible?: boolean;
   subcategoryComponents?: Array<{ key: string; label: string; priority: number }>;
   subcategoryScope?: string[];
+  /**
+   * Exact scope-card covers from v2_scope_starter images, keyed by starter_scope_key
+   * and lowercase starter_scope label. Missing key → text-only card.
+   */
+  scopeCovers?: Record<string, { imageUrl: string; imageId?: string; scopeKey: string }>;
+  /** Curated library imagery for this service (from the images catalog). */
+  styleOptions?: Array<{
+    label?: string | null;
+    value?: string | null;
+    imageUrl?: string | null;
+    description?: string | null;
+    priceTier?: string | null;
+    featuredRank?: number | null;
+    scope?: string | null;
+    scopeKey?: string | null;
+    generatedFor?: string | null;
+    imageId?: string | null;
+    timesShown?: number;
+    timesSelected?: number;
+    timesSaved?: number;
+    conversions?: number;
+  }>;
 };
 
 export type ResolvedUiModule = UiModuleDefinition & {

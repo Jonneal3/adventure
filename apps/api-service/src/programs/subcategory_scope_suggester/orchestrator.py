@@ -157,8 +157,8 @@ def suggest_subcategory_scope(payload: Dict[str, Any]) -> Dict[str, Any]:
     request_id = f"subcategory_scope_{int(time.time() * 1000)}"
     ctx = _resolve_context(payload)
     components = _resolve_components(payload)
-    min_count = max(3, min(8, _coerce_int(payload.get("min_scope_count") or payload.get("minScopeCount"), 3)))
-    max_count = max(min_count, min(8, _coerce_int(payload.get("max_scope_count") or payload.get("maxScopeCount"), 8)))
+    min_count = max(8, min(18, _coerce_int(payload.get("min_scope_count") or payload.get("minScopeCount"), 12)))
+    max_count = max(min_count, min(20, _coerce_int(payload.get("max_scope_count") or payload.get("maxScopeCount"), 18)))
 
     if not ctx["category_name"] and not ctx["subcategory_name"] and not ctx["service_summary"]:
         return {

@@ -16,6 +16,9 @@
     "app/api/generate/scene-placement/route.ts": {
       "maxDuration": 300
     },
+    "app/api/adventure/v8/[instanceId]/[action]/route.ts": {
+      "maxDuration": 300
+    },
     "app/api/leads/route.ts": {
       "maxDuration": 60
     },

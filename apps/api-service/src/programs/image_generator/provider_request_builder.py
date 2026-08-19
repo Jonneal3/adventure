@@ -107,6 +107,13 @@ def build_replicate_request(
             # Match Replicate playground default (fp8); omitting can differ by API version.
             "go_fast": True if go_fast is None else bool(go_fast),
         }
+    elif style == "imagen":
+        request_input = {
+            "prompt": prompt_text,
+            "aspect_ratio": ratio or "1:1",
+            "output_format": str(output_format or "jpg").strip() or "jpg",
+            "safety_filter_level": "block_only_high",
+        }
     elif style == "flux-2":
         edit_images: List[str] = []
         for image in [primary_edit_image, *refs]:

@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Loader2, Save, Eye, EyeOff, Copy, Check } from 'lucide-react';
 import { useInstance } from '@/contexts/InstanceContext';
 import { SettingsPageHeader, SettingsRow, SettingsSection } from '@/components/features/settings/SettingsPrimitives';
@@ -14,33 +15,64 @@ interface BasicInfoSettingsProps {
   onSave?: () => void;
 }
 
+function readAdventureBudget(config: any): { enabled: boolean; min: string; max: string; step: string } {
+  const raw = config?.adventureBudget || config?.budgetBounds || null;
+  if (!raw || typeof raw !== 'object') {
+    return { enabled: false, min: '5000', max: '80000', step: '1000' };
+  }
+  return {
+    enabled: true,
+    min: String(Number(raw.min ?? raw.minBudget) || 5000),
+    max: String(Number(raw.max ?? raw.maxBudget) || 80000),
+    step: String(Number(raw.step) || 1000),
+  };
+}
+
 export function BasicInfoSettings({ onSave }: BasicInfoSettingsProps) {
   const { currentInstance, updateInstance } = useInstance();
   const [saving, setSaving] = React.useState(false);
   const [showApiKey, setShowApiKey] = React.useState(false);
   const [copied, setCopied] = React.useState(false);
   const [apiCopied, setApiCopied] = React.useState(false);
+  const cfg =
+    typeof currentInstance?.config === 'object' && currentInstance?.config !== null
+      ? (currentInstance.config as any)
+      : {};
+  const budgetInit = readAdventureBudget(cfg);
   const [formData, setFormData] = React.useState({
     name: currentInstance?.name || '',
     description: currentInstance?.description || '',
     slug: currentInstance?.slug || '',
     is_public: currentInstance?.is_public || false,
     api_key: (currentInstance as any)?.api_key || '',
-    api_access_enabled: (typeof currentInstance?.config === 'object' && currentInstance?.config !== null ? (currentInstance.config as any).api_access_enabled : false),
-    api_endpoint: (typeof currentInstance?.config === 'object' && currentInstance?.config !== null ? (currentInstance.config as any).api_endpoint : ''),
+    api_access_enabled: Boolean(cfg.api_access_enabled),
+    api_endpoint: cfg.api_endpoint || '',
+    budgetEnabled: budgetInit.enabled,
+    budgetMin: budgetInit.min,
+    budgetMax: budgetInit.max,
+    budgetStep: budgetInit.step,
   });
 
   // Sync form data when currentInstance changes
   useEffect(() => {
     if (currentInstance) {
+      const nextCfg =
+        typeof currentInstance.config === 'object' && currentInstance.config !== null
+          ? (currentInstance.config as any)
+          : {};
+      const nextBudget = readAdventureBudget(nextCfg);
       setFormData({
         name: currentInstance.name || '',
         description: currentInstance.description || '',
         slug: currentInstance.slug || '',
         is_public: currentInstance.is_public || false,
         api_key: (currentInstance as any)?.api_key || '',
-        api_access_enabled: (typeof currentInstance?.config === 'object' && currentInstance?.config !== null ? (currentInstance.config as any).api_access_enabled : false),
-        api_endpoint: (typeof currentInstance?.config === 'object' && currentInstance?.config !== null ? (currentInstance.config as any).api_endpoint : ''),
+        api_access_enabled: Boolean(nextCfg.api_access_enabled),
+        api_endpoint: nextCfg.api_endpoint || '',
+        budgetEnabled: nextBudget.enabled,
+        budgetMin: nextBudget.min,
+        budgetMax: nextBudget.max,
+        budgetStep: nextBudget.step,
       });
     }
   }, [currentInstance]);
@@ -48,18 +80,29 @@ export function BasicInfoSettings({ onSave }: BasicInfoSettingsProps) {
   const handleSave = async () => {
     setSaving(true);
     try {
-      const updateData = {
+      const nextConfig: Record<string, unknown> = {
+        ...(typeof currentInstance?.config === 'object' && currentInstance?.config !== null
+          ? currentInstance.config
+          : {}),
+        api_access_enabled: formData.api_access_enabled,
+        api_endpoint: formData.api_endpoint,
+      };
+      if (formData.budgetEnabled) {
+        const min = Math.max(500, Number(formData.budgetMin) || 5000);
+        const max = Math.max(min + 1000, Number(formData.budgetMax) || 80000);
+        const step = Math.max(100, Number(formData.budgetStep) || 1000);
+        nextConfig.adventureBudget = { min, max, step, currency: 'USD' };
+      } else {
+        delete nextConfig.adventureBudget;
+        delete nextConfig.budgetBounds;
+      }
+
+      await updateInstance({
         name: formData.name,
         slug: formData.slug,
         is_public: formData.is_public,
-        config: {
-          ...(typeof currentInstance?.config === 'object' && currentInstance?.config !== null ? currentInstance.config : {}),
-          api_access_enabled: formData.api_access_enabled,
-          api_endpoint: formData.api_endpoint,
-        }
-      };
-
-      await updateInstance(updateData);
+        config: nextConfig,
+      });
 
       onSave?.();
     } catch (error) {} finally {
@@ -157,6 +200,64 @@ export function BasicInfoSettings({ onSave }: BasicInfoSettingsProps) {
             <Switch checked={formData.is_public} onCheckedChange={(checked) => setFormData({ ...formData, is_public: checked })} />
           }
         />
+      </SettingsSection>
+
+      <SettingsSection title="Adventure budget">
+        <SettingsRow
+          title="Override budget slider"
+          description="When on, replaces platform service+scope ranges in the Adventure budget step."
+          control={
+            <Select
+              value={formData.budgetEnabled ? 'on' : 'off'}
+              onValueChange={(value) => setFormData({ ...formData, budgetEnabled: value === 'on' })}
+            >
+              <SelectTrigger className="w-[120px] h-9">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="off">Platform</SelectItem>
+                <SelectItem value="on">Override</SelectItem>
+              </SelectContent>
+            </Select>
+          }
+        />
+        {formData.budgetEnabled ? (
+          <div className="grid grid-cols-3 gap-3 pt-2">
+            <div className="space-y-2">
+              <Label htmlFor="budget_min">Min ($)</Label>
+              <Input
+                id="budget_min"
+                type="number"
+                min={500}
+                className="h-9"
+                value={formData.budgetMin}
+                onChange={(e) => setFormData({ ...formData, budgetMin: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="budget_max">Max ($)</Label>
+              <Input
+                id="budget_max"
+                type="number"
+                min={1000}
+                className="h-9"
+                value={formData.budgetMax}
+                onChange={(e) => setFormData({ ...formData, budgetMax: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="budget_step">Step ($)</Label>
+              <Input
+                id="budget_step"
+                type="number"
+                min={100}
+                className="h-9"
+                value={formData.budgetStep}
+                onChange={(e) => setFormData({ ...formData, budgetStep: e.target.value })}
+              />
+            </div>
+          </div>
+        ) : null}
       </SettingsSection>
 
       <SettingsSection title="API">

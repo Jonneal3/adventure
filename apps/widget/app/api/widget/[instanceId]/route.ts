@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { logger } from '@/lib/server/logger';
 import { buildStudioStarterConcepts } from '@/lib/studio/starter-concepts';
+import { v2ScopeStarterKey } from '@/lib/adventure-v2/scope-starter-catalog';
 
 // Force dynamic rendering
 export const dynamic = 'force-dynamic';
@@ -51,14 +52,41 @@ function coerceSubcategoryScope(raw: unknown): string[] {
 
 /** Hero CTA fields live on category_subcategory_seo after migration 20260127000002. */
 const CATEGORIES_SUBCAT_SELECT_WITH_SEO =
-  "id, subcategory, category_id, service_summary, subcategory_components, subcategory_scope, category_subcategory_seo(hero_cta_url, hero_cta_text), categories(name)";
+  "id, subcategory, category_id, service_summary, subcategory_components, subcategory_scope, customer_label, visual_eligible, category_subcategory_seo(hero_cta_url, hero_cta_text), categories(name)";
 /** Pre-split DBs: hero_cta_* still on categories_subcategories. */
 const CATEGORIES_SUBCAT_SELECT_WITH_HERO =
-  "id, subcategory, category_id, service_summary, subcategory_components, subcategory_scope, hero_cta_url, hero_cta_text, categories(name)";
+  "id, subcategory, category_id, service_summary, subcategory_components, subcategory_scope, customer_label, visual_eligible, hero_cta_url, hero_cta_text, categories(name)";
 const CATEGORIES_SUBCAT_SELECT_BASE =
-  "id, subcategory, category_id, service_summary, subcategory_components, subcategory_scope, categories(name)";
+  "id, subcategory, category_id, service_summary, subcategory_components, subcategory_scope, customer_label, visual_eligible, categories(name)";
 const CATEGORIES_SUBCAT_SELECT_MINIMAL =
   "id, subcategory, category_id, service_summary, subcategory_components, categories(name)";
+
+/** Legacy selects without customer_label (pre-migration). */
+const CATEGORIES_SUBCAT_SELECT_WITH_SEO_LEGACY =
+  "id, subcategory, category_id, service_summary, subcategory_components, subcategory_scope, category_subcategory_seo(hero_cta_url, hero_cta_text), categories(name)";
+const CATEGORIES_SUBCAT_SELECT_WITH_HERO_LEGACY =
+  "id, subcategory, category_id, service_summary, subcategory_components, subcategory_scope, hero_cta_url, hero_cta_text, categories(name)";
+const CATEGORIES_SUBCAT_SELECT_BASE_LEGACY =
+  "id, subcategory, category_id, service_summary, subcategory_components, subcategory_scope, categories(name)";
+
+function deriveCustomerLabel(businessLabel: string): string {
+  const raw = String(businessLabel || "").trim();
+  const cleaned = raw.replace(/\s*\(service\)\s*$/i, "").trim() || raw;
+  const rules: Array<[RegExp, string]> = [
+    [/^hardscaping$/i, "Patios, walkways & outdoor structures"],
+    [/^landscaping$/i, "Yard & garden design"],
+    [/^landscape design$/i, "Outdoor design"],
+    [/^outdoor living$/i, "Outdoor living spaces"],
+    [/^bathroom remodels?$/i, "Bathroom remodel"],
+    [/^bathroom remodeling$/i, "Bathroom remodel"],
+    [/^kitchen remodels?$/i, "Kitchen remodel"],
+    [/^kitchen remodeling$/i, "Kitchen remodel"],
+  ];
+  for (const [re, label] of rules) {
+    if (re.test(cleaned)) return label;
+  }
+  return cleaned.replace(/\bRemodeling\b/g, "Remodel");
+}
 
 function shouldRetryCategoriesSubcatSelect(err: unknown): boolean {
   const e = err as { code?: string; message?: string };
@@ -85,6 +113,12 @@ async function fetchCategoriesSubcategoriesForWidget(
   const msg0 = String(err0?.message || "");
   if (!shouldRetryCategoriesSubcatSelect(err0)) return res;
 
+  // customer_label / visual_eligible may be missing pre-migration.
+  if (/customer_label|visual_eligible/i.test(msg0)) {
+    res = await trySelect(CATEGORIES_SUBCAT_SELECT_WITH_SEO_LEGACY);
+    if (!res.error) return res;
+  }
+
   res = await trySelect(CATEGORIES_SUBCAT_SELECT_WITH_HERO);
   if (!res.error) {
     logger.warn("[widget] categories_subcategories: using legacy hero_cta columns (no category_subcategory_seo embed)", {
@@ -97,7 +131,15 @@ async function fetchCategoriesSubcategoriesForWidget(
   const msg1 = String(err1?.message || "");
   if (!shouldRetryCategoriesSubcatSelect(err1)) return res;
 
+  if (/customer_label|visual_eligible/i.test(msg1)) {
+    res = await trySelect(CATEGORIES_SUBCAT_SELECT_WITH_HERO_LEGACY);
+    if (!res.error) return res;
+  }
+
   res = await trySelect(CATEGORIES_SUBCAT_SELECT_BASE);
+  if (res.error && /customer_label|visual_eligible/i.test(String((res.error as any)?.message || ""))) {
+    res = await trySelect(CATEGORIES_SUBCAT_SELECT_BASE_LEGACY);
+  }
   if (!res.error) {
     logger.warn("[widget] categories_subcategories: using select without hero CTA", { firstError: msg0, secondError: msg1 });
     return res;
@@ -160,9 +202,24 @@ function buildCatalogStyleOptions(rows: any[]): {
     imageId?: string | null;
     catalogKey?: string | null;
     catalogSource?: "account" | "global";
+    timesShown?: number;
+    timesSelected?: number;
+    timesSaved?: number;
+    conversions?: number;
+    scope?: string | null;
   }>;
   question: string | null;
 } {
+  const CATALOG_GENERATED_FOR = new Set([
+    "style_seed",
+    "subcategory_catalog",
+    "adventure_v7",
+    "v2_scope_starter",
+    "v2_neutral_scope_starter",
+    "v2_service_starter",
+    "refinement_option",
+  ]);
+
   const seen = new Set<string>();
   const options: Array<{
     label: string;
@@ -174,48 +231,93 @@ function buildCatalogStyleOptions(rows: any[]): {
     imageId?: string | null;
     catalogKey?: string | null;
     catalogSource?: "account" | "global";
+    timesShown?: number;
+    timesSelected?: number;
+    timesSaved?: number;
+    conversions?: number;
+    scope?: string | null;
   }> = [];
   let question: string | null = null;
 
   for (const row of Array.isArray(rows) ? rows : []) {
     const meta = row?.metadata && typeof row.metadata === "object" ? row.metadata : null;
     const generatedFor = String(meta?.generated_for || "").trim();
-    if (!meta || (generatedFor !== "style_seed" && generatedFor !== "subcategory_catalog")) continue;
-    const label =
-      typeof meta.option_label === "string" && meta.option_label.trim()
-        ? meta.option_label.trim()
-        : typeof meta.option_value === "string" && meta.option_value.trim()
-          ? meta.option_value.trim()
-          : "";
-    const value =
-      typeof meta.option_value === "string" && meta.option_value.trim()
-        ? meta.option_value.trim()
-        : label;
+    if (!meta || !CATALOG_GENERATED_FOR.has(generatedFor)) continue;
+
     const imageUrl = typeof row?.image_url === "string" ? row.image_url.trim() : "";
-    if (!label || !value || !imageUrl) continue;
-    const catalogKey =
-      typeof meta.catalog_key === "string" && meta.catalog_key.trim()
-        ? meta.catalog_key.trim()
-        : null;
-    const dedupeKey = catalogKey ? catalogKey.toLowerCase() : value.toLowerCase();
+    if (!imageUrl) continue;
+
+    // Different catalog generations store labels in different fields.
+    const label = String(
+      meta.option_label
+        || meta.starter_variant_label
+        || meta.refinement_variation_label
+        || meta.starter_scope
+        || meta.refinement_category_label
+        || meta.service_name
+        || meta.option_value
+        || ""
+    ).trim();
+    const value = String(
+      meta.option_value
+        || meta.starter_variant_key
+        || meta.refinement_variation_key
+        || meta.starter_scope_key
+        || meta.catalog_key
+        || label
+    ).trim();
+    if (!label || !value) continue;
+
+    const catalogKey = String(
+      meta.catalog_key
+        || meta.starter_variant_key
+        || meta.refinement_variation_key
+        || `${generatedFor}:${value}`
+    ).trim();
+    const dedupeKey = (catalogKey || value).toLowerCase();
     if (seen.has(dedupeKey)) continue;
     seen.add(dedupeKey);
+
+    const description = String(
+      meta.option_description
+        || meta.starter_scope
+        || meta.refinement_reason
+        || meta.refinement_category_label
+        || ""
+    ).trim();
+    const scope = String(meta.starter_scope || meta.refinement_category_label || "").trim() || null;
+    const priceTier = typeof meta.price_tier === "string" && meta.price_tier.trim()
+      ? meta.price_tier.trim()
+      : null;
+
+    const stats =
+      meta.adventure_stats && typeof meta.adventure_stats === "object" ? meta.adventure_stats : null;
+
+    const scopeKey = String(meta.starter_scope_key || (scope ? v2ScopeStarterKey(scope) : "") || "").trim() || null;
+
     options.push({
       label,
       value,
       imageUrl,
-      ...(typeof meta.option_description === "string" && meta.option_description.trim()
-        ? { description: meta.option_description.trim() }
-        : {}),
-      ...(typeof meta.price_tier === "string" && meta.price_tier.trim()
-        ? { priceTier: meta.price_tier.trim() }
-        : {}),
+      ...(description ? { description } : {}),
+      ...(priceTier ? { priceTier } : {}),
       ...(Number.isFinite(Number(meta.featured_rank ?? meta.featuredRank)) && Number(meta.featured_rank ?? meta.featuredRank) > 0
         ? { featuredRank: Math.floor(Number(meta.featured_rank ?? meta.featuredRank)) }
         : {}),
       ...(typeof row?.id === "string" && row.id.trim() ? { imageId: row.id.trim() } : {}),
       ...(catalogKey ? { catalogKey } : {}),
       catalogSource: typeof row?.account_id === "string" && row.account_id.trim() ? "account" : "global",
+      ...(scope ? { scope } : {}),
+      ...(scopeKey ? { scopeKey } : {}),
+      generatedFor,
+      ...(stats
+        ? {
+            timesShown: Number(stats.shown || 0) || undefined,
+            timesSelected: Number(stats.selected || 0) || undefined,
+            timesSaved: Number(stats.saved || 0) || undefined,
+            conversions: Number(stats.conversions || 0) || undefined,
+          }
+        : {}),
     });
     if (!question && typeof meta.question_text === "string" && meta.question_text.trim()) {
       question = meta.question_text.trim();
@@ -223,6 +325,58 @@ function buildCatalogStyleOptions(rows: any[]): {
   }
 
   return { options, question };
+}
+
+/**
+ * Exact scope → cover map for Adventure V7 focus cards.
+ * Only v2_scope_starter rows; account images win over global. No fuzzy matching.
+ */
+function buildScopeCovers(rows: any[]): Record<string, { imageUrl: string; imageId?: string; scopeKey: string }> {
+  type Cover = { imageUrl: string; imageId?: string; scopeKey: string; account: boolean };
+  const byKey = new Map<string, Cover>();
+  const byLabel = new Map<string, Cover>();
+
+  for (const row of Array.isArray(rows) ? rows : []) {
+    const meta = row?.metadata && typeof row.metadata === "object" ? row.metadata : null;
+    if (!meta || String(meta.generated_for || "").trim() !== "v2_scope_starter") continue;
+    const imageUrl = typeof row?.image_url === "string" ? row.image_url.trim() : "";
+    if (!/^https?:\/\//i.test(imageUrl)) continue;
+    const scopeLabel = String(meta.starter_scope || "").trim();
+    const scopeKey = String(meta.starter_scope_key || (scopeLabel ? v2ScopeStarterKey(scopeLabel) : "") || "").trim();
+    if (!scopeKey && !scopeLabel) continue;
+    const account = typeof row?.account_id === "string" && Boolean(row.account_id.trim());
+    const cover: Cover = {
+      imageUrl,
+      ...(typeof row?.id === "string" && row.id.trim() ? { imageId: row.id.trim() } : {}),
+      scopeKey: scopeKey || v2ScopeStarterKey(scopeLabel),
+      account,
+    };
+    const key = cover.scopeKey;
+    const existing = byKey.get(key);
+    if (!existing || (account && !existing.account)) {
+      byKey.set(key, cover);
+    }
+    if (scopeLabel) {
+      const labelKey = scopeLabel.toLowerCase();
+      const existingLabel = byLabel.get(labelKey);
+      if (!existingLabel || (account && !existingLabel.account)) {
+        byLabel.set(labelKey, cover);
+      }
+    }
+  }
+
+  const out: Record<string, { imageUrl: string; imageId?: string; scopeKey: string }> = {};
+  for (const [key, cover] of byKey) {
+    const { account: _a, ...rest } = cover;
+    out[key] = rest;
+  }
+  for (const [label, cover] of byLabel) {
+    if (!out[label]) {
+      const { account: _a, ...rest } = cover;
+      out[label] = rest;
+    }
+  }
+  return out;
 }
 
 export async function GET(
@@ -424,6 +578,8 @@ export async function GET(
               industryId: string | null;
               industryName: string | null;
               serviceSummary: string | null;
+              customerLabel: string | null;
+              visualEligible: boolean;
               heroCtaUrl: string | null;
               heroCtaText: string | null;
               subcategoryComponents: Array<{ key: string; label: string; priority: number }>;
@@ -434,6 +590,11 @@ export async function GET(
               const serviceName = String(s?.subcategory || "Service");
               const industryId = s?.category_id ? String(s.category_id) : null;
               const serviceSummary = typeof (s as any)?.service_summary === "string" ? String((s as any).service_summary).trim() || null : null;
+              const storedCustomer =
+                typeof (s as any)?.customer_label === "string" ? String((s as any).customer_label).trim() : "";
+              const customerLabel = storedCustomer || deriveCustomerLabel(serviceName);
+              const visualEligible =
+                typeof (s as any)?.visual_eligible === "boolean" ? Boolean((s as any).visual_eligible) : true;
               const { url: heroCtaUrl, text: heroCtaText } = pickHeroCtaFromSubcatRow(s);
               const subcategoryComponents = coerceSubcategoryComponents((s as any)?.subcategory_components);
               const subcategoryScope = coerceSubcategoryScope((s as any)?.subcategory_scope);
@@ -442,7 +603,21 @@ export async function GET(
                 cat && typeof cat === "object" && typeof (cat as any).name === "string"
                   ? String((cat as any).name)
                   : null;
-              return [String(s.id), { serviceName, industryId, industryName, serviceSummary, heroCtaUrl, heroCtaText, subcategoryComponents, subcategoryScope }];
+              return [
+                String(s.id),
+                {
+                  serviceName,
+                  industryId,
+                  industryName,
+                  serviceSummary,
+                  customerLabel,
+                  visualEligible,
+                  heroCtaUrl,
+                  heroCtaText,
+                  subcategoryComponents,
+                  subcategoryScope,
+                },
+              ];
             })
           );
           serviceOptions = ids
@@ -452,18 +627,24 @@ export async function GET(
                 industryId: null,
                 industryName: null,
                 serviceSummary: null,
+                customerLabel: "Service",
+                visualEligible: true,
                 heroCtaUrl: null as string | null,
                 heroCtaText: null as string | null,
                 subcategoryComponents: [],
                 subcategoryScope: [] as string[],
               };
               const rawLabel = meta.serviceName || "Service";
-              const cleanedLabel =
+              const businessLabel =
                 rawLabel.replace(/\s*\(service\)\s*$/i, "").trim() || rawLabel;
+              const customerLabel = meta.customerLabel || deriveCustomerLabel(businessLabel);
               return {
                 value: id,
-                label: cleanedLabel,
-                serviceName: cleanedLabel,
+                label: customerLabel,
+                businessLabel,
+                customerLabel,
+                serviceName: businessLabel,
+                visualEligible: meta.visualEligible !== false,
                 industryId: meta.industryId,
                 industryName: meta.industryName,
                 serviceSummary: meta.serviceSummary,
@@ -473,6 +654,7 @@ export async function GET(
                 ...(meta.subcategoryScope.length > 0 ? { subcategoryScope: meta.subcategoryScope } : {}),
               };
             })
+            .filter((opt) => opt.visualEligible !== false)
             .slice(0, 40);
         }
       }
@@ -607,14 +789,20 @@ export async function GET(
 
         serviceOptions = serviceOptions.map((opt) => {
           const subcategoryId = String(opt.value || "").trim();
-          const catalog = buildCatalogStyleOptions(rowsBySubcategory.get(subcategoryId) || []);
+          const rows = rowsBySubcategory.get(subcategoryId) || [];
+          const catalog = buildCatalogStyleOptions(rows);
+          const scopeCovers = buildScopeCovers(rows);
+          const next = {
+            ...opt,
+            ...(Object.keys(scopeCovers).length > 0 ? { scopeCovers } : {}),
+          };
           return catalog.options.length > 0
             ? {
-                ...opt,
+                ...next,
                 styleQuestion: catalog.question,
                 styleOptions: catalog.options,
               }
-            : opt;
+            : next;
         });
       } catch (e) {
         logger.warn("[widget] Failed to resolve styleOptions", {

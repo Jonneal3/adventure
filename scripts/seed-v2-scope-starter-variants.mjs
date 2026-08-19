@@ -13,7 +13,7 @@ const apply = process.argv.includes("--apply");
 const imageRoot = resolve(repoRoot, "output/imagegen/v2-scope-starters");
 const imageBucket = "images";
 const generatedFor = "v2_scope_starter";
-const catalogRevision = "2026-08-01-scope-scene-catalog-v3";
+const catalogRevision = "2026-08-08-scope-selection-heroes-v4";
 const bathroomSubcategoryId = "258f4d7f-746f-416b-b617-e1cca25b748f";
 const landscapeSubcategoryId = "ee70f353-c48e-4bd9-bfc1-cf1b00291fa9";
 
@@ -41,6 +41,7 @@ const scopeDefinitions = [
     family: "bathroom",
     fileBase: "bathroom-full-renovation",
     instanceId: "41766ba1-88b6-41c7-af1f-0a14ec4224e0",
+    replaceV1: true,
     service: "Bathroom Remodels",
     subcategoryId: bathroomSubcategoryId,
     scope: "Full bathroom renovation",
@@ -66,6 +67,44 @@ const scopeDefinitions = [
       "Warm Mediterranean",
       "Graphic monochrome",
       "Scandinavian wet room",
+      "Spa hotel calm",
+      "Black marble drama",
+      "Soft clay plaster",
+      "Forest green tile",
+      "Ivory herringbone",
+      "Brushed nickel loft",
+      "Desert stone oasis",
+      "Soft blush spa",
+      "Charcoal and oak",
+      "Sky blue ceramic",
+      "Travertine quiet",
+      "Art deco gold",
+      "Concrete minimal",
+      "Sage and brass",
+      "White zellige glow",
+      "Walnut wet room",
+      "Slate canyon",
+      "Pearl and chrome",
+      "Terracotta alcove",
+      "Midnight indigo",
+      "Honey limestone",
+      "Matte black spa",
+      "Pale oak Nordic",
+      "Sea glass mosaic",
+      "Cream fluted stone",
+      "Copper and clay",
+      "Fog gray glass",
+      "Warm ivory mosaic",
+      "Espresso stone niche",
+      "Alpine white spa",
+      "Moss green wet room",
+      "Champagne marble",
+      "Ink and linen",
+      "Sunlit sand tile",
+      "Porcelain gallery",
+      "Cedar and stone",
+      "Soft graphite spa",
+      "Cloud white alcove",
     ],
   },
   {
@@ -81,6 +120,7 @@ const scopeDefinitions = [
     family: "bathroom",
     fileBase: "bathroom-tile-flooring",
     instanceId: "41766ba1-88b6-41c7-af1f-0a14ec4224e0",
+    replaceV1: true,
     service: "Bathroom Remodels",
     subcategoryId: bathroomSubcategoryId,
     scope: "Tile & flooring",
@@ -103,6 +143,7 @@ const scopeDefinitions = [
     family: "bathroom",
     fileBase: "bathroom-cosmetic-refresh",
     instanceId: "41766ba1-88b6-41c7-af1f-0a14ec4224e0",
+    replaceV1: true,
     service: "Bathroom Remodels",
     subcategoryId: bathroomSubcategoryId,
     scope: "Cosmetic refresh (paint, lighting, hardware)",
@@ -111,6 +152,7 @@ const scopeDefinitions = [
     family: "bathroom",
     fileBase: "bathroom-layout-plumbing",
     instanceId: "41766ba1-88b6-41c7-af1f-0a14ec4224e0",
+    replaceV1: true,
     service: "Bathroom Remodels",
     subcategoryId: bathroomSubcategoryId,
     scope: "Layout or plumbing changes",
@@ -119,6 +161,7 @@ const scopeDefinitions = [
     family: "landscape",
     fileBase: "landscape-full-outdoor-renovation",
     instanceId: "d8ecc6fb-fd4e-40d5-acdd-40ff3a4b4d11",
+    replaceV1: true,
     service: "Landscape Design",
     subcategoryId: landscapeSubcategoryId,
     scope: "Full outdoor renovation",
@@ -127,6 +170,7 @@ const scopeDefinitions = [
     family: "landscape",
     fileBase: "landscape-patio-walkway",
     instanceId: "d8ecc6fb-fd4e-40d5-acdd-40ff3a4b4d11",
+    replaceV1: true,
     service: "Landscape Design",
     subcategoryId: landscapeSubcategoryId,
     scope: "Patio and walkway upgrade",
@@ -135,6 +179,7 @@ const scopeDefinitions = [
     family: "landscape",
     fileBase: "landscape-lawn-garden",
     instanceId: "d8ecc6fb-fd4e-40d5-acdd-40ff3a4b4d11",
+    replaceV1: true,
     service: "Landscape Design",
     subcategoryId: landscapeSubcategoryId,
     scope: "New lawn and garden installation",
@@ -143,6 +188,7 @@ const scopeDefinitions = [
     family: "landscape",
     fileBase: "landscape-driveway",
     instanceId: "d8ecc6fb-fd4e-40d5-acdd-40ff3a4b4d11",
+    replaceV1: true,
     service: "Landscape Design",
     subcategoryId: landscapeSubcategoryId,
     scope: "Driveway resurfacing and repair",
@@ -151,6 +197,7 @@ const scopeDefinitions = [
     family: "landscape",
     fileBase: "landscape-hardscape-color",
     instanceId: "d8ecc6fb-fd4e-40d5-acdd-40ff3a4b4d11",
+    replaceV1: true,
     service: "Landscape Design",
     subcategoryId: landscapeSubcategoryId,
     scope: "Hardscape color scheme refresh",
@@ -159,6 +206,7 @@ const scopeDefinitions = [
     family: "landscape",
     fileBase: "landscape-outdoor-lighting",
     instanceId: "d8ecc6fb-fd4e-40d5-acdd-40ff3a4b4d11",
+    replaceV1: true,
     service: "Landscape Design",
     subcategoryId: landscapeSubcategoryId,
     scope: "Outdoor lighting installation",
@@ -167,6 +215,7 @@ const scopeDefinitions = [
     family: "landscape",
     fileBase: "landscape-irrigation",
     instanceId: "d8ecc6fb-fd4e-40d5-acdd-40ff3a4b4d11",
+    replaceV1: true,
     service: "Landscape Design",
     subcategoryId: landscapeSubcategoryId,
     scope: "Irrigation system installation",
@@ -175,6 +224,7 @@ const scopeDefinitions = [
     family: "landscape",
     fileBase: "landscape-pruning",
     instanceId: "d8ecc6fb-fd4e-40d5-acdd-40ff3a4b4d11",
+    replaceV1: true,
     service: "Landscape Design",
     subcategoryId: landscapeSubcategoryId,
     scope: "Tree and shrub pruning service",
@@ -211,10 +261,29 @@ const starters = scopeDefinitions.flatMap((scopeDefinition) =>
       scopeKey: slug(scopeDefinition.scope),
       variantIndex,
       variantKey: `v${variantIndex}`,
-      prompt:
-        `High-end photorealistic ${scopeDefinition.service} starter concept for the exact scope ` +
-        `"${scopeDefinition.scope}", visual direction "${label}". Keep the selected scope as the ` +
-        "unmistakable subject with realistic, buildable geometry and no people, text, logos, or unrelated service areas.",
+      prompt: (() => {
+        const scope = scopeDefinition.scope;
+        if (scope === "Shower or tub area only") {
+          return `Premium photorealistic bathroom wet-zone starter, visual direction "${label}". Tightly frame ONLY a coordinated walk-in shower and bathtub with realistic plumbing, waterproofing, and high-end tile. No vanity, sink, toilet, mirrors, cabinetry, or full-room view. No people, text, logos, or watermarks.`;
+        }
+        if (scope === "Vanity, cabinets & fixtures") {
+          return `Premium photorealistic vanity close-up, visual direction "${label}". Frame only cabinetry, countertop, sinks, faucets, mirrors, and lighting. No shower, tub, or toilet. No people, text, logos, or watermarks.`;
+        }
+        if (scope === "Tile & flooring") {
+          return `Premium photorealistic tile-and-floor close-up, visual direction "${label}". Floor and wall tile with clear grout dominate the frame. No full-room vanity beauty shot. No people, text, logos, or watermarks.`;
+        }
+        if (scope === "Cosmetic refresh (paint, lighting, hardware)") {
+          return `Premium photorealistic cosmetic bathroom refresh close-up, visual direction "${label}". Paint, sconces, faucet, and cabinet hardware are the subject. No wide full-bath view. No people, text, logos, or watermarks.`;
+        }
+        if (scope === "Layout or plumbing changes") {
+          return `Premium photorealistic layout/plumbing bathroom concept, visual direction "${label}". Emphasize shower half-wall geometry and fixture placement. No vanity-only beauty shot. No people, text, logos, or watermarks.`;
+        }
+        return (
+          `High-end photorealistic ${scopeDefinition.service} starter concept for the exact scope ` +
+          `"${scope}", visual direction "${label}". Keep the selected scope as the ` +
+          "unmistakable subject with realistic, buildable geometry and no people, text, logos, or unrelated service areas."
+        );
+      })(),
     };
   })
 );

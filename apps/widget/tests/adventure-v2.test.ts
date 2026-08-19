@@ -37,7 +37,7 @@ function read(relativePath: string): string {
   return readFileSync(resolve(widgetRoot, relativePath), "utf8");
 }
 
-test("unversioned route promotes V5; versioned URLs redirect to canonical latest", () => {
+test("unversioned route promotes V8; versioned URLs redirect to canonical latest", () => {
   const unversioned = read("app/adventure/[instanceId]/page.tsx");
   const v1 = read("app/adventure/v1/[instanceId]/page.tsx");
   const v2 = read("app/adventure/v2/[instanceId]/page.tsx");
@@ -45,7 +45,7 @@ test("unversioned route promotes V5; versioned URLs redirect to canonical latest
   const v4 = read("app/adventure/v4/[instanceId]/page.tsx");
   const middleware = read("middleware.ts");
 
-  assert.match(unversioned, /<AdventureV5Experience/);
+  assert.match(unversioned, /<AdventureV8Experience/);
   assert.doesNotMatch(unversioned, /<AdventureFormExperience/);
   assert.match(v1, /data-adventure-version="v1"/);
   assert.match(v1, /<AdventureFormExperience/);
@@ -59,6 +59,8 @@ test("unversioned route promotes V5; versioned URLs redirect to canonical latest
   assert.match(middleware, /VERSIONED_ADVENTURE/);
   assert.match(middleware, /NextResponse\.redirect/);
   assert.match(middleware, /\/adventure\/\$\{versioned\[1\]\}/);
+  // Every version we have ever shipped, including the current one, redirects home.
+  assert.match(middleware, /v\(\?:1\|2\|3\|4\|5\|6\|7\|8\)/);
 });
 
 test("capabilities resolve to reusable ordered UI modules with overrides", () => {
@@ -636,5 +638,5 @@ test("designer launch UI emits one unversioned Adventure URL per surface", () =>
   assert.match(launch, /`\/adventure\/\$\{encodeURIComponent\(instanceId\)\}`/);
   assert.match(launch, /url\.searchParams\.set\("surface", surface\)/);
   assert.doesNotMatch(launch, /AdventureRouteVersion|adventureVersion/);
-  assert.match(unversioned, /AdventureV5Experience/);
+  assert.match(unversioned, /AdventureV8Experience/);
 });

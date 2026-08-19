@@ -22,6 +22,7 @@ function supportsMultiOutput(modelId: string): boolean {
 	if (model.includes('nano-banana')) return false;
 	if (model.includes('grok-imagine-image')) return false;
 	if (model.includes('flux-1.1-pro')) return false;
+	if (model.includes('imagen-4')) return false;
 	return true;
 }
 

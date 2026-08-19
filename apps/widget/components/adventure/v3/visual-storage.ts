@@ -3,7 +3,7 @@
 import type { VisualPricingSnapshot } from "./visual-pricing-types";
 
 const STORAGE_SCHEMA = 3;
-export type VisualPricingStorageNamespace = "v3" | "v4" | "v5";
+export type VisualPricingStorageNamespace = "v3" | "v4" | "v5" | "v6";
 
 function snapshotKey(instanceId: string, namespace: VisualPricingStorageNamespace): string {
   return `adventure:${namespace}:visual-pricing:${instanceId}`;
@@ -34,6 +34,20 @@ export function getOrCreateVisualPricingSession(
   } catch {
     return makeSessionId(namespace);
   }
+}
+
+/** Pin a session id (used by ?demo=1 so sales recordings see the same path). */
+export function forceVisualPricingSession(
+  instanceId: string,
+  sessionId: string,
+  namespace: VisualPricingStorageNamespace = "v3"
+): string {
+  if (typeof window !== "undefined") {
+    try {
+      window.localStorage.setItem(sessionKey(instanceId, namespace), sessionId);
+    } catch {}
+  }
+  return sessionId;
 }
 
 export function loadVisualPricingSnapshot(

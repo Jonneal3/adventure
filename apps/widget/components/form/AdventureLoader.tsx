@@ -8,7 +8,8 @@ export type AdventureLoaderPhase =
   | "batch_pricing"
   | "preview_generating"
   | "preview_refining"
-  | "preview_refreshing";
+  | "preview_refreshing"
+  | "inspiration";
 
 interface PhaseConfig {
   /** Primary message(s). If array, rotates through them. */
@@ -57,6 +58,15 @@ const PHASE_CONFIGS: Record<AdventureLoaderPhase, PhaseConfig> = {
     primary: "Refreshing your preview…",
     subMessages: [], // Pill overlay stays compact
     rotateIntervalMs: 2600,
+  },
+  inspiration: {
+    primary: "Gathering inspiration nearby…",
+    subMessages: [
+      "Loading looks from similar projects in the area…",
+      "Finding colors, tile, and fixtures that fit this job…",
+      "Putting together a first set of ideas…",
+    ],
+    rotateIntervalMs: 2200,
   },
 };
 
