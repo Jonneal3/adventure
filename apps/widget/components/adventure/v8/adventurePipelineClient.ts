@@ -18,7 +18,7 @@ export type V8DesignPayload = {
   budget?: number;
   budgetBandId?: string | null;
   finishTier?: string | null;
-  startPath?: "inspiration" | "photo" | null;
+  startPath?: "pricing" | "photo" | null;
   photoUrl?: string | null;
   favoriteUrls?: string[];
   selectedIdeaUrl?: string | null;
@@ -31,16 +31,33 @@ export type V8DesignPayload = {
 };
 
 export type AdventureAction =
-  | "inspiration"
-  | "ideas"
-  | "refine"
-  | "estimate"
   | "handoff"
   | "budget_bands"
-  | "library"
+  | "discovery"
+  | "estimate"
+  | "project_manifest"
   | "intake"
-  | "visual_directions"
-  | "discovery";
+  | "refinement_suggestions";
+
+export type V8StarterGenerationResult = {
+  imageUrl: string;
+  prompt: string;
+  referenceImageId: string;
+  referenceImageUrl: string;
+  matchedScopeKeys: string[];
+  missingScopeKeys: string[];
+  modelId: string;
+  provider?: string | null;
+  predictionId?: string | null;
+  latencyMs?: Record<string, unknown> | null;
+  structuralValidation?: {
+    checked: boolean;
+    valid: boolean;
+    defects: string[];
+    summary: string;
+  } | null;
+  usedApprovedReferenceFallback?: boolean;
+};
 
 function extractImageUrls(data: Record<string, any> | null | undefined): string[] {
   if (!data) return [];
@@ -88,18 +105,6 @@ export async function callAdventurePipeline(
     );
     const data = await res.json().catch(() => null);
     if (!data) return null;
-    const hasStructuredImages =
-      Array.isArray(data.images) &&
-      data.images.some((img: unknown) => {
-        if (typeof img === "string") return Boolean(img.trim());
-        return Boolean(img && typeof img === "object" && ((img as any).url || (img as any).src || (img as any).image));
-      });
-    if (!hasStructuredImages) {
-      const urls = extractImageUrls(data);
-      if (urls.length) {
-        data.images = urls.map((url, i) => ({ url, source: extra?.forceGenerate ? "generated" : "library", id: `img-${i + 1}` }));
-      }
-    }
     if (!res.ok && !(Array.isArray(data.images) && data.images.length)) return null;
     return data;
   } catch {
@@ -107,44 +112,173 @@ export async function callAdventurePipeline(
   }
 }
 
-function catalogLookFromRow(raw: Record<string, any> | null | undefined): Record<string, any> | null {
-  if (!raw || typeof raw !== "object") return null;
-  const url = String(raw.url || raw.image || raw.image_url || "").trim();
-  if (!/^https?:\/\//i.test(url)) return null;
-  const tags = [raw.category, raw.subcategory, raw.prompt, raw.label]
-    .filter((value) => value != null && String(value).trim())
-    .map(String);
-  return {
-    id: String(raw.id || url.slice(-18)),
-    url,
-    label: String(raw.label || raw.subcategory || raw.category || "Look").trim() || "Look",
-    description: String(raw.prompt || raw.description || "").trim(),
-    tags,
-    source: "library",
-  };
+/** Select an approved starter reference and generate one anchored variation. */
+export async function generateV8StarterImage(opts: {
+  instanceId: string;
+  sessionId: string;
+  serviceId: string;
+  scopes: string[];
+  otherScope?: string | null;
+  budget: number;
+  finishTier: string;
+}): Promise<V8StarterGenerationResult | null> {
+  const instanceId = String(opts.instanceId || "").trim();
+  const serviceId = String(opts.serviceId || "").trim();
+  if (!instanceId || !serviceId || !opts.sessionId || !opts.finishTier) return null;
+  try {
+    const response = await fetch(
+      `/api/adventure/v8/${encodeURIComponent(instanceId)}/starter`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sessionId: opts.sessionId,
+          serviceId,
+          scopes: opts.scopes,
+          otherScope: opts.otherScope || null,
+          budget: opts.budget,
+          finishTier: opts.finishTier,
+        }),
+        cache: "no-store",
+        signal: AbortSignal.timeout(45_000),
+      }
+    );
+    const data = await response.json().catch(() => null);
+    const imageUrl = String(data?.imageUrl || "").trim();
+    if (!response.ok || !data?.success || !/^https?:\/\//i.test(imageUrl)) return null;
+    return {
+      imageUrl,
+      prompt: String(data.prompt || "").trim(),
+      referenceImageId: String(data.referenceImageId || "").trim(),
+      referenceImageUrl: String(data.referenceImageUrl || "").trim(),
+      matchedScopeKeys: Array.isArray(data.matchedScopeKeys)
+        ? data.matchedScopeKeys.map((key: unknown) => String(key || "")).filter(Boolean)
+        : [],
+      missingScopeKeys: Array.isArray(data.missingScopeKeys)
+        ? data.missingScopeKeys.map((key: unknown) => String(key || "")).filter(Boolean)
+        : [],
+      modelId: String(data.modelId || "prunaai/p-image-edit").trim(),
+      provider: data.provider ? String(data.provider) : null,
+      predictionId: data.predictionId ? String(data.predictionId) : null,
+      latencyMs:
+        data.latencyMs && typeof data.latencyMs === "object"
+          ? data.latencyMs
+          : null,
+      structuralValidation:
+        data.structuralValidation && typeof data.structuralValidation === "object"
+          ? data.structuralValidation
+          : null,
+      usedApprovedReferenceFallback: Boolean(data.usedApprovedReferenceFallback),
+    };
+  } catch {
+    return null;
+  }
 }
 
-/** Contractor catalog photos already on this instance (sample gallery + uploads). */
-export async function fetchInstanceCatalogLooks(instanceId: string): Promise<Record<string, any>[]> {
-  const id = String(instanceId || "").trim();
-  if (!id) return [];
-  const [gallery, images] = await Promise.all([
-    fetch(`/api/sample-gallery/${encodeURIComponent(id)}?limit=80`, { cache: "no-store" })
-      .then((res) => (res.ok ? res.json() : null))
-      .catch(() => null),
-    fetch(`/api/images/${encodeURIComponent(id)}?limit=80`, { cache: "no-store" })
-      .then((res) => (res.ok ? res.json() : null))
-      .catch(() => null),
-  ]);
-  const seen = new Set<string>();
-  const out: Record<string, any>[] = [];
-  for (const raw of [...(gallery?.images || []), ...(images?.images || [])]) {
-    const row = catalogLookFromRow(raw);
-    if (!row || seen.has(row.url)) continue;
-    seen.add(row.url);
-    out.push(row);
+export async function fetchV8RefinementCatalog(opts: {
+  instanceId: string;
+  serviceId: string;
+  serviceLabel?: string | null;
+  serviceSummary?: string | null;
+  scopes: string[];
+  budget: number;
+  imageUrl: string;
+}): Promise<import("./types").V8RefinementCatalog | null> {
+  const instanceId = String(opts.instanceId || "").trim();
+  const serviceId = String(opts.serviceId || "").trim();
+  const imageUrl = String(opts.imageUrl || "").trim();
+  if (!instanceId || !serviceId || !imageUrl) return null;
+  try {
+    const response = await fetch(
+      `/api/adventure/v8/${encodeURIComponent(instanceId)}/refinement-catalog`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          serviceId,
+          serviceLabel: opts.serviceLabel || null,
+          serviceSummary: opts.serviceSummary || null,
+          scopes: opts.scopes,
+          budget: opts.budget,
+          imageUrl,
+        }),
+        cache: "no-store",
+        signal: AbortSignal.timeout(18_000),
+      }
+    );
+    const data = await response.json().catch(() => null);
+    if (!response.ok || !data?.ok || !Array.isArray(data.categories)) return null;
+    return {
+      source: data.source === "vision" || data.source === "service" ? data.source : "fallback",
+      diagnosis: String(data.diagnosis || "").trim(),
+      categories: data.categories,
+    } as import("./types").V8RefinementCatalog;
+  } catch {
+    return null;
   }
-  return out;
+}
+
+export async function generateV8RefinementOptionImages(opts: {
+  instanceId: string;
+  sessionId: string;
+  serviceId: string;
+  serviceLabel?: string | null;
+  serviceSummary?: string | null;
+  industry?: string | null;
+  budget: number;
+  category: import("./types").V8RefinementCategory;
+}): Promise<Record<string, string>> {
+  const instanceId = String(opts.instanceId || "").trim();
+  const sessionId = String(opts.sessionId || "").trim();
+  const categoryId = String(opts.category?.id || "").trim();
+  if (!instanceId || !sessionId || !categoryId || !opts.category.options.length) return {};
+
+  const categorySubject = String(opts.category.label || "item").trim();
+  try {
+    const response = await fetch(
+      `/api/ai-form/${encodeURIComponent(instanceId)}/option-images/generate`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          generationPurpose: "v8-refinement-thumbnail",
+          sessionId,
+          serviceId: opts.serviceId,
+          service: opts.serviceLabel || categorySubject,
+          serviceSummary: opts.serviceSummary || null,
+          industry: opts.industry || null,
+          budgetRange: opts.budget,
+          stepId: `v8-refinement-material-fixture-${categoryId}`,
+          question: `Choose one ${categorySubject} fixture or material`,
+          options: opts.category.options.slice(0, 5).map((option) => ({
+            label: option.label,
+            value: option.id,
+            image_prompt: [
+              option.imagePrompt ||
+                `Exactly one ${option.label} ${categorySubject} selection.`,
+              `Product-only catalog thumbnail of the ${categorySubject} choice.`,
+              `Show exactly one isolated ${categorySubject} item or one continuous material sample, centered and filling about 75 percent of a square frame.`,
+              "Neutral studio or minimal material backdrop; true-to-life construction, finish, proportions, and color.",
+              `The picture must unmistakably show ${categorySubject}, not a room that merely contains it.`,
+              "No full room, no bathroom scene, no kitchen scene, no collage, no people, no duplicate products, no unrelated fixtures, no text, and no labels.",
+            ].join(" "),
+          })),
+        }),
+        cache: "no-store",
+        signal: AbortSignal.timeout(20_000),
+      }
+    );
+    const data = await response.json().catch(() => null);
+    if (!response.ok || !Array.isArray(data?.options)) return {};
+    return data.options.reduce((images: Record<string, string>, option: any) => {
+      const id = String(option?.value || "").trim();
+      const imageUrl = String(option?.imageUrl || "").trim();
+      if (id && /^https?:\/\//i.test(imageUrl)) images[id] = imageUrl;
+      return images;
+    }, {});
+  } catch {
+    return {};
+  }
 }
 
 /** Generate designs through the production image API (same path as the main widget). */
@@ -258,6 +392,36 @@ export async function generateV8DesignImages(opts: {
 export async function generateV8DesignImage(opts: Parameters<typeof generateV8DesignImages>[0]): Promise<string | null> {
   const urls = await generateV8DesignImages({ ...opts, count: 1 });
   return urls[0] || null;
+}
+
+export async function analyzeV8ProjectManifest(opts: {
+  instanceId: string;
+  imageUrl: string;
+  serviceId?: string | null;
+  serviceLabel?: string | null;
+  scopes?: string[];
+}): Promise<{
+  manifest: import("./types").V8ProjectManifest;
+  discovery?: Record<string, unknown> | null;
+} | null> {
+  const imageUrl = String(opts.imageUrl || "").trim();
+  if (!imageUrl) return null;
+  const data = await callAdventurePipeline(
+    "project_manifest",
+    {
+      instanceId: opts.instanceId,
+      serviceId: opts.serviceId,
+      serviceLabel: opts.serviceLabel,
+      scopes: opts.scopes,
+      selectedIdeaUrl: imageUrl,
+    },
+    { imageUrl }
+  );
+  if (!data?.ok || !data.manifest || data.manifest.analysisStatus !== "verified") return null;
+  return {
+    manifest: data.manifest as import("./types").V8ProjectManifest,
+    discovery: data.discovery && typeof data.discovery === "object" ? data.discovery : null,
+  };
 }
 
 /** Fire shown/selected counters and write winning generations back into the library. */

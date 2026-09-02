@@ -182,6 +182,47 @@ No people, text, logos, or watermarks in the prompt.
 VisualDirectionsSignature.__doc__ = VISUAL_DIRECTIONS_INSTRUCTIONS
 
 
+class RefinementSuggestionsSignature(dspy.Signature):
+    """Write fast, target-aware chips for refining the current project image."""
+
+    request_json: str = dspy.InputField(
+        desc=(
+            "JSON with service, scope, current design label, visible components, and the selected target. "
+            "The result becomes one-click image-edit suggestions."
+        )
+    )
+
+    suggestions_json: str = dspy.OutputField(
+        desc=(
+            'Single JSON object: {"suggestions":[{"label":"Polished chrome",'
+            '"prompt":"Replace the visible faucet finish with polished chrome."}]}'
+        )
+    )
+
+
+REFINEMENT_SUGGESTIONS_INSTRUCTIONS = """
+You write three one-click refinement suggestions for an existing home-project design image.
+
+Output ONLY valid JSON, no markdown.
+
+Rules:
+- Return exactly 3 suggestions.
+- label: 2-4 customer-facing words, maximum 28 characters.
+- prompt: one short imperative image-edit instruction. It must be concrete, visible, buildable, and specific to the selected target.
+- When target is a component, change only that component. Never add or remove unrelated items.
+- When target is "Anywhere", suggest coordinated finish, material, color, or style changes for the existing design. Preserve layout and component count.
+- Use supplied service, scope, components, design label, and change summary as context.
+- Prefer real choices: polished chrome, brushed nickel, light oak, painted finish, larger tile, warmer grout, etc.
+- For faucets, fixtures, or hardware, suggest proven finish swaps such as polished chrome, brushed nickel, matte black, or brushed brass. Do not invent glass-finished fixtures, filters, or gadget features.
+- Do NOT suggest cheaper, more expensive, premium, upgrade, simpler, or as shown. Those reusable controls already exist.
+- Do NOT mention prices, brands, structural work, moving plumbing, or changing the camera.
+- No duplicate ideas.
+"""
+
+
+RefinementSuggestionsSignature.__doc__ = REFINEMENT_SUGGESTIONS_INSTRUCTIONS
+
+
 __all__ = [
     "InstructionInterpretSignature",
     "INSTRUCTION_INTERPRET_INSTRUCTIONS",
@@ -191,4 +232,6 @@ __all__ = [
     "INTAKE_INSTRUCTIONS",
     "VisualDirectionsSignature",
     "VISUAL_DIRECTIONS_INSTRUCTIONS",
+    "RefinementSuggestionsSignature",
+    "REFINEMENT_SUGGESTIONS_INSTRUCTIONS",
 ]

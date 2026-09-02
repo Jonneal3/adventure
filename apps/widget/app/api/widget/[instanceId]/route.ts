@@ -52,11 +52,17 @@ function coerceSubcategoryScope(raw: unknown): string[] {
 
 /** Hero CTA fields live on category_subcategory_seo after migration 20260127000002. */
 const CATEGORIES_SUBCAT_SELECT_WITH_SEO =
+  "id, subcategory, category_id, service_summary, subcategory_components, subcategory_scope, customer_label, visual_eligible, photo_subject, photo_context, category_subcategory_seo(hero_cta_url, hero_cta_text), categories(name)";
+const CATEGORIES_SUBCAT_SELECT_WITH_SEO_NO_PHOTO =
   "id, subcategory, category_id, service_summary, subcategory_components, subcategory_scope, customer_label, visual_eligible, category_subcategory_seo(hero_cta_url, hero_cta_text), categories(name)";
 /** Pre-split DBs: hero_cta_* still on categories_subcategories. */
 const CATEGORIES_SUBCAT_SELECT_WITH_HERO =
+  "id, subcategory, category_id, service_summary, subcategory_components, subcategory_scope, customer_label, visual_eligible, photo_subject, photo_context, hero_cta_url, hero_cta_text, categories(name)";
+const CATEGORIES_SUBCAT_SELECT_WITH_HERO_NO_PHOTO =
   "id, subcategory, category_id, service_summary, subcategory_components, subcategory_scope, customer_label, visual_eligible, hero_cta_url, hero_cta_text, categories(name)";
 const CATEGORIES_SUBCAT_SELECT_BASE =
+  "id, subcategory, category_id, service_summary, subcategory_components, subcategory_scope, customer_label, visual_eligible, photo_subject, photo_context, categories(name)";
+const CATEGORIES_SUBCAT_SELECT_BASE_NO_PHOTO =
   "id, subcategory, category_id, service_summary, subcategory_components, subcategory_scope, customer_label, visual_eligible, categories(name)";
 const CATEGORIES_SUBCAT_SELECT_MINIMAL =
   "id, subcategory, category_id, service_summary, subcategory_components, categories(name)";
@@ -110,8 +116,16 @@ async function fetchCategoriesSubcategoriesForWidget(
   if (!res.error) return res;
 
   const err0 = res.error as any;
-  const msg0 = String(err0?.message || "");
+  let msg0 = String(err0?.message || "");
   if (!shouldRetryCategoriesSubcatSelect(err0)) return res;
+
+  // photo_subject / photo_context were added after the V8 upload experience.
+  // Keep older databases readable while deployments roll through environments.
+  if (/photo_subject|photo_context/i.test(msg0)) {
+    res = await trySelect(CATEGORIES_SUBCAT_SELECT_WITH_SEO_NO_PHOTO);
+    if (!res.error) return res;
+    msg0 = String((res.error as any)?.message || msg0);
+  }
 
   // customer_label / visual_eligible may be missing pre-migration.
   if (/customer_label|visual_eligible/i.test(msg0)) {
@@ -120,6 +134,9 @@ async function fetchCategoriesSubcategoriesForWidget(
   }
 
   res = await trySelect(CATEGORIES_SUBCAT_SELECT_WITH_HERO);
+  if (res.error && /photo_subject|photo_context/i.test(String((res.error as any)?.message || ""))) {
+    res = await trySelect(CATEGORIES_SUBCAT_SELECT_WITH_HERO_NO_PHOTO);
+  }
   if (!res.error) {
     logger.warn("[widget] categories_subcategories: using legacy hero_cta columns (no category_subcategory_seo embed)", {
       firstError: msg0,
@@ -137,6 +154,9 @@ async function fetchCategoriesSubcategoriesForWidget(
   }
 
   res = await trySelect(CATEGORIES_SUBCAT_SELECT_BASE);
+  if (res.error && /photo_subject|photo_context/i.test(String((res.error as any)?.message || ""))) {
+    res = await trySelect(CATEGORIES_SUBCAT_SELECT_BASE_NO_PHOTO);
+  }
   if (res.error && /customer_label|visual_eligible/i.test(String((res.error as any)?.message || ""))) {
     res = await trySelect(CATEGORIES_SUBCAT_SELECT_BASE_LEGACY);
   }
@@ -166,6 +186,16 @@ function coerceHeroCtaText(raw: unknown): string | null {
   return t || null;
 }
 
+function normalizeCatalogFinishTier(raw: unknown): string | null {
+  const value = String(raw || "").trim().toLowerCase();
+  if (!value) return null;
+  if (/^(\$|starter|value|budget|economy)$/.test(value)) return "value";
+  if (/^(\$\$|mid|middle|standard|upper|upper-mid)$/.test(value)) return "mid";
+  if (/^(\$\$\$|plus|premium|high)$/.test(value)) return "premium";
+  if (/^(\$\$\$\$|luxury|lux|estate|bespoke)$/.test(value)) return "luxury";
+  return value.replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || null;
+}
+
 /** Prefer category_subcategory_seo (current schema); fall back to legacy columns on the row. */
 function pickHeroCtaFromSubcatRow(s: any): { url: string | null; text: string | null } {
   const seo = s?.category_subcategory_seo;
@@ -191,22 +221,35 @@ function coerceHeroCtaUrl(raw: unknown): string | null {
   return null;
 }
 
+const V8_QUALITY_CATALOG_MODEL_ID = "black-forest-labs/flux-2-pro";
+const V8_QUALITY_CATALOG_READY_COUNT = 24;
+
+function isPublishReadyGalleryMetadata(metadata: any): boolean {
+  return (
+    metadata?.gallery_enrichment?.version === 1 &&
+    metadata?.gallery_enrichment?.publish?.status === "ready"
+  );
+}
+
 function buildCatalogStyleOptions(rows: any[]): {
   options: Array<{
     label: string;
     value: string;
     imageUrl: string;
     description?: string | null;
+    finishTier?: string | null;
     priceTier?: string | null;
     featuredRank?: number | null;
     imageId?: string | null;
     catalogKey?: string | null;
     catalogSource?: "account" | "global";
+    generatedFor?: string;
     timesShown?: number;
     timesSelected?: number;
     timesSaved?: number;
     conversions?: number;
     scope?: string | null;
+    scopeKey?: string | null;
   }>;
   question: string | null;
 } {
@@ -214,6 +257,7 @@ function buildCatalogStyleOptions(rows: any[]): {
     "style_seed",
     "subcategory_catalog",
     "adventure_v7",
+    "adventure_v8",
     "v2_scope_starter",
     "v2_neutral_scope_starter",
     "v2_service_starter",
@@ -221,28 +265,52 @@ function buildCatalogStyleOptions(rows: any[]): {
   ]);
 
   const seen = new Set<string>();
+  const qualityCatalogReady = (Array.isArray(rows) ? rows : []).filter((row) => {
+    const meta = row?.metadata && typeof row.metadata === "object" ? row.metadata : null;
+    return (
+      isPublishReadyGalleryMetadata(meta) &&
+      String(meta?.generated_for || "").trim() === "style_seed" &&
+      String(meta?.ai_model || "").trim() === V8_QUALITY_CATALOG_MODEL_ID &&
+      Boolean(String(meta?.scope_key || "").trim())
+    );
+  }).length >= V8_QUALITY_CATALOG_READY_COUNT;
   const options: Array<{
     label: string;
     value: string;
     imageUrl: string;
     description?: string | null;
+    finishTier?: string | null;
     priceTier?: string | null;
     featuredRank?: number | null;
     imageId?: string | null;
     catalogKey?: string | null;
     catalogSource?: "account" | "global";
+    generatedFor?: string;
     timesShown?: number;
     timesSelected?: number;
     timesSaved?: number;
     conversions?: number;
     scope?: string | null;
+    scopeKey?: string | null;
   }> = [];
   let question: string | null = null;
 
   for (const row of Array.isArray(rows) ? rows : []) {
     const meta = row?.metadata && typeof row.metadata === "object" ? row.metadata : null;
     const generatedFor = String(meta?.generated_for || "").trim();
-    if (!meta || !CATALOG_GENERATED_FOR.has(generatedFor)) continue;
+    if (!meta || !isPublishReadyGalleryMetadata(meta) || !CATALOG_GENERATED_FOR.has(generatedFor)) continue;
+    // Keep the previous catalog visible while its quality backfill is running,
+    // then retire fast-model seed rows from visitor retrieval in one swap.
+    if (
+      qualityCatalogReady &&
+      generatedFor === "style_seed" &&
+      (
+        String(meta.ai_model || "").trim() !== V8_QUALITY_CATALOG_MODEL_ID ||
+        !String(meta.scope_key || "").trim()
+      )
+    ) {
+      continue;
+    }
 
     const imageUrl = typeof row?.image_url === "string" ? row.image_url.trim() : "";
     if (!imageUrl) continue;
@@ -285,7 +353,14 @@ function buildCatalogStyleOptions(rows: any[]): {
         || meta.refinement_category_label
         || ""
     ).trim();
-    const scope = String(meta.starter_scope || meta.refinement_category_label || "").trim() || null;
+    const scope = String(meta.scope || meta.starter_scope || meta.refinement_category_label || "").trim() || null;
+    const finishTier = normalizeCatalogFinishTier(
+      meta.finish_tier
+        || meta.estimated_finish_tier
+        || meta?.discovery?.estimated_finish_tier
+        || meta.price_tier // legacy rows remain readable during migration
+        || ""
+    );
     const priceTier = typeof meta.price_tier === "string" && meta.price_tier.trim()
       ? meta.price_tier.trim()
       : null;
@@ -293,13 +368,14 @@ function buildCatalogStyleOptions(rows: any[]): {
     const stats =
       meta.adventure_stats && typeof meta.adventure_stats === "object" ? meta.adventure_stats : null;
 
-    const scopeKey = String(meta.starter_scope_key || (scope ? v2ScopeStarterKey(scope) : "") || "").trim() || null;
+    const scopeKey = String(meta.scope_key || meta.starter_scope_key || (scope ? v2ScopeStarterKey(scope) : "") || "").trim() || null;
 
     options.push({
       label,
       value,
       imageUrl,
       ...(description ? { description } : {}),
+      ...(finishTier ? { finishTier } : {}),
       ...(priceTier ? { priceTier } : {}),
       ...(Number.isFinite(Number(meta.featured_rank ?? meta.featuredRank)) && Number(meta.featured_rank ?? meta.featuredRank) > 0
         ? { featuredRank: Math.floor(Number(meta.featured_rank ?? meta.featuredRank)) }
@@ -338,7 +414,7 @@ function buildScopeCovers(rows: any[]): Record<string, { imageUrl: string; image
 
   for (const row of Array.isArray(rows) ? rows : []) {
     const meta = row?.metadata && typeof row.metadata === "object" ? row.metadata : null;
-    if (!meta || String(meta.generated_for || "").trim() !== "v2_scope_starter") continue;
+    if (!meta || !isPublishReadyGalleryMetadata(meta) || String(meta.generated_for || "").trim() !== "v2_scope_starter") continue;
     const imageUrl = typeof row?.image_url === "string" ? row.image_url.trim() : "";
     if (!/^https?:\/\//i.test(imageUrl)) continue;
     const scopeLabel = String(meta.starter_scope || "").trim();
@@ -389,10 +465,11 @@ export async function GET(
   
   try {
     const instanceId = params.instanceId;
+    const requestUrl = new URL(request.url);
+    const intakeOnly = requestUrl.searchParams.get("phase") === "intake";
     const debugEnabled = (() => {
       try {
-        const url = new URL(request.url);
-        const v = (url.searchParams.get("debug") || url.searchParams.get("ai_form_debug") || url.searchParams.get("form_debug") || "")
+        const v = (requestUrl.searchParams.get("debug") || requestUrl.searchParams.get("ai_form_debug") || requestUrl.searchParams.get("form_debug") || "")
           .trim()
           .toLowerCase();
         return v === "1" || v === "true" || v === "yes" || v === "on";
@@ -402,11 +479,10 @@ export async function GET(
     })();
     const hintedServiceId = (() => {
       try {
-        const url = new URL(request.url);
         const raw =
-          url.searchParams.get("serviceId") ||
-          url.searchParams.get("service_id") ||
-          url.searchParams.get("service") ||
+          requestUrl.searchParams.get("serviceId") ||
+          requestUrl.searchParams.get("service_id") ||
+          requestUrl.searchParams.get("service") ||
           null;
         return raw ? String(raw).trim() : null;
       } catch {
@@ -455,31 +531,7 @@ export async function GET(
       }
     });
 
-    // First, let's check if the instance exists at all (this will help debug RLS issues)
-    
-    const { data: instanceExists, error: existsError } = await supabase
-      .from('instances')
-      .select('id, is_public')
-      .eq('id', instanceId)
-      .maybeSingle();
-
-    if (existsError) {
-      
-    } else if (!instanceExists) {
-      
-      return NextResponse.json({
-        error: 'Instance not found',
-        instanceId: instanceId,
-        details: 'Instance does not exist in database'
-      }, { status: 404, headers: { "X-Request-Id": requestId } });
-    } else {
-      
-    }
-
-    // Fetch the instance data with explicit cache busting and force fresh data
-    
-    
-    // Force fresh data by using a cache-busting approach
+    // One instance read is enough: it both verifies existence and supplies config.
     const { data: instance, error: instanceError } = await supabase
       .from('instances')
       .select('*')
@@ -503,18 +555,6 @@ export async function GET(
     }
 
     const responseTimestamp = new Date().toISOString();
-    
-    const { data: rawConfig, error: rawError } = await supabase
-      .from('instances')
-      .select('config, updated_at, created_at, name')
-      .eq('id', instanceId)
-      .single();
-      
-    if (!rawError && rawConfig) {
-      
-    } else {
-      
-    }
 
     // Provide deterministic service options to the client so the form can render
     // service-selection without needing to hit /api/ai-form/:id/generate-steps.
@@ -525,6 +565,8 @@ export async function GET(
       industryName?: string | null;
       serviceName?: string | null;
       serviceSummary?: string | null;
+      photoSubject?: string | null;
+      photoContext?: string | null;
       heroCtaUrl?: string | null;
       heroCtaText?: string | null;
       subcategoryComponents?: Array<{
@@ -539,11 +581,19 @@ export async function GET(
         value: string;
         imageUrl: string;
         description?: string | null;
+        finishTier?: string | null;
         priceTier?: string | null;
         featuredRank?: number | null;
         imageId?: string | null;
         catalogKey?: string | null;
         catalogSource?: "account" | "global";
+        generatedFor?: string;
+        timesShown?: number;
+        timesSelected?: number;
+        timesSaved?: number;
+        conversions?: number;
+        scope?: string | null;
+        scopeKey?: string | null;
       }>;
     }> = [];
     try {
@@ -578,6 +628,8 @@ export async function GET(
               industryId: string | null;
               industryName: string | null;
               serviceSummary: string | null;
+              photoSubject: string | null;
+              photoContext: string | null;
               customerLabel: string | null;
               visualEligible: boolean;
               heroCtaUrl: string | null;
@@ -590,6 +642,8 @@ export async function GET(
               const serviceName = String(s?.subcategory || "Service");
               const industryId = s?.category_id ? String(s.category_id) : null;
               const serviceSummary = typeof (s as any)?.service_summary === "string" ? String((s as any).service_summary).trim() || null : null;
+              const photoSubject = typeof (s as any)?.photo_subject === "string" ? String((s as any).photo_subject).trim() || null : null;
+              const photoContext = typeof (s as any)?.photo_context === "string" ? String((s as any).photo_context).trim() || null : null;
               const storedCustomer =
                 typeof (s as any)?.customer_label === "string" ? String((s as any).customer_label).trim() : "";
               const customerLabel = storedCustomer || deriveCustomerLabel(serviceName);
@@ -610,6 +664,8 @@ export async function GET(
                   industryId,
                   industryName,
                   serviceSummary,
+                  photoSubject,
+                  photoContext,
                   customerLabel,
                   visualEligible,
                   heroCtaUrl,
@@ -627,6 +683,8 @@ export async function GET(
                 industryId: null,
                 industryName: null,
                 serviceSummary: null,
+                photoSubject: null,
+                photoContext: null,
                 customerLabel: "Service",
                 visualEligible: true,
                 heroCtaUrl: null as string | null,
@@ -648,6 +706,8 @@ export async function GET(
                 industryId: meta.industryId,
                 industryName: meta.industryName,
                 serviceSummary: meta.serviceSummary,
+                photoSubject: meta.photoSubject,
+                photoContext: meta.photoContext,
                 ...(meta.heroCtaUrl != null ? { heroCtaUrl: meta.heroCtaUrl } : {}),
                 ...(meta.heroCtaText != null ? { heroCtaText: meta.heroCtaText } : {}),
                 ...(meta.subcategoryComponents.length > 0 ? { subcategoryComponents: meta.subcategoryComponents } : {}),
@@ -699,6 +759,8 @@ export async function GET(
               industryId: string | null;
               industryName: string | null;
               serviceSummary: string | null;
+              photoSubject: string | null;
+              photoContext: string | null;
               heroCtaUrl: string | null;
               heroCtaText: string | null;
               subcategoryComponents: Array<{ key: string; label: string; priority: number }>;
@@ -711,6 +773,10 @@ export async function GET(
               const industryId = s?.category_id ? String(s.category_id) : null;
               const serviceSummary =
                 typeof (s as any)?.service_summary === "string" ? String((s as any).service_summary).trim() || null : null;
+              const photoSubject =
+                typeof (s as any)?.photo_subject === "string" ? String((s as any).photo_subject).trim() || null : null;
+              const photoContext =
+                typeof (s as any)?.photo_context === "string" ? String((s as any).photo_context).trim() || null : null;
               const { url: heroCtaUrl, text: heroCtaText } = pickHeroCtaFromSubcatRow(s);
               const subcategoryComponents = coerceSubcategoryComponents((s as any)?.subcategory_components);
               const subcategoryScope = coerceSubcategoryScope((s as any)?.subcategory_scope);
@@ -719,7 +785,7 @@ export async function GET(
                 cat && typeof cat === "object" && typeof (cat as any).name === "string"
                   ? String((cat as any).name)
                   : null;
-              return [String(s.id), { label: cleanedLabel, industryId, industryName, serviceSummary, heroCtaUrl, heroCtaText, subcategoryComponents, subcategoryScope }];
+              return [String(s.id), { label: cleanedLabel, industryId, industryName, serviceSummary, photoSubject, photoContext, heroCtaUrl, heroCtaText, subcategoryComponents, subcategoryScope }];
             }),
           );
 
@@ -733,6 +799,8 @@ export async function GET(
               industryId: meta?.industryId ?? null,
               industryName: meta?.industryName ?? null,
               serviceSummary: meta?.serviceSummary ?? null,
+              photoSubject: meta?.photoSubject ?? null,
+              photoContext: meta?.photoContext ?? null,
               ...(meta?.heroCtaUrl != null ? { heroCtaUrl: meta.heroCtaUrl } : {}),
               ...(meta?.heroCtaText != null ? { heroCtaText: meta.heroCtaText } : {}),
               ...(meta?.subcategoryComponents?.length ? { subcategoryComponents: meta.subcategoryComponents } : {}),
@@ -749,7 +817,9 @@ export async function GET(
       }
     }
 
-    if (serviceOptions.length > 0) {
+    // Intake only needs labels and scope metadata. Catalog imagery is loaded by
+    // the later visual stage, so keep it off the critical path for step one.
+    if (serviceOptions.length > 0 && !intakeOnly) {
       try {
         const subcategoryIds = serviceOptions.map((opt) => String(opt.value || "").trim()).filter(Boolean);
         const accountId = typeof (instance as any)?.account_id === "string" ? String((instance as any).account_id).trim() : "";
@@ -815,7 +885,7 @@ export async function GET(
     // New Studio V1 reads this flat projection. Existing consumers continue using
     // serviceOptions[].styleOptions unchanged. The helper safely returns a shorter
     // set (including []) when a catalog does not have six valid public images yet.
-    const starterConcepts = buildStudioStarterConcepts(serviceOptions);
+    const starterConcepts = intakeOnly ? [] : buildStudioStarterConcepts(serviceOptions);
 
     const responseData = {
       success: true,

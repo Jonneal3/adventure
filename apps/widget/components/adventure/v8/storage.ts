@@ -2,7 +2,7 @@
 
 import type { V8RailQuestion, V8State } from "./types";
 
-const SNAPSHOT_VERSION = 1;
+const SNAPSHOT_VERSION = 4;
 
 export type V8SessionContext = {
   serviceId: string | null;
@@ -88,6 +88,16 @@ export function loadV8Snapshot(instanceId: string): V8SessionSnapshot | null {
         generatingLabel: "",
         railQuestion: inferRailQuestion(parsed.state, parsed.context?.mode),
         moodId: parsed.state.moodId ?? null,
+        activeRevisionIndex: parsed.state.photoPathChosen === false || (parsed.state.looks || []).length === 0
+          ? -1
+          : Number.isInteger(parsed.state.activeRevisionIndex)
+            ? Math.min(Math.max(0, parsed.state.activeRevisionIndex), parsed.state.looks.length - 1)
+            : Math.max(
+                0,
+                parsed.state.looks.findIndex((look) => look.id === parsed.state.selectedDesignId)
+              ),
+        pendingBudgetDelta: Number(parsed.state.pendingBudgetDelta || 0),
+        pricingParts: Array.isArray(parsed.state.pricingParts) ? parsed.state.pricingParts : [],
       },
       layoutThumbs: parsed.layoutThumbs || {},
       styleThumbs: parsed.styleThumbs || {},

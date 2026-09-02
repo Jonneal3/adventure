@@ -2,9 +2,8 @@
 """
 Bulk-tag catalog images: search metadata + quality score.
 
-Cheap model (Gemini Flash-Lite by default) does the full pass. Ambiguous
-aesthetic calls escalate to a stronger model. Rejected photos stay in
-Supabase but are hidden from the concept gallery.
+One vision model does the full pass. Rejected photos stay in Supabase but are
+hidden from the concept gallery.
 
 This is a one-shot cleanup. Re-run as new images land, or call
 tag_catalog_photo() from ingest later.
@@ -13,6 +12,10 @@ Usage:
   PYTHONPATH=src python scripts/tag_discovery_images.py --limit 50 --dry-run
   PYTHONPATH=src python scripts/tag_discovery_images.py --service-id UUID
   PYTHONPATH=src python scripts/tag_discovery_images.py --limit 0
+
+With Replicate configured, the default model is GPT-5 mini. Set
+ADVENTURE_CATALOG_VISION_MODEL to override it; Gemini Flash-Lite is selected
+automatically when GEMINI_API_KEY is available.
 """
 
 from __future__ import annotations
@@ -20,6 +23,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import ssl
 import sys
 import time
 import urllib.error
@@ -27,19 +31,25 @@ import urllib.parse
 import urllib.request
 from typing import Any, Dict, Iterable, Optional
 
+import certifi
+
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 SRC = os.path.join(ROOT, "src")
+if ROOT not in sys.path:
+    sys.path.insert(0, ROOT)
 if SRC not in sys.path:
     sys.path.insert(0, SRC)
 
 from programs.adventure_pipeline.catalog_tag import (  # noqa: E402
     already_tagged,
     catalog_vision_enabled,
+    project_manifest_from_catalog_tags,
     tag_catalog_photo,
 )
 
 
 PAGE_SIZE_MAX = 200
+SSL_CONTEXT = ssl.create_default_context(cafile=certifi.where())
 
 
 def _config() -> tuple[str, str]:
@@ -72,7 +82,7 @@ def _request(method: str, path_qs: str, body: Optional[dict] = None, extra_heade
         headers=headers,
         method=method,
     )
-    with urllib.request.urlopen(req, timeout=45) as resp:
+    with urllib.request.urlopen(req, timeout=45, context=SSL_CONTEXT) as resp:
         raw = resp.read().decode("utf-8")
         return json.loads(raw) if raw else None
 
@@ -117,7 +127,6 @@ def main() -> int:
     parser.add_argument("--instance-id", default="")
     parser.add_argument("--sleep", type=float, default=0.05)
     parser.add_argument("--dry-run", action="store_true", help="Call the model but do not write")
-    parser.add_argument("--no-review", action="store_true", help="Skip the stronger second pass")
     parser.add_argument("--no-hide", action="store_true", help="Tag rejects but still show them in the gallery")
     args = parser.parse_args()
     if not catalog_vision_enabled():
@@ -125,7 +134,7 @@ def main() -> int:
         return 1
 
     cap = None if int(args.limit) <= 0 else int(args.limit)
-    tagged = skipped = failed = hidden = reviewed = 0
+    tagged = skipped = failed = hidden = 0
     processed = 0
     for row in _iter_rows(
         page_size=args.page_size,
@@ -137,10 +146,18 @@ def main() -> int:
         meta = row.get("metadata") if isinstance(row.get("metadata"), dict) else {}
         existing = meta.get("discovery") if isinstance(meta.get("discovery"), dict) else {}
         if already_tagged(existing) and not args.force:
-            skipped += 1
+            if isinstance(meta.get("project_manifest"), dict):
+                skipped += 1
+                continue
+            if not args.dry_run:
+                next_meta = dict(meta)
+                next_meta["project_manifest"] = project_manifest_from_catalog_tags(existing)
+                _patch_metadata(str(row["id"]), next_meta)
+            tagged += 1
+            print(f"{'dry ' if args.dry_run else ''}manifest {row.get('id')} from existing discovery")
             continue
         url = str(row.get("image_url") or "").strip()
-        tags = tag_catalog_photo(url, review=not args.no_review)
+        tags = tag_catalog_photo(url)
         processed += 1
         if not tags:
             failed += 1
@@ -151,25 +168,23 @@ def main() -> int:
             tags["keep"] = True
             tags["verdict"] = "keep"
             tags["overridden"] = "no-hide"
-        if tags.get("reviewed"):
-            reviewed += 1
         if tags.get("keep") is False:
             hidden += 1
         if not args.dry_run:
             next_meta = dict(meta)
             next_meta["discovery"] = tags
+            next_meta["project_manifest"] = project_manifest_from_catalog_tags(tags)
             _patch_metadata(str(row["id"]), next_meta)
         tagged += 1
         print(
             f"{'dry ' if args.dry_run else ''}tagged {row.get('id')} "
             f"{tags.get('primary_scope')} {tags.get('estimated_finish_tier')} "
             f"q={tags.get('quality_score')} {tags.get('verdict')}"
-            f"{' reviewed' if tags.get('reviewed') else ''}"
         )
         time.sleep(max(0.0, args.sleep))
     print(
         f"done tagged={tagged} skipped={skipped} failed={failed} "
-        f"hidden={hidden} reviewed={reviewed} dry_run={bool(args.dry_run)}"
+        f"hidden={hidden} dry_run={bool(args.dry_run)}"
     )
     return 0 if failed == 0 or tagged else 1
 

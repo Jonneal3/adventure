@@ -4,6 +4,36 @@ import { NextRequest, NextResponse } from "next/server";
 import { CreditService } from "../../../../lib/credit-service";
 import { createClient } from "@supabase/supabase-js";
 import { logger } from "@/lib/server/logger";
+import { readFile } from "node:fs/promises";
+import path from "node:path";
+
+const LOCAL_REFERENCE_ROOTS = [
+	"adventure/style-references/",
+	"adventure/item-references/",
+];
+
+async function localReferenceDataUrl(value: unknown): Promise<string> {
+	const raw = String(value || "").trim();
+	if (!raw.startsWith("/")) return raw;
+	const relative = decodeURIComponent(raw.split(/[?#]/, 1)[0]).replace(/^\/+/, "");
+	if (!LOCAL_REFERENCE_ROOTS.some((root) => relative.startsWith(root)) || relative.includes("..")) {
+		return raw;
+	}
+	try {
+		const publicRoot = path.resolve(process.cwd(), "public");
+		const absolute = path.resolve(publicRoot, relative);
+		if (!absolute.startsWith(`${publicRoot}${path.sep}`)) return raw;
+		const bytes = await readFile(absolute);
+		const mime = /\.png$/i.test(relative)
+			? "image/png"
+			: /\.webp$/i.test(relative)
+				? "image/webp"
+				: "image/jpeg";
+		return `data:${mime};base64,${bytes.toString("base64")}`;
+	} catch {
+		return raw;
+	}
+}
 
 function normalizeServiceUrl(raw: unknown): string {
 	let s = String(raw || "").trim();
@@ -97,7 +127,8 @@ export async function POST(request: NextRequest) {
 			}
 		}
 
-		const extraRefs: string[] = Array.isArray(body.referenceImages) ? body.referenceImages : [];
+		const rawExtraRefs: string[] = Array.isArray(body.referenceImages) ? body.referenceImages : [];
+		const extraRefs = await Promise.all(rawExtraRefs.map((reference) => localReferenceDataUrl(reference)));
 		const ordered = [body.sceneImage, body.productImage, ...extraRefs].filter(Boolean);
 		const allImages = Array.from(new Set(ordered));
 		const targetImage = allImages[0];

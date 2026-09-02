@@ -14,31 +14,6 @@ interface IframeWidgetPreviewProps {
   style?: React.CSSProperties;
 }
 
-/** Quiet boot cue — thin line only. No gray card skeleton that fights the widget's own loader. */
-function PreviewIframeLoader({ variant }: { variant: 'mobile' | 'iframe' | 'desktop' }) {
-  const accent =
-    variant === 'mobile'
-      ? 'bg-blue-500/40 dark:bg-blue-400/30'
-      : variant === 'iframe'
-        ? 'bg-primary/40'
-        : 'bg-primary/45';
-
-  return (
-    <div
-      className="flex w-40 max-w-[60%] flex-col items-center gap-2"
-      role="status"
-      aria-label="Loading preview"
-    >
-      <div className={`h-0.5 w-full overflow-hidden rounded-full bg-muted-foreground/10`}>
-        <div className={`h-full w-1/3 rounded-full ${accent} animate-pulse`} />
-      </div>
-      <span className="text-[11px] font-medium tracking-wide text-muted-foreground/70">
-        Getting things ready
-      </span>
-    </div>
-  );
-}
-
 const IframeWidgetPreview: React.FC<IframeWidgetPreviewProps> = ({
   className,
   fullPage = false,
@@ -381,13 +356,6 @@ const IframeWidgetPreview: React.FC<IframeWidgetPreviewProps> = ({
               title="Widget Preview"
             />
             
-            {/* Loading State */}
-            {!isIframeLoaded && !iframeError && (
-              <div className="absolute inset-0 flex items-center justify-center bg-white dark:bg-slate-900">
-                <PreviewIframeLoader variant="mobile" />
-              </div>
-            )}
-            
             {/* Error State */}
             {iframeError && (
               <div className="absolute inset-0 flex items-center justify-center bg-white dark:bg-slate-900">
@@ -439,13 +407,6 @@ const IframeWidgetPreview: React.FC<IframeWidgetPreviewProps> = ({
               title="Widget Preview"
             />
             
-            {/* Loading State */}
-            {!isIframeLoaded && !iframeError && (
-              <div className="absolute inset-0 flex items-center justify-center bg-white dark:bg-slate-900">
-                <PreviewIframeLoader variant="iframe" />
-              </div>
-            )}
-            
             {/* Error State */}
             {iframeError && (
               <div className="absolute inset-0 flex items-center justify-center bg-white dark:bg-slate-900">
@@ -485,13 +446,6 @@ const IframeWidgetPreview: React.FC<IframeWidgetPreviewProps> = ({
         }}
         title="Widget Preview"
       />
-      
-      {/* Loading State */}
-      {!isIframeLoaded && !iframeError && (
-        <div className="absolute inset-0 flex items-center justify-center bg-background">
-          <PreviewIframeLoader variant="desktop" />
-        </div>
-      )}
       
       {/* Error State */}
       {iframeError && (

@@ -7,6 +7,7 @@ import os
 from typing import Any, Dict, Optional
 
 from programs.common.dspy_runtime import configure_dspy, make_dspy_lm_for_module
+from programs.common.env import prefixed_model
 
 
 def compact_json(obj: Any) -> str:
@@ -53,6 +54,7 @@ def run_json_signature(
     default_temperature: float = 0.2,
     default_max_tokens: int = 700,
     default_timeout: float = 30.0,
+    module_default_model: Optional[str] = None,
 ) -> Optional[Dict[str, Any]]:
     """
     Run a single-shot DSPy prediction and parse the JSON output.
@@ -64,6 +66,14 @@ def run_json_signature(
         return None
 
     prefix = module_env_prefix.strip().upper()
+    if module_default_model and not os.getenv(f"{prefix}_MODEL"):
+        provider = str(lm_cfg.get("provider") or "groq")
+        model_name = str(module_default_model).strip()
+        lm_cfg = {
+            **lm_cfg,
+            "model": prefixed_model(provider, model_name),
+            "modelName": model_name,
+        }
     try:
         import dspy
 

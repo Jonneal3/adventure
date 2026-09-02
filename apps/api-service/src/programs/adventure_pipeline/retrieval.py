@@ -3,7 +3,7 @@ Library retrieval + ranking for Adventure V7.
 
 Does not fetch Supabase itself — the widget supplies catalog candidates.
 This layer decides which stored images are worth showing given the current
-design state (service, scope, budget, taste).
+design state (service, scope, finish quality, taste).
 """
 
 from __future__ import annotations
@@ -12,10 +12,11 @@ import hashlib
 import re
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
+from programs.adventure_pipeline.budget_bands import normalize_finish_tier
+from programs.adventure_pipeline.catalog_tag import project_manifest_from_catalog_tags
 from programs.adventure_pipeline.library import hard_filter_by_scopes, scope_starter_key
 from programs.adventure_pipeline.recipes import (
     look_conflicts_with_service,
-    look_fits_selected_scopes,
     look_haystack,
 )
 from programs.adventure_pipeline.schemas import DesignState
@@ -29,106 +30,24 @@ def _tokens(text: str) -> set[str]:
     return {t for t in re.split(r"[^a-z0-9]+", str(text or "").lower()) if len(t) > 2}
 
 
-# Map price_tier labels used in the catalog onto approximate spend bands.
-_TIER_BANDS: Dict[str, Tuple[float, float]] = {
-    "$": (0, 15_000),
-    "$$": (10_000, 40_000),
-    "$$$": (30_000, 90_000),
-    "$$$$": (70_000, 500_000),
-}
+_FINISH_ORDER = ("starter", "value", "mid", "upper", "plus", "premium", "luxury", "estate")
+_FULL_SCOPE = re.compile(r"^(full|whole|complete|entire|everything)(-|\b)", re.I)
+MIN_LIBRARY_RELEVANCE = 0.68
 
 
-def _tier_fit(price_tier: str, budget: float) -> float:
-    """1.0 = perfect band match, 0.0 = far outside."""
-    tier = str(price_tier or "").strip()
-    if not tier or budget <= 0:
-        return 0.4
-    band = _TIER_BANDS.get(tier)
-    if not band:
-        # Accept "mid", "premium", etc. loosely.
-        lower = tier.lower()
-        if any(k in lower for k in ("budget", "value", "starter", "economy")):
-            band = _TIER_BANDS["$"]
-        elif any(k in lower for k in ("mid", "standard")):
-            band = _TIER_BANDS["$$"]
-        elif any(k in lower for k in ("premium", "high")):
-            band = _TIER_BANDS["$$$"]
-        elif any(k in lower for k in ("lux", "bespoke", "custom")):
-            band = _TIER_BANDS["$$$$"]
-        else:
-            return 0.4
-    lo, hi = band
-    if lo <= budget <= hi:
-        return 1.0
-    # Soft falloff outside the band.
-    if budget < lo:
-        gap = (lo - budget) / max(lo, 1)
-    else:
-        gap = (budget - hi) / max(hi, 1)
-    return max(0.0, 1.0 - min(gap, 1.0))
-
-
-def _customer_tier_rank(budget: float) -> int:
-    if budget < 15_000:
-        return 1
-    if budget < 40_000:
-        return 2
-    if budget < 90_000:
-        return 3
-    return 4
-
-
-def _image_tier_rank(price_tier: str) -> int:
-    tier = str(price_tier or "").strip()
-    dollars = len(re.sub(r"[^$]", "", tier))
-    if dollars:
-        return dollars
-    lower = tier.lower()
-    if any(k in lower for k in ("budget", "value", "starter", "economy")):
-        return 1
-    if any(k in lower for k in ("mid", "standard")):
-        return 2
-    if any(k in lower for k in ("premium", "high")):
-        return 3
-    if any(k in lower for k in ("lux", "bespoke", "custom")):
-        return 4
-    return 2
-
-
-_BUDGET_WINDOW = 0.05
-
-
-def within_budget_window(item: Dict[str, Any], budget: float) -> bool:
-    if budget <= 0:
-        return True
-    stored = item.get("budget")
+def _finish_fit(image_tier: str, selected_tier: str) -> float:
+    """Soft visual-quality similarity; never converts an image into a price."""
+    image = normalize_finish_tier(str(image_tier or ""))
+    selected = normalize_finish_tier(str(selected_tier or ""))
+    if not image:
+        return 0.45
+    if not selected:
+        return 0.65
     try:
-        mid = float(stored or 0)
-    except (TypeError, ValueError):
-        mid = 0.0
-    if mid > 0:
-        return abs(mid - budget) / max(budget, 1) <= _BUDGET_WINDOW
-    tier = str(item.get("priceTier") or item.get("price_tier") or "").strip()
-    if not tier:
-        return True
-    return _image_tier_rank(tier) <= _customer_tier_rank(budget)
-
-
-def _hard_filter_by_budget(
-    candidates: Sequence[Dict[str, Any]],
-    *,
-    budget: float,
-    min_keep: int = 12,
-) -> List[Dict[str, Any]]:
-    """Keep looks inside the customer's budget band (±5% when a numeric budget is stored)."""
-    items = [c for c in candidates if isinstance(c, dict)]
-    if budget <= 0 or not items:
-        return list(items)
-    keep = [c for c in items if within_budget_window(c, budget)]
-    if keep:
-        return keep
-    unlabeled = [c for c in items if not str(c.get("priceTier") or "").strip() and not c.get("budget")]
-    return unlabeled[:max(min_keep, 0)]
+        distance = abs(_FINISH_ORDER.index(image) - _FINISH_ORDER.index(selected))
+    except ValueError:
+        return 0.45
+    return max(0.12, 1.0 - 0.22 * distance)
 
 
 def _performance_score(item: Dict[str, Any]) -> float:
@@ -182,13 +101,91 @@ def normalize_library_candidates(raw: Any) -> List[Dict[str, Any]]:
         if not scope_key and scope:
             scope_key = scope_starter_key(scope)
         generated_for = str(meta.get("generatedFor") or meta.get("generated_for") or "").strip()
+        raw_change_summary = (
+            meta.get("changeSummary")
+            or meta.get("change_summary")
+            or meta.get("whatChanged")
+            or meta.get("what_changed")
+            or ""
+        )
+        change_summary = (
+            " · ".join(str(value).strip() for value in raw_change_summary if str(value or "").strip())
+            if isinstance(raw_change_summary, list)
+            else str(raw_change_summary or "").strip()
+        )
+        raw_included_items = (
+            meta.get("includedItems")
+            or meta.get("included_items")
+            or meta.get("whatWasDone")
+            or meta.get("what_was_done")
+            or meta.get("workItems")
+            or meta.get("work_items")
+            or meta.get("components")
+            or meta.get("contains")
+            or []
+        )
+        included_items = (
+            [str(value).strip() for value in raw_included_items if str(value or "").strip()]
+            if isinstance(raw_included_items, list)
+            else []
+        )
+        raw_focus_regions = (
+            meta.get("focusRegions")
+            or meta.get("focus_regions")
+            or meta.get("componentRegions")
+            or meta.get("component_regions")
+            or {}
+        )
+        focus_regions = raw_focus_regions if isinstance(raw_focus_regions, dict) else {}
+        raw_focus_outlines = (
+            meta.get("focusOutlines")
+            or meta.get("focus_outlines")
+            or meta.get("componentOutlines")
+            or meta.get("component_outlines")
+            or {}
+        )
+        focus_outlines = raw_focus_outlines if isinstance(raw_focus_outlines, dict) else {}
+        raw_focus_masks = meta.get("focusMasks") or meta.get("focus_masks") or {}
+        focus_masks = raw_focus_masks if isinstance(raw_focus_masks, dict) else {}
+        project_manifest = (
+            meta.get("projectManifest")
+            if isinstance(meta.get("projectManifest"), dict)
+            else meta.get("project_manifest")
+            if isinstance(meta.get("project_manifest"), dict)
+            else None
+        )
+        discovery = meta.get("discovery") if isinstance(meta.get("discovery"), dict) else None
+        if project_manifest is None and discovery:
+            project_manifest = project_manifest_from_catalog_tags(discovery)
         row = {
             "id": str(meta.get("id") or meta.get("imageId") or f"library-{len(out) + 1}"),
             "url": url,
+            "beforeUrl": str(
+                meta.get("beforeUrl")
+                or meta.get("before_url")
+                or meta.get("beforeImageUrl")
+                or meta.get("before_image_url")
+                or ""
+            ).strip() or None,
             "label": label or "From our work",
             "source": "library",
-            "priceTier": str(meta.get("priceTier") or meta.get("price_tier") or ""),
+            "finishTier": str(
+                meta.get("finishTier")
+                or meta.get("finish_tier")
+                or meta.get("estimatedFinishTier")
+                or meta.get("estimated_finish_tier")
+                or meta.get("priceTier")
+                or meta.get("price_tier")
+                or ""
+            ),
+            "priceTier": str(meta.get("priceTier") or meta.get("price_tier") or "") or None,
             "description": str(meta.get("description") or meta.get("option_description") or ""),
+            "changeSummary": change_summary or None,
+            "includedItems": included_items,
+            "projectManifest": project_manifest,
+            "focusRegions": focus_regions,
+            "focusOutlines": focus_outlines,
+            "focusMasks": focus_masks,
             "tags": meta.get("tags") if isinstance(meta.get("tags"), list) else [],
             "scope": scope or None,
             "scopeKey": scope_key or None,
@@ -230,6 +227,12 @@ def _exact_scope_hit(item: Dict[str, Any], scope_keys: Sequence[str]) -> float:
         t = str(tag or "").strip()
         if t:
             keys.add(scope_starter_key(t))
+    if any(_FULL_SCOPE.match(needle) for needle in needles):
+        if any(_FULL_SCOPE.match(key) for key in keys):
+            return 1.0
+        # Component-specific finished scenes are still useful for a whole-job
+        # request, but remain below an explicitly whole-project image.
+        return 0.82 if keys else 0.0
     hits = len(keys & needles)
     if not hits:
         return 0.0
@@ -253,18 +256,17 @@ def rank_library(
     """
     Rank stored images for this project state.
 
-    Hard-filters by selected scopes first (broadens only if thin), then scores
-    taste + exact scope + budget + performance.
+    Ranks by service-safe scope similarity, finish-quality closeness, taste,
+    and performance. Monetary price is intentionally absent from image search.
     """
     if limit <= 0 or not candidates:
         return []
 
     scope_keys = list(design.scope_keys or design.scopes or [])
-    if design.scope and design.scope not in scope_keys:
+    if design.scope and not scope_keys:
         scope_keys.append(design.scope)
 
     pool = hard_filter_by_scopes(list(candidates), scope_keys)
-    pool = _hard_filter_by_budget(pool, budget=float(design.budget or 0))
     excluded = {str(u).strip() for u in (exclude_urls or []) if str(u).strip()}
     confirmed = set(design.taste.confirmed_ids or [])
     taste_labels = [
@@ -280,7 +282,7 @@ def rank_library(
             design.customer_service_label or "",
         ]
     )
-    budget = float(design.budget or 0)
+    selected_finish = normalize_finish_tier(str(design.budget_band_id or "")) or "mid"
 
     scored: List[Tuple[float, int, Dict[str, Any]]] = []
     for i, item in enumerate(pool):
@@ -295,33 +297,32 @@ def rank_library(
             summary=str(design.service_summary or ""),
         ):
             continue
-        if not look_fits_selected_scopes(
-            haystack,
-            scopes=scope_keys,
-            generated_for=str(item.get("generatedFor") or item.get("generated_for") or ""),
-        ):
-            continue
-        if not within_budget_window(item, budget):
-            continue
         hay = _tokens(haystack)
         taste_hit = len(taste_tokens & hay) / max(len(taste_tokens), 1) if taste_tokens else 0.25
         scope_hit = _exact_scope_hit(item, scope_keys)
-        budget_hit = _tier_fit(str(item.get("priceTier") or ""), budget)
+        finish_hit = _finish_fit(
+            str(item.get("finishTier") or item.get("priceTier") or ""),
+            selected_finish,
+        )
         perf = _performance_score(item)
         featured = item.get("featuredRank")
-        feature_boost = 0.15 if featured is not None and float(featured or 0) > 0 else 0.0
+        feature_boost = 0.04 if featured is not None and float(featured or 0) > 0 else 0.0
+
+        relevance = 0.84 * min(scope_hit, 1.0) + 0.16 * finish_hit
+        if scope_keys and relevance < MIN_LIBRARY_RELEVANCE:
+            continue
 
         score = (
-            0.15 * taste_hit
-            + 0.42 * min(scope_hit, 1.0)
-            + 0.28 * budget_hit
-            + 0.15 * perf
+            0.12 * taste_hit
+            + 0.52 * min(scope_hit, 1.0)
+            + 0.28 * finish_hit
+            + 0.08 * perf
             + feature_boost
         )
         if scope_hit > 1.0:
             score += 0.08  # scope-starter bonus
         # Tiny stable jitter so ties don't always pick the same first rows.
-        score += (_hash_seed(f"{url}:{scope_text}:{int(budget)}") % 100) / 10_000.0
+        score += (_hash_seed(f"{url}:{scope_text}:{selected_finish}") % 100) / 10_000.0
         scored.append((score, i, item))
 
     scored.sort(key=lambda row: (-row[0], row[1]))
@@ -329,6 +330,12 @@ def rank_library(
     for score, _i, item in scored[:limit]:
         row = dict(item)
         row["retrievalScore"] = round(float(score), 4)
+        scope_hit = _exact_scope_hit(row, scope_keys)
+        finish_hit = _finish_fit(
+            str(row.get("finishTier") or row.get("priceTier") or ""),
+            selected_finish,
+        )
+        row["relevanceScore"] = round(0.84 * min(scope_hit, 1.0) + 0.16 * finish_hit, 4)
         row["source"] = "library"
         # Prefer real metadata cues over empty.
         if not row.get("cue") and row.get("performanceCue"):
@@ -357,7 +364,7 @@ def retrieval_mix(
 
     key = str(mode or "").strip().lower()
     if key == "inspiration":
-        # Prefer stored looks for this scope + price. Generate a minority
+        # Prefer stored looks for this scope + finish neighborhood. Generate a minority
         # slice to grow the catalog — skip generation when the well is deep.
         if available >= requested * 2:
             return {"library": requested, "generate": 0}
@@ -379,8 +386,8 @@ def retrieval_mix(
 
 
 __all__ = [
+    "MIN_LIBRARY_RELEVANCE",
     "normalize_library_candidates",
     "rank_library",
     "retrieval_mix",
-    "within_budget_window",
 ]

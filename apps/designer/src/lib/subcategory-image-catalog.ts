@@ -5,15 +5,21 @@ import { IMAGES_BUCKET, IMAGE_STORAGE_PREFIXES } from "@/storage/prefixes";
 export const STYLE_SEED_GENERATED_FOR = "style_seed";
 export const LEGACY_STYLE_SEED_GENERATED_FOR = "subcategory_catalog";
 export const SUBCATEGORY_IMAGE_CATALOG_GENERATED_FOR = STYLE_SEED_GENERATED_FOR;
-export const SUBCATEGORY_IMAGE_CATALOG_MODEL_ID = "black-forest-labs/flux-schnell";
-export const SUBCATEGORY_IMAGE_CATALOG_SEED_COUNT = 20;
-export const SUBCATEGORY_IMAGE_CATALOG_MAX_IMAGES = 50;
+// Gallery inventory is generated outside the visitor's critical path, so optimize
+// for first-impression quality instead of thumbnail latency.
+export const SUBCATEGORY_IMAGE_CATALOG_MODEL_ID = "black-forest-labs/flux-2-pro";
+// Keep a small floor inside each actual Step-2 scope bucket. This runs at
+// catalog-seed time, never while a visitor is waiting in the form.
+export const SUBCATEGORY_IMAGE_CATALOG_MIN_PER_SCOPE = 5;
+// subcategory_scope is capped at 16 entries; add one whole-project bucket.
+export const SUBCATEGORY_IMAGE_CATALOG_MAX_SCOPE_BUCKETS = 17;
+export const SUBCATEGORY_IMAGE_CATALOG_MAX_IMAGES = 100;
 
-const PRICE_TIER_DESCS: Record<string, string> = {
-  "$": "Budget-friendly, builder-grade materials, economy finishes, standard fixtures.",
-  "$$": "Mid-range quality, quartz or laminate surfaces, semi-custom details.",
-  "$$$": "Premium materials, natural stone, custom cabinetry, high-end fixtures.",
-  "$$$$": "Luxury, bespoke finishes, marble, custom millwork, designer fixtures.",
+const FINISH_TIER_DESCS: Record<string, string> = {
+  value: "Budget-conscious materials, standard fixtures, clean and durable finishes.",
+  mid: "Mid-tier materials, upgraded fixtures, and selective custom details.",
+  premium: "Premium materials, custom details, and high-end fixtures.",
+  luxury: "Bespoke finishes, custom millwork, and designer fixtures.",
 };
 
 const BEFORE_AFTER_RE = /\bbefore\s*(?:\/|-|&|and)\s*after\b/gi;
@@ -23,8 +29,24 @@ export type CatalogOptionInput = {
   label?: string | null;
   value?: string | null;
   imagePrompt?: string | null;
+  finishTier?: string | null;
+  scope?: string | null;
+  scopeKey?: string | null;
+  /** Legacy generator response; normalized to finishTier before persistence. */
   priceTier?: string | null;
+  manifest?: Record<string, any> | null;
+  pricingPreflight?: Record<string, any> | null;
 };
+
+export function normalizeCatalogFinishTier(value: unknown): string {
+  const raw = String(value || "").trim().toLowerCase();
+  if (!raw) return "";
+  if (/^(\$|starter|value|budget|economy)$/.test(raw)) return "value";
+  if (/^(\$\$|mid|middle|standard|upper|upper-mid)$/.test(raw)) return "mid";
+  if (/^(\$\$\$|plus|premium|high)$/.test(raw)) return "premium";
+  if (/^(\$\$\$\$|luxury|lux|estate|bespoke)$/.test(raw)) return "luxury";
+  return raw.replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+}
 
 type CatalogImageRow = {
   account_id: string | null;
@@ -76,9 +98,13 @@ function isStyleSeedGeneratedFor(value: unknown): boolean {
   return generatedFor === STYLE_SEED_GENERATED_FOR || generatedFor === LEGACY_STYLE_SEED_GENERATED_FOR;
 }
 
-function isCatalogImage(row: CatalogImageRow): boolean {
+function isCatalogImage(row: CatalogImageRow, requireScopeTag = false): boolean {
   const meta = row?.metadata && typeof row.metadata === "object" ? row.metadata : null;
-  return isStyleSeedGeneratedFor(meta?.generated_for);
+  return (
+    isStyleSeedGeneratedFor(meta?.generated_for) &&
+    String(meta?.ai_model || "").trim() === SUBCATEGORY_IMAGE_CATALOG_MODEL_ID &&
+    (!requireScopeTag || Boolean(String(meta?.scope_key || "").trim()))
+  );
 }
 
 function logCatalog(label: string, data: Record<string, unknown>) {
@@ -109,8 +135,9 @@ export function buildCatalogKeyForOption(option: CatalogOptionInput): string {
     String(option.imagePrompt || "").trim() ||
     String(option.label || "").trim() ||
     String(option.value || "").trim();
-  const tier = String(option.priceTier || "").trim();
-  return normalizeText([raw, tier].filter(Boolean).join(" "));
+  const tier = normalizeCatalogFinishTier(option.finishTier || option.priceTier);
+  const scope = String(option.scopeKey || option.scope || "").trim();
+  return normalizeText([scope, raw, tier].filter(Boolean).join(" "));
 }
 
 export function buildCatalogPromptForOption(params: {
@@ -126,11 +153,13 @@ export function buildCatalogPromptForOption(params: {
     sanitizeVisualContextText(params.option.value) ||
     "Design direction";
   const description = sanitizeVisualContextText(params.option.description);
-  const tier = String(params.option.priceTier || "").trim();
-  const tierSuffix = tier && PRICE_TIER_DESCS[tier] ? ` Price tier cues: ${PRICE_TIER_DESCS[tier]}` : "";
+  const tier = normalizeCatalogFinishTier(params.option.finishTier || params.option.priceTier);
+  const tierSuffix = tier && FINISH_TIER_DESCS[tier] ? ` Finish-quality cues: ${FINISH_TIER_DESCS[tier]}` : "";
+  const scope = sanitizeVisualContextText(params.option.scope);
+  const scopeSuffix = scope ? ` The visible project scope must specifically feature ${scope}.` : "";
   const context = buildContextPrompt(params);
   const descriptionSuffix = description ? ` Direction details: ${description}` : "";
-  return `Photorealistic photo of one finished scene, not a split-screen or before-and-after layout. No text, no words, no letters, no labels, no captions, no watermarks, no signs. ${context}. Option: ${promptText}.${descriptionSuffix}${tierSuffix}`;
+  return `Photorealistic photo of one finished scene, not a split-screen or before-and-after layout. No text, no words, no letters, no labels, no captions, no watermarks, no signs. ${context}.${scopeSuffix} Option: ${promptText}.${descriptionSuffix}${tierSuffix}`;
 }
 
 export async function listCatalogImages(params: {
@@ -138,6 +167,7 @@ export async function listCatalogImages(params: {
   subcategoryId: string;
   accountId?: string | null;
   includeGlobal?: boolean;
+  requireScopeTag?: boolean;
 }): Promise<CatalogImageRow[]> {
   const selectCols = "id, image_url, metadata, created_at, prompt_id, subcategory_id, status, account_id, user_id";
   const accountId = String(params.accountId || "").trim() || null;
@@ -168,7 +198,7 @@ export async function listCatalogImages(params: {
   const seen = new Set<string>();
   const filtered: CatalogImageRow[] = [];
   for (const row of merged as CatalogImageRow[]) {
-    if (!row?.id || seen.has(row.id) || !isCatalogImage(row)) continue;
+    if (!row?.id || seen.has(row.id) || !isCatalogImage(row, params.requireScopeTag === true)) continue;
     seen.add(row.id);
     filtered.push(row);
   }
@@ -236,7 +266,8 @@ export async function persistGeneratedCatalogImages(params: {
 }): Promise<number> {
   const currentRows = await listCatalogImages({
     accountId: params.scope === "account" ? params.accountId : null,
-    includeGlobal: false,
+    includeGlobal: params.scope === "global",
+    requireScopeTag: true,
     subcategoryId: params.subcategoryId,
     supabase: params.supabase,
   });
@@ -249,7 +280,28 @@ export async function persistGeneratedCatalogImages(params: {
       description: typeof item?.description === "string" ? item.description : typeof item?.descriptor === "string" ? item.descriptor : null,
       imagePrompt: typeof item?.image_prompt === "string" ? item.image_prompt : typeof item?.imagePrompt === "string" ? item.imagePrompt : null,
       label: typeof item?.label === "string" ? item.label : null,
-      priceTier: typeof item?.price_tier === "string" ? item.price_tier : typeof item?.priceTier === "string" ? item.priceTier : null,
+      finishTier:
+        typeof item?.finish_tier === "string"
+          ? item.finish_tier
+          : typeof item?.finishTier === "string"
+            ? item.finishTier
+            : typeof item?.price_tier === "string"
+              ? item.price_tier
+              : typeof item?.priceTier === "string"
+                ? item.priceTier
+                : null,
+      scope:
+        typeof item?.scope === "string"
+          ? item.scope
+          : typeof item?.scope_label === "string"
+            ? item.scope_label
+            : null,
+      scopeKey:
+        typeof item?.scopeKey === "string"
+          ? item.scopeKey
+          : typeof item?.scope_key === "string"
+            ? item.scope_key
+            : null,
       value: typeof item?.value === "string" ? item.value : null,
     });
     if (!key || responseByKey.has(key)) continue;
@@ -263,6 +315,18 @@ export async function persistGeneratedCatalogImages(params: {
     const key = buildCatalogKeyForOption(option);
     if (!key) continue;
     const generated = responseByKey.get(key);
+    const manifest = option.manifest && typeof option.manifest === "object" ? option.manifest : null;
+    const pricingPreflight = option.pricingPreflight && typeof option.pricingPreflight === "object"
+      ? option.pricingPreflight
+      : null;
+    if (!manifest || manifest.version !== 1 || manifest.source !== "planned" || !Array.isArray(manifest.components) || !manifest.components.length) {
+      logCatalog("manifest_preflight_missing", { key, subcategoryId: params.subcategoryId });
+      continue;
+    }
+    if (pricingPreflight?.status !== "complete") {
+      logCatalog("pricing_preflight_missing", { key, subcategoryId: params.subcategoryId });
+      continue;
+    }
     const imageUrl =
       typeof generated?.imageUrl === "string"
         ? generated.imageUrl
@@ -339,13 +403,15 @@ export async function persistGeneratedCatalogImages(params: {
           category_name: String(params.categoryName || "").trim() || null,
           generated_for: STYLE_SEED_GENERATED_FOR,
           image_prompt_source: String(option.imagePrompt || "").trim() || null,
-          model_name: "Flux Schnell",
+          model_name: "Flux 2 Pro",
           model_provider: "Replicate",
           option_description: String(option.description || "").trim() || null,
           option_label: String(option.label || "").trim() || null,
           option_value: String(option.value || "").trim() || null,
           origin_instance_id: String(params.instanceId || "").trim() || null,
-          price_tier: String(option.priceTier || "").trim() || null,
+          finish_tier: normalizeCatalogFinishTier(option.finishTier || option.priceTier) || null,
+          scope: String(option.scope || "").trim() || null,
+          scope_key: String(option.scopeKey || option.scope || "").trim() || null,
           prompt_text: promptText,
           question_text: String(params.question || "").trim() || null,
           s3_path: upload.storagePath,
@@ -353,6 +419,39 @@ export async function persistGeneratedCatalogImages(params: {
           source_step_id: String(params.stepId || "").trim() || null,
           subcategory_id: params.subcategoryId,
           subcategory_name: String(params.subcategoryName || "").trim() || null,
+          priceable_manifest: manifest,
+          gallery_enrichment: {
+            version: 1,
+            pipelineSource: "planned",
+            provenance: { modelId: SUBCATEGORY_IMAGE_CATALOG_MODEL_ID },
+            qa: { status: "keep", reason: "planned_manifest", scores: {}, artifacts: [] },
+            priceableManifest: manifest,
+            before: {
+              status: "not_generated",
+              attempts: 0,
+              disclosure: "ai_generated_illustrative_before",
+            },
+            verification: {
+              status: "uncertain",
+              confidence: 0,
+              sameScene: false,
+              beforePlausible: false,
+              afterQualityValid: false,
+              manifestCoverage: [],
+              verifiedComponents: [],
+              unsupportedObservations: [],
+              observedDelta: [],
+              assumptions: [],
+              failureReasons: [],
+            },
+            pricing: pricingPreflight,
+            publish: { status: "pending" },
+            stages: {
+              manifest: { version: 1, status: "complete", attempts: 1 },
+              pricePreflight: { version: 1, status: "complete", attempts: 1 },
+              after: { version: 1, status: "complete", attempts: 1 },
+            },
+          },
         } as Json,
         model_id: null,
         negative_prompt: null,

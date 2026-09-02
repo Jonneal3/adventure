@@ -1,0 +1,31 @@
+{
+  "version": 1,
+  "imageModel": "black-forest-labs/flux-2-pro",
+  "targetProjectsPerVertical": 50,
+  "verticals": [
+    {
+      "key": "bathroom_remodeling",
+      "industry": "Residential Remodelers",
+      "serviceId": "258f4d7f-746f-416b-b617-e1cca25b748f",
+      "serviceName": "Bathroom Remodeling",
+      "pricingFamily": "bathroom_remodel",
+      "targetProjects": 95
+    },
+    {
+      "key": "landscaping",
+      "industry": "Landscaping Services",
+      "serviceId": "ee70f353-c48e-4bd9-bfc1-cf1b00291fa9",
+      "serviceName": "Landscaping (Service)",
+      "pricingFamily": "landscape_design",
+      "targetProjects": 58
+    },
+    {
+      "key": "kitchen_remodeling",
+      "industry": "Residential Remodelers",
+      "serviceId": "958a3700-06b2-4f3b-9d16-bd04ffe4f646",
+      "serviceName": "Kitchen Remodeling",
+      "pricingFamily": "kitchen_remodel",
+      "targetProjects": 50
+    }
+  ]
+}

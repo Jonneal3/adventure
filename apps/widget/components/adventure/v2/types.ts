@@ -140,6 +140,10 @@ export type ServiceOption = {
   industryId?: string | null;
   industryName?: string | null;
   serviceSummary?: string | null;
+  /** Service-specific noun used by the upload step, e.g. "yard" or "face/profile". */
+  photoSubject?: string | null;
+  /** Sentence fragment describing what the photo reveals for this service. */
+  photoContext?: string | null;
   /** When false, hide from visual Adventure service picker. */
   visualEligible?: boolean;
   subcategoryComponents?: Array<{ key: string; label: string; priority: number }>;
@@ -155,12 +159,17 @@ export type ServiceOption = {
     value?: string | null;
     imageUrl?: string | null;
     description?: string | null;
+    /** Visual material/finish quality; never a stored monetary price band. */
+    finishTier?: string | null;
+    /** Legacy catalog field, accepted while old rows are re-tagged. */
     priceTier?: string | null;
     featuredRank?: number | null;
     scope?: string | null;
     scopeKey?: string | null;
     generatedFor?: string | null;
     imageId?: string | null;
+    catalogKey?: string | null;
+    catalogSource?: "account" | "global";
     timesShown?: number;
     timesSelected?: number;
     timesSaved?: number;

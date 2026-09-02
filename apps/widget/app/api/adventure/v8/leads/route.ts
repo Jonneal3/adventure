@@ -23,9 +23,10 @@ export async function POST(request: NextRequest) {
     const email = validEmail(body?.email);
     const phone =
       typeof body?.phone === "string" ? body.phone.trim().slice(0, 40) || null : null;
-    if (!instanceId || !sessionId || !email) {
+    const partial = Boolean(body?.partial);
+    if (!instanceId || !sessionId || (!email && !phone)) {
       return NextResponse.json(
-        { ok: false, error: "instanceId, sessionId, and a valid email are required" },
+        { ok: false, error: "instanceId, sessionId, and a valid email or phone are required" },
         { status: 400, headers: { "Cache-Control": "no-store" } }
       );
     }
@@ -66,9 +67,9 @@ export async function POST(request: NextRequest) {
       const update = await supabase
         .from("form_submissions")
         .update({
-          email,
+          email: email || existing.email || null,
           phone: phone || existing.phone || null,
-          is_partial: false,
+          is_partial: partial,
           submission_data: submissionData,
         })
         .eq("id", existing.id)
@@ -95,9 +96,9 @@ export async function POST(request: NextRequest) {
       .from("form_submissions")
       .insert({
         instance_id: instanceId,
-        email,
-        phone,
-        is_partial: false,
+          email: email || null,
+          phone,
+          is_partial: partial,
         submission_data: submissionData,
         user_agent: request.headers.get("user-agent"),
         ip_address: forwarded ? forwarded.split(",")[0].trim() : request.headers.get("x-real-ip"),

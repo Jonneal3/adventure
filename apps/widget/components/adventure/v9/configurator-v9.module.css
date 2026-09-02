@@ -1,0 +1,1504 @@
+.theme {
+  width: 100%;
+  height: 100%;
+  min-height: 100dvh;
+  overflow: hidden;
+  font-family: inherit;
+}
+
+.theme :global([data-adventure-version="v9"]) {
+  --background: 0 0% 100%;
+  --foreground: 240 10% 3.9%;
+  --card: 0 0% 100%;
+  --card-foreground: 240 10% 3.9%;
+  --muted: 240 4.8% 95.9%;
+  --muted-foreground: 240 3.8% 46.1%;
+  --accent: 240 4.8% 95.9%;
+  --accent-foreground: 240 5.9% 10%;
+  --border: 240 5.9% 90%;
+  --input: 240 5.9% 90%;
+  --v8-background: hsl(var(--background));
+  --v8-foreground: hsl(var(--foreground));
+  --v8-muted: hsl(var(--muted-foreground));
+  --v8-border: hsl(var(--border));
+  --v8-ring: hsl(var(--ring) / 0.28);
+  --v9-surface: hsl(var(--card));
+  --v9-subtle: hsl(var(--muted));
+  --v9-border: hsl(var(--border));
+  --v9-shadow: 0 18px 46px -34px hsl(var(--foreground) / 0.3);
+  height: 100%;
+  max-height: 100dvh;
+  background: var(--v9-surface);
+  color: hsl(var(--foreground));
+  font-family: inherit;
+}
+
+.theme :global([data-adventure-version="v9"]) *,
+.theme :global([data-adventure-version="v9"]) *::before,
+.theme :global([data-adventure-version="v9"]) *::after {
+  box-sizing: border-box;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+.theme :global([data-adventure-version="v9"] [data-adventure-ui="navigation"]) {
+  display: flex;
+  width: 100%;
+  max-width: none;
+  min-height: 72px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 0;
+  padding: 12px clamp(24px, 4vw, 64px);
+  border: 0;
+  border-radius: 0;
+  background: var(--v9-surface);
+}
+
+.theme :global([data-adventure-version="v9"] [data-adventure-ui="navigation"] > [data-adventure-ui="button"]) {
+  width: auto;
+  min-width: 112px;
+  height: 48px;
+  min-height: 48px;
+  justify-content: center;
+}
+
+.theme :global([data-adventure-version="v9"] [data-adventure-ui="progress"]) {
+  min-height: 32px;
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--v9-border);
+  border-radius: 999px;
+  background: var(--v9-subtle);
+  color: hsl(var(--muted-foreground));
+  padding: 0 12px;
+  box-shadow: none;
+  font-size: 12px;
+  font-weight: 650;
+  letter-spacing: 0;
+}
+
+.theme :global([data-adventure-version="v9"] [data-adventure-ui="viewport"]) {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 0 clamp(24px, 4vw, 64px) 24px;
+  border: 0;
+  border-radius: 0;
+  background: var(--v9-surface);
+  box-shadow: none;
+}
+
+.theme :global([data-adventure-version="v9"] [data-adventure-ui="loading-state"]) {
+  width: 100%;
+  height: 100%;
+  min-height: 320px;
+}
+
+.theme :global([data-adventure-version="v9"] [data-adventure-ui="loader"]) {
+  gap: 10px;
+  background: transparent;
+}
+
+.theme :global([data-adventure-version="v9"] [data-adventure-ui="loader-message"]) {
+  margin: 0;
+  color: hsl(var(--foreground));
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 560;
+  line-height: 1.4;
+}
+
+.theme :global([data-adventure-version="v9"] [data-adventure-ui="step-shell"]) {
+  min-height: 0;
+}
+
+.theme :global([data-adventure-version="v9"] [data-adventure-ui="step-body"]) {
+  padding: 14px 2px 24px;
+  scrollbar-gutter: stable;
+}
+
+.theme :global([data-adventure-version="v9"] [data-adventure-ui="step-body"] > h1) {
+  max-width: 650px;
+  margin: 0 0 8px;
+  color: hsl(var(--foreground));
+  font-family: inherit;
+  font-size: clamp(24px, 3vw, 34px);
+  font-weight: 720;
+  letter-spacing: -0.035em;
+  line-height: 1.12;
+}
+
+.theme :global([data-adventure-version="v9"] [data-adventure-ui="step-body"] > h1 + p) {
+  max-width: 620px;
+  margin: 0 0 22px;
+  color: hsl(var(--muted-foreground));
+  font-size: 15px;
+  line-height: 1.55;
+}
+
+.theme :global([data-adventure-version="v9"] [data-adventure-ui="choice-grid"]) {
+  width: 100%;
+  gap: 12px;
+  padding: 2px;
+}
+
+/* Text-choice steps share one compact chip cloud instead of oversized cards. */
+.theme :global([data-adventure-version="v9"][data-stage="project"] [data-adventure-ui="choice-grid"]),
+.theme :global([data-adventure-version="v9"][data-stage="budget"] [data-adventure-ui="choice-grid"]),
+.theme :global([data-adventure-version="v9"][data-stage="path"] [data-adventure-ui="choice-grid"]),
+.theme :global([data-adventure-version="v9"][data-stage="connect"] [data-adventure-ui="choice-grid"]) {
+  display: flex;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  align-items: flex-start;
+  justify-content: flex-start;
+  gap: 8px;
+  margin: 0;
+}
+
+.theme :global([data-adventure-version="v9"][data-stage="project"] [data-intent="choice"]),
+.theme :global([data-adventure-version="v9"][data-stage="budget"] [data-intent="choice"]),
+.theme :global([data-adventure-version="v9"][data-stage="path"] [data-intent="choice"]),
+.theme :global([data-adventure-version="v9"][data-stage="connect"] [data-intent="choice"]) {
+  display: inline-flex;
+  flex: 0 0 auto;
+  width: auto;
+  max-width: 100%;
+  height: 44px;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  border-radius: 999px;
+  padding: 0 16px;
+  line-height: 1;
+  text-align: center;
+}
+
+.theme :global([data-adventure-version="v9"][data-stage="project"] [data-intent="choice"] > *),
+.theme :global([data-adventure-version="v9"][data-stage="budget"] [data-intent="choice"] > *),
+.theme :global([data-adventure-version="v9"][data-stage="path"] [data-intent="choice"] > *),
+.theme :global([data-adventure-version="v9"][data-stage="connect"] [data-intent="choice"] > *) {
+  display: inline-flex;
+  width: auto;
+  height: 100%;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  padding: 0;
+  line-height: 1.2;
+  text-align: center;
+  transform: translateY(-0.5px);
+}
+
+.theme :global([data-adventure-version="v9"][data-stage="path"] [data-intent="choice"] > span),
+.theme :global([data-adventure-version="v9"][data-stage="connect"] [data-intent="choice"] > span) {
+  display: none;
+}
+
+.theme :global([data-adventure-version="v9"][data-stage="path"] [data-adventure-ui="photo-uploader"]) {
+  width: min(100%, 560px);
+  margin: 0;
+}
+
+.theme :global([data-adventure-version="v9"][data-stage="path"] [data-adventure-ui="photo-dropzone"]) {
+  display: flex;
+  width: 100%;
+  min-height: 80px;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 14px;
+  border: 1px solid #d9d9d9;
+  border-radius: 16px;
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
+  padding: 14px 16px;
+  box-shadow: none;
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+  transition: border-color 150ms ease, background-color 150ms ease;
+}
+
+.theme :global([data-adventure-version="v9"][data-stage="path"] [data-adventure-ui="photo-dropzone"]:hover:not(:disabled)) {
+  border-color: #b8b8b8;
+  background: #fdfcfa;
+  box-shadow: none;
+}
+
+.theme :global([data-adventure-version="v9"][data-stage="path"] [data-adventure-ui="photo-dropzone"]:focus-visible) {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 3px;
+  box-shadow: 0 0 0 4px hsl(var(--ring) / 0.16);
+}
+
+.theme :global([data-adventure-version="v9"][data-stage="path"] [data-adventure-ui="photo-upload-icon"]) {
+  display: inline-flex;
+  width: 40px;
+  height: 40px;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  margin: 0;
+  border: 0;
+  border-radius: 999px;
+  background: #f4f4f4;
+  color: hsl(var(--foreground));
+}
+
+.theme :global([data-adventure-version="v9"][data-stage="path"] [data-adventure-ui="photo-upload-icon"] svg) {
+  width: 19px;
+  height: 19px;
+  stroke-width: 1.8;
+}
+
+.theme :global([data-adventure-version="v9"][data-stage="path"] [data-adventure-ui="photo-upload-copy"]) {
+  display: flex;
+  min-width: 0;
+  flex: 1 1 auto;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+}
+
+.theme :global([data-adventure-version="v9"][data-stage="path"] [data-adventure-ui="photo-upload-copy"] strong) {
+  font-size: 16px;
+  font-weight: 680;
+  letter-spacing: -0.015em;
+  line-height: 1.25;
+}
+
+.theme :global([data-adventure-version="v9"][data-stage="path"] [data-adventure-ui="photo-file-types"]) {
+  color: hsl(var(--muted-foreground));
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.3;
+}
+
+.theme :global([data-adventure-version="v9"][data-stage="path"] [data-adventure-ui="photo-skip"]) {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 6px;
+  width: 100%;
+  margin-top: 12px;
+  padding: 0 2px;
+  text-align: left;
+}
+
+.theme :global([data-adventure-version="v9"][data-stage="path"] [data-adventure-ui="photo-skip"] p) {
+  margin: 0;
+  color: hsl(var(--muted-foreground));
+  font-size: 14px;
+  font-weight: 450;
+  line-height: 1.4;
+}
+
+.theme :global([data-adventure-version="v9"][data-stage="path"] [data-adventure-ui="photo-skip"] [data-adventure-ui="button"]) {
+  width: auto;
+  min-height: auto;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: hsl(var(--primary));
+  padding: 0 2px;
+  font-size: 14px;
+  font-weight: 680;
+  text-decoration: none;
+}
+
+.theme :global([data-adventure-version="v9"][data-stage="path"] [data-adventure-ui="photo-skip"] [data-adventure-ui="button"]:hover:not(:disabled)) {
+  background: transparent;
+  color: hsl(var(--foreground) / 0.72);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.theme :global([data-adventure-version="v9"][data-stage="project"] [data-intent="choice"] > div > span:first-child) {
+  display: inline-flex;
+  width: 14px;
+  min-width: 14px;
+  align-items: center;
+  justify-content: center;
+  margin-right: 4px;
+}
+
+.theme :global([data-adventure-version="v9"][data-stage="project"] [data-intent="choice"] > div::after) {
+  content: "";
+  display: inline-block;
+  width: 14px;
+  min-width: 14px;
+  margin-left: 4px;
+}
+
+.theme :global([data-adventure-version="v9"] [data-adventure-ui="button"]),
+.theme :global([data-adventure-version="v9"] [data-adventure-ui="choice-card"]) {
+  min-height: 48px;
+  border-radius: 999px;
+  padding-inline: 20px;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 650;
+  line-height: 1.2;
+  letter-spacing: -0.005em;
+  box-shadow: none;
+  transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease,
+    box-shadow 150ms ease, transform 150ms ease;
+}
+
+.theme :global([data-adventure-version="v9"] [data-adventure-ui="button"]:focus-visible),
+.theme :global([data-adventure-version="v9"] [data-adventure-ui="choice-card"]:focus-visible),
+.theme :global([data-adventure-version="v9"] [data-adventure-ui="input"]:focus-visible) {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px hsl(var(--ring) / 0.16);
+}
+
+.theme :global([data-adventure-version="v9"] [data-intent="primary"]) {
+  border: 1px solid hsl(var(--primary));
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+}
+
+.theme :global([data-adventure-version="v9"] [data-intent="primary"]:hover:not(:disabled)) {
+  background: hsl(var(--primary) / 0.9);
+}
+
+.theme :global([data-adventure-version="v9"] [data-intent="secondary"]),
+.theme :global([data-adventure-version="v9"] [data-intent="utility"]) {
+  border: 1px solid var(--v9-border);
+  background: var(--v9-surface);
+  color: hsl(var(--foreground));
+}
+
+.theme :global([data-adventure-version="v9"] [data-intent="secondary"]:hover:not(:disabled)),
+.theme :global([data-adventure-version="v9"] [data-intent="utility"]:hover:not(:disabled)),
+.theme :global([data-adventure-version="v9"] [data-intent="ghost"]:hover:not(:disabled)),
+.theme :global([data-adventure-version="v9"] [data-intent="icon"]:hover:not(:disabled)) {
+  background: var(--v9-subtle);
+  color: hsl(var(--foreground));
+}
+
+.theme :global([data-adventure-version="v9"] [data-intent="ghost"]) {
+  border-color: transparent;
+  background: transparent;
+  color: hsl(var(--foreground));
+}
+
+.theme :global([data-adventure-version="v9"] [data-adventure-ui="choice-card"]),
+.theme :global([data-adventure-version="v9"] [data-intent="choice"]) {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  min-height: 64px;
+  height: auto;
+  justify-content: flex-start;
+  overflow: hidden;
+  border: 1px solid var(--v9-border);
+  border-radius: 16px;
+  background: var(--v9-surface);
+  color: hsl(var(--foreground));
+  padding: 14px 16px;
+  text-align: left;
+  white-space: normal;
+}
+
+.theme :global([data-adventure-version="v9"] [data-card-kind="service"]),
+.theme :global([data-adventure-version="v9"] [data-card-kind="image"]) {
+  padding: 0;
+}
+
+.theme :global([data-adventure-version="v9"] [data-adventure-ui="choice-card"] > *),
+.theme :global([data-adventure-version="v9"] [data-intent="choice"] > *) {
+  width: 100%;
+  text-align: left;
+}
+
+.theme :global([data-adventure-version="v9"] [data-adventure-ui="choice-card"]:hover:not(:disabled)),
+.theme :global([data-adventure-version="v9"] [data-intent="choice"]:hover:not(:disabled)) {
+  border-color: hsl(var(--primary) / 0.55);
+  background: hsl(var(--primary) / 0.035);
+}
+
+.theme :global([data-adventure-version="v9"] [data-adventure-ui="choice-card"][aria-pressed="true"]),
+.theme :global([data-adventure-version="v9"] [data-intent="choice"][aria-pressed="true"]) {
+  border-color: hsl(var(--primary));
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  box-shadow: none;
+}
+
+.theme :global([data-adventure-version="v9"] [data-adventure-ui="choice-card"][aria-pressed="true"]:hover:not(:disabled)),
+.theme :global([data-adventure-version="v9"] [data-intent="choice"][aria-pressed="true"]:hover:not(:disabled)) {
+  border-color: hsl(var(--primary));
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+}
+
+.theme :global([data-adventure-version="v9"] [data-intent="choice"][aria-pressed="true"] strong),
+.theme :global([data-adventure-version="v9"] [data-intent="choice"][aria-pressed="true"] span),
+.theme :global([data-adventure-version="v9"] [data-intent="choice"][aria-pressed="true"] div) {
+  color: inherit;
+}
+
+.theme :global([data-adventure-version="v9"] [data-card-kind="service"][aria-pressed="true"]),
+.theme :global([data-adventure-version="v9"] [data-card-kind="image"][aria-pressed="true"]) {
+  background: var(--v9-surface);
+  color: hsl(var(--foreground));
+}
+
+.theme :global([data-adventure-version="v9"] [data-card-kind="service"][aria-pressed="true"] > :last-child),
+.theme :global([data-adventure-version="v9"] [data-card-kind="image"][aria-pressed="true"] > :last-child) {
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+}
+
+.theme :global([data-adventure-version="v9"] [data-adventure-ui="button"][aria-pressed="true"]:not([data-intent="choice"])) {
+  border-color: hsl(var(--primary));
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+}
+
+.theme :global([data-adventure-version="v9"] [data-intent="icon"]) {
+  width: 44px;
+  min-width: 44px;
+  height: 44px;
+  min-height: 44px;
+  border: 1px solid var(--v9-border);
+  background: var(--v9-surface);
+  color: hsl(var(--foreground));
+  padding: 0;
+}
+
+.theme :global([data-adventure-version="v9"] [data-adventure-ui="button"]:disabled),
+.theme :global([data-adventure-version="v9"] [data-adventure-ui="choice-card"]:disabled) {
+  cursor: not-allowed;
+  opacity: 0.46;
+}
+
+.theme :global([data-adventure-version="v9"] [data-adventure-role="panel-header"]:disabled) {
+  opacity: 1;
+}
+
+.theme :global([data-adventure-version="v9"] [data-adventure-ui="input"]) {
+  width: 100%;
+  min-height: 48px;
+  border: 1px solid hsl(var(--input));
+  border-radius: 12px;
+  background: var(--v9-surface);
+  color: hsl(var(--foreground));
+  padding: 0 14px;
+  font-family: inherit;
+  font-size: 15px;
+  box-shadow: none;
+}
+
+.theme :global([data-adventure-version="v9"] [data-adventure-ui="input"]::placeholder) {
+  color: hsl(var(--muted-foreground));
+}
+
+.theme :global([data-adventure-version="v9"] [data-adventure-ui="action-bar"]) {
+  flex: 0 0 auto;
+  display: flex;
+  min-height: 72px;
+  align-items: center;
+  justify-content: flex-end;
+  margin: 0;
+  padding: 12px 2px 0;
+  border: 0;
+  background: var(--v9-surface);
+}
+
+.theme :global([data-adventure-version="v9"] [data-adventure-ui="action-bar"] > [data-adventure-ui="button"]) {
+  width: auto;
+  min-width: 184px;
+}
+
+.theme :global([data-adventure-version="v9"] [data-adventure-ui="action-bar"] > div) {
+  width: min(100%, 520px);
+}
+
+.theme :global([data-adventure-version="v9"] [data-adventure-ui="action-bar"] [data-intent="secondary"]),
+.theme :global([data-adventure-version="v9"] [data-adventure-ui="action-bar"] [data-intent="ghost"]) {
+  margin-top: 0;
+}
+
+.theme :global([data-adventure-version="v9"] [class*="pathSecondaryActions"]) {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+/* Gallery: variable-height Pinterest-style columns with labels over the image. */
+.theme :global([data-adventure-version="v9"]:has([data-adventure-ui="gallery-shell"]) [data-adventure-ui="navigation"]) {
+  width: 100%;
+  max-width: none;
+}
+
+.theme :global([data-adventure-version="v9"]:has([data-adventure-ui="gallery-shell"]) [data-adventure-ui="viewport"]) {
+  width: 100%;
+  max-width: none;
+}
+
+.theme :global([data-adventure-version="v9"] [data-adventure-ui="gallery-body"]) {
+  display: flex;
+  min-height: 0;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 14px 2px 0;
+}
+
+.theme :global([data-adventure-version="v9"] [data-adventure-ui="gallery-scroll"]) {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  padding: 0 2px 18px 0;
+  scrollbar-gutter: auto;
+}
+
+.theme :global([data-adventure-version="v9"] [data-adventure-ui="gallery-scroll"][data-loading="true"]) {
+  border-color: transparent;
+  background: transparent;
+  padding: 0;
+  scrollbar-gutter: auto;
+}
+
+.theme :global([data-adventure-version="v9"] [data-adventure-ui="gallery-scroll"][data-loading="true"] [role="status"]) {
+  min-height: clamp(220px, 46dvh, 420px);
+  margin: 0;
+}
+
+.theme :global([data-adventure-version="v9"] [data-adventure-ui="project-grid"]) {
+  display: grid;
+  grid-template-columns: repeat(var(--pricing-column-count, 1), minmax(0, 1fr));
+  align-items: start;
+  gap: 16px;
+  margin: 0;
+}
+
+.theme :global([data-adventure-version="v9"] [data-adventure-ui="project-column"]) {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.theme :global([data-adventure-version="v9"] [data-adventure-ui="project-card"]) {
+  display: inline-block;
+  width: 100%;
+  overflow: hidden;
+  break-inside: avoid;
+  margin: 0;
+  border: 0;
+  border-radius: 16px;
+  background: transparent;
+  vertical-align: top;
+}
+
+.theme :global([data-adventure-version="v9"] [data-adventure-ui="project-card"] > [data-adventure-ui="button"]) {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  border: 0;
+  border-radius: 16px;
+  background: transparent;
+  padding: 0;
+  white-space: normal;
+}
+
+.theme :global([data-adventure-version="v9"] [data-adventure-ui="project-media"]) {
+  position: relative;
+  display: block;
+  overflow: hidden;
+  border-radius: 16px;
+  background: var(--v9-subtle);
+}
+
+.theme :global([data-adventure-version="v9"] [data-adventure-ui="project-media"] > img) {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: var(--project-aspect, 4 / 5);
+  object-fit: cover;
+}
+
+.theme :global([data-adventure-version="v9"] [data-adventure-ui="project-caption"]) {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: linear-gradient(to top, rgba(10, 10, 12, 0.82), rgba(10, 10, 12, 0));
+  color: #fff;
+  padding: 56px 16px 16px;
+  pointer-events: none;
+}
+
+.theme :global([data-adventure-version="v9"] [data-adventure-ui="project-title"]) {
+  color: #fff;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  text-shadow: 0 1px 10px rgba(0, 0, 0, 0.25);
+}
+
+.theme :global([data-adventure-version="v9"] [data-adventure-ui="project-action"]) {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.theme :global([data-adventure-version="v9"] [data-adventure-ui="project-action"] svg) {
+  width: 15px;
+  height: 15px;
+}
+
+.theme :global([data-adventure-version="v9"] [data-adventure-ui="gallery-action-bar"]) {
+  flex: 0 0 auto;
+  display: flex;
+  min-height: 72px;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  margin: 0;
+  padding: 12px 2px 0;
+  border: 0;
+  background: var(--v9-surface);
+}
+
+.theme :global([data-adventure-version="v9"] [data-adventure-ui="gallery-action-bar"] [data-adventure-ui="button"]) {
+  width: auto;
+  min-width: 184px;
+  min-height: 48px;
+  border: 1px solid var(--v9-border);
+  background: var(--v9-surface);
+  color: hsl(var(--foreground));
+  padding-inline: 20px;
+}
+
+/* Price detail: stable media/sidebar split with the view switch on the image. */
+.theme :global([data-adventure-version="v9"]:has([data-adventure-ui="pricing-shell"]) [data-adventure-ui="viewport"]) {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 0 clamp(24px, 4vw, 64px) 24px;
+  border: 0;
+  border-radius: 0;
+  background: var(--v9-surface);
+}
+
+.theme :global([data-adventure-version="v9"]:has([data-adventure-ui="pricing-shell"]) [data-adventure-ui="navigation"]) {
+  width: 100%;
+  margin: 0;
+  padding: 12px 0;
+  border: 0;
+  border-radius: 0;
+  background: var(--v9-surface);
+}
+
+.theme :global([data-adventure-version="v9"] [data-adventure-ui="pricing-body"]) {
+  display: block;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding: 0;
+}
+
+.theme :global([data-adventure-version="v9"] [data-adventure-ui="pricing-layout"]) {
+  position: static;
+  display: grid;
+  grid-template-columns: minmax(0, 1.7fr) minmax(320px, 0.8fr);
+  grid-template-rows: auto;
+  align-items: start;
+  gap: 18px;
+  min-height: 0;
+}
+
+.theme :global([data-adventure-version="v9"] [data-adventure-ui="pricing-media"]) {
+  position: static;
+  display: block;
+  min-width: 0;
+}
+
+.theme :global([data-adventure-version="v9"] [data-adventure-ui="pricing-canvas"]) {
+  position: static;
+  display: flex;
+  width: 100%;
+  height: auto !important;
+  min-height: 0 !important;
+  aspect-ratio: auto !important;
+  flex-direction: column;
+}
+
+.theme :global([data-adventure-version="v9"] [data-adventure-ui="media-toolbar"]) {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 4;
+  display: inline-flex;
+  min-height: 0;
+  align-items: center;
+  margin: 0;
+  padding: 3px;
+  border: 1px solid rgba(255, 255, 255, 0.74);
+  border-radius: 999px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.84), rgba(244, 244, 242, 0.62));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 5px 18px rgba(15, 23, 42, 0.13);
+}
+
+.theme :global([data-adventure-version="v9"] [data-adventure-ui="segmented-control"]) {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 4;
+  display: inline-flex;
+  gap: 3px;
+  transform: none;
+  border: 1px solid rgba(255, 255, 255, 0.74);
+  border-radius: 999px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.84), rgba(244, 244, 242, 0.62));
+  padding: 3px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 5px 18px rgba(15, 23, 42, 0.13);
+}
+
+.theme :global([data-adventure-version="v9"] [data-adventure-ui="segmented-control"] [data-adventure-ui="button"]) {
+  width: auto;
+  min-width: 68px;
+  min-height: 36px;
+  height: 36px;
+  border: 0;
+  background: transparent;
+  color: rgba(24, 24, 27, 0.72);
+  padding-inline: 14px;
+  font-size: 12px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+
+.theme :global([data-adventure-version="v9"] [data-adventure-ui="segmented-control"] [aria-pressed="true"]) {
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  box-shadow: none;
+}
+
+.theme :global([data-adventure-version="v9"] [data-adventure-ui="media-actions"]) {
+  position: static;
+  display: flex;
+  gap: 3px;
+}
+
+.theme :global([data-adventure-version="v9"] [data-adventure-ui="media-toolbar"] [data-intent="icon"]) {
+  width: 36px;
+  min-width: 36px;
+  height: 36px;
+  min-height: 36px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: rgba(24, 24, 27, 0.76);
+  box-shadow: none;
+}
+
+.theme :global([data-adventure-version="v9"] [data-adventure-ui="media-toolbar"] [data-intent="icon"]:hover:not(:disabled)) {
+  background: hsl(var(--card) / 0.66);
+  color: hsl(var(--foreground));
+}
+
+.theme :global([data-adventure-version="v9"] [data-adventure-ui="media-toolbar"] [data-intent="icon"] svg) {
+  width: 16px;
+  height: 16px;
+}
+
+.theme :global([data-adventure-version="v9"] [data-adventure-ui="media-frame"]) {
+  position: relative;
+  width: 100%;
+  height: auto;
+  min-height: 0;
+  overflow: hidden;
+  aspect-ratio: 4 / 3;
+  border: 1px solid var(--v9-border);
+  border-radius: 16px;
+  background: var(--v9-subtle);
+  box-shadow: none;
+}
+
+.theme :global([data-adventure-version="v9"] [data-adventure-ui="media-frame"] > img),
+.theme :global([data-adventure-version="v9"] [data-adventure-ui="media-frame"] > [role="img"]) {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  object-fit: cover;
+}
+
+.theme :global([data-adventure-version="v9"] [data-adventure-ui="pricing-panel"]) {
+  position: static !important;
+  z-index: auto;
+  display: flex;
+  width: 100% !important;
+  max-height: none;
+  overflow: visible;
+  transform: none !important;
+}
+
+.theme :global([data-adventure-version="v9"] [data-adventure-ui="pricing-layout"][data-access="unlocked"] [data-adventure-ui="pricing-panel"]) {
+  gap: 0;
+  overflow: hidden;
+  border: 1px solid var(--v9-border);
+  border-radius: 16px;
+  background: var(--v9-surface);
+}
+
+.theme :global([data-adventure-version="v9"] [data-adventure-ui="panel"]),
+.theme :global([data-adventure-version="v9"] [data-adventure-ui="pricing-panel"] > section) {
+  overflow: hidden;
+  border: 1px solid var(--v9-border) !important;
+  border-radius: 16px !important;
+  background: var(--v9-surface) !important;
+  padding: 18px !important;
+  box-shadow: none !important;
+}
+
+.theme :global([data-adventure-version="v9"] [data-adventure-ui="pricing-layout"][data-access="unlocked"] [data-adventure-ui="pricing-panel"] > section) {
+  overflow: visible;
+  border: 0 !important;
+  border-radius: 0 !important;
+  padding: 18px 20px !important;
+}
+
+.theme :global([data-adventure-version="v9"] [data-adventure-ui="pricing-layout"][data-access="unlocked"] [data-adventure-ui="refinement-section"]) {
+  border-top: 1px solid var(--v9-border) !important;
+}
+
+.theme :global([data-adventure-version="v9"] [data-adventure-ui="estimate-header"]) {
+  display: flex;
+  width: 100%;
+  min-height: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  padding: 0;
+  text-align: left;
+}
+
+.theme :global([data-adventure-version="v9"] [data-adventure-ui="estimate-summary"]) {
+  min-width: 0;
+}
+
+.theme :global([data-adventure-version="v9"] [data-adventure-ui="estimate-title"]) {
+  color: hsl(var(--foreground));
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 680;
+  line-height: 1.25;
+  letter-spacing: -0.015em;
+}
+
+.theme :global([data-adventure-version="v9"] [data-adventure-ui="estimate-compact"]) {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+}
+
+.theme :global([data-adventure-version="v9"] [data-adventure-ui="estimate-compact"] > span) {
+  color: hsl(var(--muted-foreground));
+  font-size: 11px;
+  font-weight: 550;
+}
+
+.theme :global([data-adventure-version="v9"] [data-adventure-ui="estimate-compact"] strong) {
+  color: hsl(var(--foreground));
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.theme :global([data-adventure-version="v9"] [data-adventure-ui="estimate-return"]) {
+  flex: 0 0 auto;
+  border: 1px solid var(--v9-border);
+  border-radius: 999px;
+  background: var(--v9-subtle);
+  color: hsl(var(--foreground));
+  padding: 7px 10px;
+  font-size: 11.5px;
+  font-weight: 650;
+}
+
+.theme :global([data-adventure-version="v9"] [data-adventure-ui="refinement-header"]) {
+  display: flex;
+  width: 100%;
+  min-height: 0;
+  align-items: center;
+  justify-content: space-between;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  padding: 0;
+  text-align: left;
+}
+
+.theme :global([data-adventure-version="v9"] [data-adventure-ui="refinement-header"] > span) {
+  display: grid;
+  gap: 3px;
+}
+
+.theme :global([data-adventure-version="v9"] [data-adventure-ui="refinement-header"] strong) {
+  color: hsl(var(--foreground));
+  font-size: 15px;
+  font-weight: 680;
+  letter-spacing: -0.015em;
+}
+
+.theme :global([data-adventure-version="v9"] [data-adventure-ui="refinement-header"] small) {
+  color: hsl(var(--muted-foreground));
+  font-size: 11.5px;
+  font-weight: 480;
+  line-height: 1.35;
+}
+
+.theme :global([data-adventure-version="v9"] [data-adventure-ui="refinement-controls"]) {
+  display: grid;
+  gap: 16px;
+  margin-top: 16px;
+  border-top: 1px solid var(--v9-border);
+  padding-top: 16px;
+}
+
+.theme :global([data-adventure-version="v9"] [data-adventure-ui="refinement-targets"]),
+.theme :global([data-adventure-version="v9"] [data-adventure-ui="refinement-suggestions"]),
+.theme :global([data-adventure-version="v9"] [data-adventure-ui="refinement-prompt"]) {
+  display: grid;
+  gap: 8px;
+}
+
+.theme :global([data-adventure-version="v9"] [data-adventure-ui="refinement-targets"] > span),
+.theme :global([data-adventure-version="v9"] [data-adventure-ui="refinement-suggestions"] > span),
+.theme :global([data-adventure-version="v9"] [data-adventure-ui="refinement-prompt"] > label) {
+  color: hsl(var(--muted-foreground));
+  font-size: 11px;
+  font-weight: 620;
+  line-height: 1.3;
+}
+
+.theme :global([data-adventure-version="v9"] [data-adventure-ui="refinement-targets"] > div),
+.theme :global([data-adventure-version="v9"] [data-adventure-ui="refinement-suggestions"] > div) {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.theme :global([data-adventure-version="v9"] [data-adventure-ui="refinement-targets"] [data-adventure-ui="button"]),
+.theme :global([data-adventure-version="v9"] [data-adventure-ui="refinement-suggestions"] [data-adventure-ui="button"]) {
+  width: auto;
+  min-width: 0;
+  min-height: 34px;
+  height: 34px;
+  border: 1px solid var(--v9-border);
+  border-radius: 999px;
+  background: var(--v9-subtle);
+  color: hsl(var(--foreground));
+  padding: 0 12px;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.theme :global([data-adventure-version="v9"] [data-adventure-ui="refinement-targets"] [data-adventure-ui="button"][data-selected="true"]) {
+  border-color: hsl(var(--primary));
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+}
+
+.theme :global([data-adventure-version="v9"] [data-adventure-ui="refinement-prompt"] > div) {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 6px;
+}
+
+.theme :global([data-adventure-version="v9"] [data-adventure-ui="refinement-prompt"] [data-adventure-ui="input"]) {
+  min-width: 0;
+  min-height: 42px;
+  height: 42px;
+  border-radius: 999px;
+  background: var(--v9-surface);
+  padding-inline: 14px;
+  font-size: 12px;
+}
+
+.theme :global([data-adventure-version="v9"] [data-adventure-ui="refinement-prompt"] [data-adventure-ui="button"]) {
+  width: auto;
+  min-width: 76px;
+  min-height: 42px;
+  height: 42px;
+  border-radius: 999px;
+  padding-inline: 16px;
+  font-size: 12px;
+}
+
+.theme :global([data-adventure-version="v9"] [data-adventure-ui="estimate-breakdown"]) {
+  gap: 12px;
+  margin-top: 14px;
+  border-top: 1px solid var(--v9-border);
+  padding-top: 14px;
+}
+
+.theme :global([data-adventure-version="v9"] [data-adventure-ui="project-facts"]) {
+  display: grid;
+  gap: 10px;
+}
+
+.theme :global([data-adventure-version="v9"] [data-adventure-ui="project-facts"] > div) {
+  display: grid;
+  gap: 3px;
+}
+
+.theme :global([data-adventure-version="v9"] [data-adventure-ui="project-facts"] span) {
+  color: hsl(var(--muted-foreground));
+  font-size: 10px;
+  font-weight: 620;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.theme :global([data-adventure-version="v9"] [data-adventure-ui="project-facts"] strong) {
+  color: hsl(var(--foreground));
+  font-size: 12px;
+  font-weight: 590;
+  line-height: 1.45;
+}
+
+.theme :global([data-adventure-version="v9"] [data-adventure-ui="refinement-references"]) {
+  display: grid;
+  gap: 8px;
+}
+
+.theme :global([data-adventure-version="v9"] [data-adventure-ui="refinement-references"] > span) {
+  color: hsl(var(--muted-foreground));
+  font-size: 11px;
+  font-weight: 620;
+}
+
+.theme :global([data-adventure-version="v9"] [data-adventure-ui="refinement-references"] > div) {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.theme :global([data-adventure-version="v9"] [data-adventure-ui="refinement-references"] [data-adventure-ui="button"]) {
+  width: auto;
+  min-width: 0;
+  min-height: 36px;
+  height: 36px;
+  border: 1px solid var(--v9-border);
+  border-radius: 999px;
+  background: var(--v9-surface);
+  color: hsl(var(--foreground));
+  padding: 0 12px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.theme :global([data-adventure-version="v9"] [data-adventure-ui="refinement-references"] small) {
+  color: hsl(var(--muted-foreground));
+  font-size: 10.5px;
+  line-height: 1.4;
+}
+
+.theme :global([data-adventure-version="v9"] [data-adventure-ui="breakdown-list"]) {
+  gap: 9px;
+}
+
+.theme :global([data-adventure-version="v9"] [data-adventure-ui="breakdown-list"] > strong) {
+  color: hsl(var(--foreground));
+  font-size: 13px;
+  font-weight: 680;
+}
+
+.theme :global([data-adventure-version="v9"] [data-adventure-ui="breakdown-rows"]) {
+  border-color: var(--v9-border);
+}
+
+.theme :global([data-adventure-version="v9"] [data-adventure-ui="breakdown-rows"] > div) {
+  min-height: 38px;
+  border-color: var(--v9-border);
+  padding: 7px 0;
+}
+
+.theme :global([data-adventure-version="v9"] [data-adventure-ui="breakdown-rows"] > div > span),
+.theme :global([data-adventure-version="v9"] [data-adventure-ui="breakdown-rows"] > div > strong) {
+  font-size: 11.5px;
+}
+
+.theme :global([data-adventure-version="v9"] [data-adventure-ui="pricing-layout"][data-access="locked"] [data-adventure-ui="panel"]) {
+  position: static;
+  overflow: hidden;
+  padding: 20px !important;
+  font-family: inherit;
+}
+
+.theme :global([data-adventure-version="v9"] [data-adventure-ui="locked-design-name"]) {
+  margin-bottom: 16px;
+  color: hsl(var(--foreground));
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.025em;
+}
+
+.theme :global([data-adventure-version="v9"] [data-adventure-ui="pricing-layout"][data-access="locked"] [data-adventure-ui="price-summary"]) {
+  gap: 6px;
+}
+
+.theme :global([data-adventure-version="v9"] [data-adventure-ui="pricing-layout"][data-access="locked"] [data-adventure-ui="price-label"]) {
+  color: hsl(var(--muted-foreground));
+  font-size: 13px;
+  font-weight: 620;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+  text-transform: none;
+}
+
+.theme :global([data-adventure-version="v9"] [data-adventure-ui="pricing-layout"][data-access="locked"] [data-adventure-ui="locked-price"]) {
+  min-height: 34px;
+  gap: 8px;
+  color: hsl(var(--foreground));
+  font-size: 28px;
+  font-weight: 720;
+  line-height: 1.08;
+  letter-spacing: -0.025em;
+}
+
+.theme :global([data-adventure-version="v9"] [data-adventure-ui="locked-price-digits"]) {
+  min-width: 58px;
+  height: 0.62em;
+  align-self: center;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(24, 24, 27, 0.18), rgba(24, 24, 27, 0.48), rgba(24, 24, 27, 0.2));
+  color: transparent;
+  filter: blur(3px);
+  opacity: 0.82;
+  text-shadow: none;
+}
+
+.theme :global([data-adventure-version="v9"] [data-adventure-ui="unlock-form"]) {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 6px;
+  margin-top: 0;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  padding: 0 !important;
+}
+
+.theme :global([data-adventure-version="v9"] [data-adventure-ui="unlock-form"] [data-adventure-ui="input"]) {
+  min-width: 0;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.theme :global([data-adventure-version="v9"] [data-adventure-ui="unlock-form"] [data-adventure-ui="button"]) {
+  min-width: 96px;
+  min-height: 48px;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 650;
+}
+
+.theme :global([data-adventure-version="v9"] [data-adventure-ui="unlock-heading"]) {
+  margin: 0 0 6px;
+  color: hsl(var(--foreground));
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 650;
+  line-height: 1.35;
+  letter-spacing: -0.01em;
+}
+
+.theme :global([data-adventure-version="v9"] [data-adventure-ui="unlock-note"]) {
+  margin-top: 10px;
+  color: hsl(var(--muted-foreground));
+  font-family: inherit;
+  font-size: 11.5px;
+  font-weight: 450;
+  line-height: 1.5;
+  letter-spacing: -0.005em;
+}
+
+@media (max-width: 900px) {
+  .theme :global([data-adventure-version="v9"] [data-adventure-ui="pricing-layout"]) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .theme :global([data-adventure-version="v9"] [data-adventure-ui="media-frame"]) {
+    aspect-ratio: 16 / 10;
+  }
+}
+
+@media (max-width: 640px) {
+  .theme :global([data-adventure-version="v9"]) {
+    background: var(--v9-surface);
+  }
+
+  .theme :global([data-adventure-version="v9"] [data-adventure-ui="navigation"]) {
+    width: 100%;
+    margin: 0;
+    padding: 10px 14px 8px;
+    border: 0;
+    border-radius: 0;
+  }
+
+  .theme :global([data-adventure-version="v9"] [data-adventure-ui="viewport"]),
+  .theme :global([data-adventure-version="v9"]:has([data-adventure-ui="gallery-shell"]) [data-adventure-ui="viewport"]),
+  .theme :global([data-adventure-version="v9"]:has([data-adventure-ui="pricing-shell"]) [data-adventure-ui="viewport"]) {
+    width: 100%;
+    max-width: none;
+    margin: 0;
+    padding: 0 14px calc(10px + env(safe-area-inset-bottom, 0px));
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .theme :global([data-adventure-version="v9"] [data-adventure-ui="step-body"]) {
+    padding: 12px 0 20px;
+    scrollbar-gutter: auto;
+  }
+
+  .theme :global([data-adventure-version="v9"] [data-adventure-ui="step-body"] > h1) {
+    margin-bottom: 6px;
+    font-size: clamp(22px, 7vw, 28px);
+  }
+
+  .theme :global([data-adventure-version="v9"] [data-adventure-ui="step-body"] > h1 + p) {
+    margin-bottom: 18px;
+    font-size: 14px;
+    line-height: 1.45;
+  }
+
+  .theme :global([data-adventure-version="v9"][data-stage="path"] [data-adventure-ui="photo-uploader"]) {
+    margin-top: 0;
+  }
+
+  .theme :global([data-adventure-version="v9"][data-stage="path"] [data-adventure-ui="photo-dropzone"]) {
+    min-height: 72px;
+    gap: 12px;
+    border-radius: 14px;
+    padding: 12px 14px;
+  }
+
+  .theme :global([data-adventure-version="v9"][data-stage="path"] [data-adventure-ui="photo-upload-icon"]) {
+    width: 36px;
+    height: 36px;
+  }
+
+  .theme :global([data-adventure-version="v9"][data-stage="path"] [data-adventure-ui="photo-upload-copy"] strong) {
+    font-size: 15px;
+  }
+
+  .theme :global([data-adventure-version="v9"][data-stage="path"] [data-adventure-ui="photo-file-types"]) {
+    font-size: 13px;
+  }
+
+  .theme :global([data-adventure-version="v9"][data-stage="path"] [data-adventure-ui="photo-skip"]) {
+    flex-direction: row;
+    align-items: center;
+    gap: 5px;
+    margin-top: 10px;
+    padding: 0 2px;
+  }
+
+  .theme :global([data-adventure-version="v9"][data-stage="path"] [data-adventure-ui="photo-skip"] p),
+  .theme :global([data-adventure-version="v9"][data-stage="path"] [data-adventure-ui="photo-skip"] [data-adventure-ui="button"]) {
+    font-size: 14px;
+  }
+
+  .theme :global([data-adventure-version="v9"] [data-adventure-ui="choice-grid"]) {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+  }
+
+  .theme :global([data-adventure-version="v9"][data-stage="project"] [data-adventure-ui="choice-grid"]),
+  .theme :global([data-adventure-version="v9"][data-stage="budget"] [data-adventure-ui="choice-grid"]),
+  .theme :global([data-adventure-version="v9"][data-stage="path"] [data-adventure-ui="choice-grid"]),
+  .theme :global([data-adventure-version="v9"][data-stage="connect"] [data-adventure-ui="choice-grid"]) {
+    gap: 7px 6px;
+  }
+
+  .theme :global([data-adventure-version="v9"][data-stage="project"] [data-intent="choice"]),
+  .theme :global([data-adventure-version="v9"][data-stage="budget"] [data-intent="choice"]),
+  .theme :global([data-adventure-version="v9"][data-stage="path"] [data-intent="choice"]),
+  .theme :global([data-adventure-version="v9"][data-stage="connect"] [data-intent="choice"]) {
+    min-height: 44px;
+    padding: 0 14px;
+  }
+
+  .theme :global([data-adventure-version="v9"] [data-adventure-ui="action-bar"]) {
+    width: calc(100% + 28px);
+    margin: 0 -14px;
+    padding: 12px 14px calc(12px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .theme :global([data-adventure-version="v9"] [data-adventure-ui="action-bar"] [data-adventure-ui="button"]),
+  .theme :global([data-adventure-version="v9"] [data-adventure-ui="action-bar"] > [data-adventure-ui="button"]) {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .theme :global([data-adventure-version="v9"] [class*="pathSecondaryActions"]) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .theme :global([data-adventure-version="v9"] [data-adventure-ui="gallery-body"]) {
+    padding-top: 12px;
+  }
+
+  .theme :global([data-adventure-version="v9"] [data-adventure-ui="gallery-action-bar"]) {
+    width: calc(100% + 28px);
+    margin: 0 -14px;
+    padding: 12px 14px calc(12px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .theme :global([data-adventure-version="v9"] [data-adventure-ui="gallery-action-bar"] [data-adventure-ui="button"]) {
+    width: 100%;
+  }
+
+  .theme :global([data-adventure-version="v9"] [data-adventure-ui="pricing-body"]) {
+    padding: 0 0 12px;
+  }
+
+  .theme :global([data-adventure-version="v9"] [data-adventure-ui="refinement-prompt"] > div) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .theme :global([data-adventure-version="v9"] [data-adventure-ui="refinement-prompt"] [data-adventure-ui="button"]) {
+    width: 100%;
+  }
+
+  .theme :global([data-adventure-version="v9"] [data-adventure-ui="media-toolbar"]) {
+    top: 10px;
+    right: 10px;
+  }
+
+  .theme :global([data-adventure-version="v9"] [data-adventure-ui="segmented-control"]) {
+    width: auto;
+  }
+
+  .theme :global([data-adventure-version="v9"] [data-adventure-ui="segmented-control"] [data-adventure-ui="button"]) {
+    flex: 0 0 auto;
+    min-width: 64px;
+  }
+
+  .theme :global([data-adventure-version="v9"] [data-adventure-ui="media-actions"]) {
+    width: auto;
+  }
+
+  .theme :global([data-adventure-version="v9"] [data-adventure-ui="media-toolbar"] [data-intent="icon"]) {
+    width: 34px;
+    min-width: 34px;
+    height: 34px;
+    min-height: 34px;
+  }
+
+  .theme :global([data-adventure-version="v9"] [data-adventure-ui="media-frame"]) {
+    aspect-ratio: 4 / 3;
+    border-radius: 14px;
+  }
+
+  .theme :global([data-adventure-version="v9"] [data-adventure-ui="pricing-panel"] > section),
+  .theme :global([data-adventure-version="v9"] [data-adventure-ui="panel"]) {
+    padding: 16px !important;
+  }
+
+  .theme :global([data-adventure-version="v9"] [data-adventure-ui="pricing-layout"][data-access="locked"] [data-adventure-ui="panel"]) {
+    padding: 18px !important;
+  }
+
+  .theme :global([data-adventure-version="v9"] [data-adventure-ui="pricing-layout"][data-access="locked"] [data-adventure-ui="locked-design-name"]) {
+    margin-bottom: 12px;
+    font-size: 18px;
+  }
+
+  .theme :global([data-adventure-version="v9"] [data-adventure-ui="pricing-layout"][data-access="locked"] [data-adventure-ui="locked-price"]) {
+    min-height: 30px;
+    gap: 6px;
+    font-size: 25px;
+  }
+
+  .theme :global([data-adventure-version="v9"] [data-adventure-ui="locked-price-digits"]) {
+    min-width: 52px;
+    filter: blur(2.5px);
+  }
+
+  .theme :global([data-adventure-version="v9"] [data-adventure-ui="unlock-form"]) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .theme :global([data-adventure-version="v9"] [data-adventure-ui="unlock-form"] [data-adventure-ui="button"]) {
+    width: 100%;
+    min-height: 44px;
+  }
+
+  .theme :global([data-adventure-version="v9"] [data-adventure-ui="unlock-note"]) {
+    margin-top: 8px;
+    font-size: 11px;
+    line-height: 1.45;
+  }
+}
+
+@media (max-width: 360px) {
+  .theme :global([data-adventure-version="v9"] [data-adventure-ui="navigation"]) {
+    padding-inline: 10px;
+  }
+
+  .theme :global([data-adventure-version="v9"] [data-adventure-ui="viewport"]),
+  .theme :global([data-adventure-version="v9"]:has([data-adventure-ui="gallery-shell"]) [data-adventure-ui="viewport"]),
+  .theme :global([data-adventure-version="v9"]:has([data-adventure-ui="pricing-shell"]) [data-adventure-ui="viewport"]) {
+    padding-inline: 10px;
+  }
+
+  .theme :global([data-adventure-version="v9"] [data-adventure-ui="action-bar"]),
+  .theme :global([data-adventure-version="v9"] [data-adventure-ui="gallery-action-bar"]) {
+    width: calc(100% + 20px);
+    margin-inline: -10px;
+    padding-inline: 10px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .theme :global([data-adventure-version="v9"] *),
+  .theme :global([data-adventure-version="v9"] *::before),
+  .theme :global([data-adventure-version="v9"] *::after) {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

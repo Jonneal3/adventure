@@ -12,7 +12,6 @@ import {
   Settings, 
   Palette, 
   Rocket, 
-  Sparkles,
   Image as ImageIcon,
   Images,
   FileText,
@@ -71,7 +70,7 @@ export default function LeftSidebar({
       <div
         className="flex flex-col border-r border-border/60 bg-card/60 backdrop-blur w-14 transition-all duration-300 shadow-sm"
       >
-        <div className="p-3 border-b border-border/50 flex-shrink-0">
+        <div className="p-3 flex-shrink-0">
           <Button
             variant="ghost"
             size="sm"
@@ -80,11 +79,6 @@ export default function LeftSidebar({
           >
             <ChevronRight className="h-4 w-4" />
           </Button>
-        </div>
-        <div className="flex-1 flex flex-col items-center justify-center space-y-4">
-          <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-            <Sparkles className="h-4 w-4 text-primary" />
-          </div>
         </div>
       </div>
     );
@@ -95,13 +89,12 @@ export default function LeftSidebar({
       className="flex flex-col border-r border-border/60 bg-card/60 backdrop-blur w-[420px] h-full min-h-0 transition-all duration-300 shadow-sm"
     >
       {/* Compact Header */}
-      <div className="p-3 border-b border-border/60 flex-shrink-0 bg-card/40">
+      <div className="p-3 flex-shrink-0 bg-card/40">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div>
               <h1 className="text-sm font-semibold text-foreground/90 tracking-tight">Design Studio</h1>
             </div>
-            <div className="h-4 w-px bg-border/50" />
             <div className="flex items-center gap-2">
               <div className={`w-2 h-2 rounded-full transition-colors ${
                 saveStatus === 'saving' ? 'bg-yellow-500 animate-pulse' :

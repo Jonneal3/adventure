@@ -10,6 +10,7 @@ from __future__ import annotations
 import base64
 import json
 import os
+import re
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -23,6 +24,7 @@ from programs.pricing.replicate_vlm import (
 )
 
 
+CATALOG_METADATA_SPEC_VERSION = 1
 DISCOVERY_SCOPES = (
     "vanity",
     "shower-tub",
@@ -103,16 +105,7 @@ def _cheap_model() -> str:
         return env
     if _gemini_key():
         return "gemini-2.5-flash-lite"
-    return str(os.getenv("ADVENTURE_VISION_MODEL") or "openai/gpt-4.1-nano").strip()
-
-
-def _review_model() -> str:
-    env = str(os.getenv("ADVENTURE_CATALOG_VISION_REVIEW_MODEL") or "").strip()
-    if env:
-        return env
-    if _gemini_key():
-        return "gemini-2.5-flash"
-    return str(os.getenv("ADVENTURE_VISION_REVIEW_MODEL") or "openai/gpt-4.1-mini").strip()
+    return str(os.getenv("ADVENTURE_VISION_MODEL") or "openai/gpt-5-mini").strip()
 
 
 def catalog_vision_enabled() -> bool:
@@ -249,6 +242,7 @@ def normalize_catalog_tags(raw: Any, *, model: str = "") -> Dict[str, Any]:
     keep = bool(inspirational)
     description = str(parsed.get("description") or parsed.get("caption") or "").strip()[:240]
     tags = {
+        "schema_version": CATALOG_METADATA_SPEC_VERSION,
         "contains": _string_list(parsed.get("contains"), cap=12),
         "primary_scope": scope,
         "style": style,
@@ -276,8 +270,46 @@ def normalize_catalog_tags(raw: Any, *, model: str = "") -> Dict[str, Any]:
     return tags
 
 
-def tag_catalog_photo(image_url: str, *, review: bool = True) -> Optional[Dict[str, Any]]:
-    """Cheap pass, then a stronger model only when the first call is ambiguous."""
+def project_manifest_from_catalog_tags(tags: Any) -> Dict[str, Any]:
+    """Turn VLM catalog observations into the one runtime project contract."""
+    source = tags if isinstance(tags, dict) else {}
+    contains = _string_list(source.get("contains"), cap=12)
+    defects = {str(item or "").strip().lower() for item in source.get("defects") or []}
+    hard_defects = sorted(defects & HARD_DEFECTS)
+    try:
+        confidence = max(0.0, min(1.0, float(source.get("quality_score") or 0.0)))
+    except (TypeError, ValueError):
+        confidence = 0.0
+    components = [
+        {
+            "key": value,
+            "label": value.replace("-", " ").replace("_", " ").strip().title(),
+            "confidence": round(confidence, 3),
+            "quantity": 1,
+        }
+        for value in contains
+    ]
+    primary_scope = str(source.get("primary_scope") or "").strip() or None
+    is_full = bool(
+        primary_scope
+        and re.search(r"(?:^|[-_ ])(?:full|whole|complete|entire)(?:$|[-_ ])", primary_scope, re.I)
+    )
+    status = "verified" if components and not hard_defects else "rejected"
+    return {
+        "version": 1,
+        "analysisStatus": status,
+        "sceneType": "full-project" if is_full else "component",
+        "description": str(source.get("description") or "").strip() or None,
+        "primaryScope": primary_scope,
+        "components": components,
+        "model": str(source.get("model") or "").strip() or None,
+        "analyzedAt": str(source.get("tagged_at") or _now()),
+        "defects": hard_defects,
+    }
+
+
+def tag_catalog_photo(image_url: str) -> Optional[Dict[str, Any]]:
+    """Run exactly one catalog vision pass and fail closed on provider errors."""
     if not catalog_vision_enabled():
         return None
     url = str(image_url or "").strip()
@@ -288,18 +320,89 @@ def tag_catalog_photo(image_url: str, *, review: bool = True) -> Optional[Dict[s
     if not cheap:
         return None
     tags = normalize_catalog_tags(cheap, model=cheap_model)
-    if review and needs_review(tags):
-        review_model = _review_model()
-        stronger = _run_vision(url, model=review_model, role="review")
-        if stronger:
-            tags = normalize_catalog_tags(stronger, model=review_model)
-            tags["reviewed"] = True
-            tags["triage_model"] = cheap_model
-        else:
-            tags["reviewed"] = False
-    else:
-        tags["reviewed"] = False
+    tags["reviewed"] = False
     return tags
+
+
+def normalize_starter_profile_suggestion(
+    raw: Any,
+    *,
+    service_id: str = "",
+    service_scope_keys: Optional[List[str]] = None,
+    model: str = "",
+) -> Dict[str, Any]:
+    """Normalize an offline VLM suggestion without making it retrieval-eligible."""
+    parsed = raw if isinstance(raw, dict) else {}
+    allowed = {
+        str(value or "").strip().lower().replace("_", "-").replace(" ", "-")
+        for value in (service_scope_keys or [])
+        if str(value or "").strip()
+    }
+    visible = _string_list(parsed.get("visible_scope_keys"), cap=32)
+    hero = _string_list(parsed.get("hero_scope_keys"), cap=16)
+    if allowed:
+        visible = [value for value in visible if value in allowed]
+        hero = [value for value in hero if value in allowed]
+    defects = _string_list(parsed.get("defects"), cap=12)
+    inventory_raw = parsed.get("fixture_inventory")
+    inventory: Dict[str, Any] = {}
+    if isinstance(inventory_raw, dict):
+        for raw_key, raw_value in list(inventory_raw.items())[:24]:
+            key = str(raw_key or "").strip().lower().replace(" ", "_")[:64]
+            if not key or not isinstance(raw_value, (str, int, float, bool)):
+                continue
+            inventory[key] = raw_value
+
+    def score(key: str, fallback: float) -> float:
+        try:
+            return round(max(0.0, min(1.0, float(parsed.get(key)))), 3)
+        except (TypeError, ValueError):
+            return fallback
+
+    structural_valid = parsed.get("structural_valid") is True and not defects
+    return {
+        "version": 1,
+        # Suggestions can never enter runtime retrieval until a human flips both fields.
+        "eligible": False,
+        "review_status": "pending",
+        "service_id": str(service_id or parsed.get("service_id") or "").strip() or None,
+        "visible_scope_keys": visible,
+        "hero_scope_keys": hero,
+        "finish_tier": _closed(parsed.get("finish_tier"), DISCOVERY_TIERS, "mid"),
+        "layout_family": str(parsed.get("layout_family") or "general").strip().lower().replace(" ", "-")[:80] or "general",
+        "camera_angle": str(parsed.get("camera_angle") or "wide-three-quarter").strip().lower().replace(" ", "-")[:80] or "wide-three-quarter",
+        "fixture_inventory": inventory,
+        "plainness_score": score("plainness_score", 0.5),
+        "editability_score": score("editability_score", 0.5),
+        "structural_valid": structural_valid,
+        "defects": defects,
+        "suggested_by_model": str(model or parsed.get("model") or "").strip() or None,
+        "suggested_at": _now(),
+    }
+
+
+def suggest_starter_profile(
+    image_url: str,
+    *,
+    service_id: str = "",
+    service_scope_keys: Optional[List[str]] = None,
+) -> Optional[Dict[str, Any]]:
+    """Offline-only starter metadata prefill. Human approval remains mandatory."""
+    if not catalog_vision_enabled():
+        return None
+    url = str(image_url or "").strip()
+    if not (url.startswith("http://") or url.startswith("https://")):
+        return None
+    model = _cheap_model()
+    raw = _run_vision(url, model=model, role="starter")
+    if not raw:
+        return None
+    return normalize_starter_profile_suggestion(
+        raw,
+        service_id=service_id,
+        service_scope_keys=service_scope_keys,
+        model=model,
+    )
 
 
 def _string_list(raw: Any, *, cap: int) -> List[str]:
@@ -327,6 +430,17 @@ def _gemini_key() -> str:
 
 
 def _prompt(role: str) -> Tuple[str, str]:
+    if role == "starter":
+        return (
+            "You inspect remodeling photos proposed as neutral AI-editing anchors. Return JSON only. "
+            "Describe only what is visibly present. Count major fixtures and outdoor zones exactly. "
+            "Flag duplicate fixtures, warped geometry, impossible reflections, collage layouts, text, people, "
+            "watermarks, blur, and AI artifacts. A starter should be plain, structurally believable, broadly editable, "
+            "and photographed from a useful wide or component-focused angle. Do not approve or reject it; humans do that.",
+            "Return JSON with visible_scope_keys, hero_scope_keys, finish_tier (value/mid/premium/luxury), "
+            "layout_family, camera_angle, fixture_inventory (object of exact counts/types), plainness_score (0-1), "
+            "editability_score (0-1), structural_valid (boolean), and defects (array).",
+        )
     system = (
         "You index remodeling photos for an inspiration gallery. Return JSON only. "
         "This board is Pinterest-style inspiration — not a before photo, not a blank starter room, "
@@ -480,7 +594,7 @@ def _replicate_model_id(model: str) -> str:
         return name
     if "gemini" in name.lower():
         return f"google/{name}"
-    return name or "openai/gpt-4.1-nano"
+    return name or "openai/gpt-5-mini"
 
 
 def _replicate_input(model_id: str, *, system: str, user: str, image_url: str) -> Dict[str, Any]:
@@ -491,6 +605,15 @@ def _replicate_input(model_id: str, *, system: str, user: str, image_url: str) -
             "images": images,
             "max_output_tokens": 800,
             "temperature": 0.1,
+        }
+    if "gpt-5" in model_id.lower():
+        return {
+            "system_prompt": system,
+            "prompt": user,
+            "image_input": images,
+            "max_completion_tokens": 800,
+            "reasoning_effort": "minimal",
+            "verbosity": "low",
         }
     return {
         "system_prompt": system,
@@ -514,13 +637,16 @@ def _replicate_json(image_url: str, *, model: str, system: str, user: str) -> Op
         final = _replicate_wait_for_completion(str(pred_id), timeout_sec=_TIMEOUT)
         if str(final.get("status") or "").lower() != "succeeded":
             return None
-        return _extract_json_from_text(final.get("output"))
+        output = final.get("output")
+        text = "".join(str(part) for part in output) if isinstance(output, list) else str(output or "")
+        return _extract_json_from_text(text)
     except Exception:
         return None
 
 
 __all__ = [
     "AESTHETIC_REJECT",
+    "CATALOG_METADATA_SPEC_VERSION",
     "DISCOVERY_SCOPES",
     "DISCOVERY_STYLES",
     "DISCOVERY_TIERS",
@@ -532,5 +658,6 @@ __all__ = [
     "inspiration_blocked",
     "needs_review",
     "normalize_catalog_tags",
+    "project_manifest_from_catalog_tags",
     "tag_catalog_photo",
 ]

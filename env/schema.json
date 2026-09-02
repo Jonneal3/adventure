@@ -49,7 +49,7 @@
     {
       "name": "NEXT_PUBLIC_SUPABASE_URL",
       "group": "supabase",
-      "apps": ["adv-widget", "adv-designer", "adv-shopify"],
+      "apps": ["adv-widget", "adv-designer", "adv-shopify", "adv-api-service"],
       "targets": ["development", "preview", "production"],
       "required": true,
       "secret": false
@@ -65,7 +65,7 @@
     {
       "name": "SUPABASE_SERVICE_ROLE_KEY",
       "group": "supabase",
-      "apps": ["adv-widget", "adv-designer", "adv-shopify"],
+      "apps": ["adv-widget", "adv-designer", "adv-shopify", "adv-api-service"],
       "targets": ["development", "preview", "production"],
       "required": true,
       "secret": true
@@ -73,7 +73,7 @@
     {
       "name": "SUPABASE_URL",
       "group": "supabase",
-      "apps": ["adv-shopify"],
+      "apps": ["adv-shopify", "adv-api-service"],
       "targets": ["development", "preview", "production"],
       "required": true,
       "secret": false,

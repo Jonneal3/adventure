@@ -618,6 +618,59 @@ def _extract_scene_refinement_inputs(payload: Dict[str, Any]) -> Dict[str, Any]:
         max_len=500,
     )
     tier_shift_refinement = generation_intent_raw == "budget_tier_shift"
+    style_shift_refinement = generation_intent_raw == "style_shift"
+    component_tier_shift_refinement = generation_intent_raw == "component_tier_shift"
+    if tier_shift_refinement:
+        resolved_refinement_notes = (
+            "Budget tier shift requested. Make broad finish/material changes that clearly match the new budget tier while preserving geometry. "
+            + refinement_notes
+            if refinement_notes
+            else "Budget tier shift requested. Make broad finish/material changes that clearly match the new budget tier while preserving geometry."
+        )
+        resolved_reference_adherence = (
+            "Budget tier shift anchor constraint: preserve the current scene composition, camera, perspective, geometry, and lighting "
+            "direction, but allow broad replacement of service-touched materials, fixtures, and finishes so the result visibly lands in "
+            "the new budget tier."
+        )
+        resolved_budget_requirements = placement_inputs.get("budget_requirements") or ""
+    elif style_shift_refinement:
+        resolved_refinement_notes = (
+            "Whole-canvas style shift requested. Apply the requested palette, material, lighting, and vibe changes broadly across "
+            "visible service-touched finishes while preserving geometry and fixture locations. "
+            + refinement_notes
+            if refinement_notes
+            else "Whole-canvas style shift requested. Apply broad palette, material, lighting, and vibe changes while preserving geometry."
+        )
+        resolved_reference_adherence = (
+            "Style-shift anchor constraint: preserve the current scene composition, camera, perspective, geometry, fixture locations, "
+            "doors/windows, and full image framing, but allow broad color, palette, surface, material, finish, and lighting-temperature "
+            "changes across visible service-touched elements. Do not reduce the request to a tiny accent."
+        )
+        resolved_budget_requirements = placement_inputs.get("budget_requirements") or ""
+    elif component_tier_shift_refinement:
+        resolved_refinement_notes = (
+            "Targeted component finish-tier upgrade requested. Upgrade the named component visibly while preserving the surrounding room. "
+            + refinement_notes
+            if refinement_notes
+            else "Targeted component finish-tier upgrade requested. Upgrade the named component visibly while preserving the surrounding room."
+        )
+        resolved_reference_adherence = (
+            "Component-tier anchor constraint: preserve the current scene composition, camera, perspective, geometry, lighting direction, "
+            "fixture locations, and all non-target materials/objects. Allow the named target component only to move one to two finish "
+            "tiers higher with clearer materials, better hardware, cleaner detailing, and stronger visual presence. A tiny color shift "
+            "is not sufficient."
+        )
+        resolved_budget_requirements = (
+            "Budget realism: keep the overall room plausible for the supplied project budget, but the user's explicit named-component "
+            "upgrade may exceed the original tier for that component only. Do not upgrade unrelated elements into luxury."
+        )
+    else:
+        resolved_refinement_notes = refinement_notes
+        resolved_reference_adherence = (
+            "Hard anchor constraint: preserve the current scene composition, camera, perspective, geometry, depth relationships, "
+            "lighting direction, and unchanged objects/materials. Make only the requested local design refinements."
+        )
+        resolved_budget_requirements = placement_inputs.get("budget_requirements") or ""
     return {
         "service_summary": placement_inputs.get("service_summary") or "Refine the current scene design.",
         "subject": placement_inputs.get("subject") or "project",
@@ -626,24 +679,10 @@ def _extract_scene_refinement_inputs(payload: Dict[str, Any]) -> Dict[str, Any]:
         "scene_context": "User provided an existing scene/design image that should remain the anchor.",
         "user_preferences": placement_inputs.get("user_preferences") or "",
         "previous_prompt": previous_prompt,
-        "refinement_notes": (
-            "Budget tier shift requested. Make broad finish/material changes that clearly match the new budget tier while preserving geometry. "
-            + refinement_notes
-            if tier_shift_refinement and refinement_notes
-            else "Budget tier shift requested. Make broad finish/material changes that clearly match the new budget tier while preserving geometry."
-            if tier_shift_refinement
-            else refinement_notes
-        ),
-        "reference_adherence": (
-            "Budget tier shift anchor constraint: preserve the current scene composition, camera, perspective, geometry, and lighting "
-            "direction, but allow broad replacement of service-touched materials, fixtures, and finishes so the result visibly lands in "
-            "the new budget tier."
-            if tier_shift_refinement
-            else "Hard anchor constraint: preserve the current scene composition, camera, perspective, geometry, depth relationships, "
-            "lighting direction, and unchanged objects/materials. Make only the requested local design refinements."
-        ),
+        "refinement_notes": resolved_refinement_notes,
+        "reference_adherence": resolved_reference_adherence,
         "budget_level": placement_inputs.get("budget_level") or "",
-        "budget_requirements": placement_inputs.get("budget_requirements") or "",
+        "budget_requirements": resolved_budget_requirements,
     }
 
 

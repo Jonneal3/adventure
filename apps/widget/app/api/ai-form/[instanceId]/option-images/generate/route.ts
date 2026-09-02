@@ -63,7 +63,9 @@ export async function POST(request: NextRequest, { params }: { params: { instanc
     String(process.env.OPTION_IMAGES_ENABLED || process.env.AI_FORM_OPTION_IMAGES || "")
       .trim()
       .toLowerCase() === "true";
-  if (!optionImagesEnabled) {
+  const isV8RefinementThumbnailRequest =
+    body?.generationPurpose === "v8-refinement-thumbnail";
+  if (!optionImagesEnabled && !isV8RefinementThumbnailRequest) {
     const stepIdEarly = typeof body?.stepId === "string" ? body.stepId.trim() : "";
     const questionEarly = typeof body?.question === "string" ? body.question.trim() : "Choose an option.";
     const optsFromBody = Array.isArray(body?.options) ? body.options : (body?.step && typeof body.step === "object" ? (body.step as any)?.options : null);

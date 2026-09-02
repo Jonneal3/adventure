@@ -31,10 +31,44 @@ type WriteBackCandidate = {
   serviceLabel?: string;
   industry?: string;
   scope?: string;
+  finishTier?: string;
+  /** Legacy only; new catalog writes use finishTier. */
   priceTier?: string;
+  priceRange?: { min?: number; max?: number; currency?: string; source?: string } | null;
   modelId?: string;
+  projectManifest?: Record<string, unknown> | null;
   writeBack?: Record<string, unknown>;
 };
+
+function statKeyForEvent(type: string): "shown" | "selected" | "saved" | "shared" | "conversions" | null {
+  if (type === "shown") return "shown";
+  if (type === "selected" || type === "favorite") return "selected";
+  if (type === "saved") return "saved";
+  if (type === "share" || type === "shared") return "shared";
+  if (type === "conversion" || type === "quote") return "conversions";
+  return null;
+}
+
+function emptyStats() {
+  return { shown: 0, selected: 0, saved: 0, shared: 0, conversions: 0, impressions: 0, clicks: 0 };
+}
+
+function incrementStat(stats: Record<string, unknown>, type: string) {
+  const key = statKeyForEvent(type);
+  if (!key) return;
+  stats[key] = Number(stats[key] || 0) + 1;
+  if (key === "shown") stats.impressions = Number(stats.impressions || 0) + 1;
+  if (key === "selected") stats.clicks = Number(stats.clicks || 0) + 1;
+}
+
+function isWorthKeeping(stats: Record<string, unknown>): boolean {
+  return (
+    Number(stats.selected || 0) > 0 ||
+    Number(stats.saved || 0) > 0 ||
+    Number(stats.shared || 0) > 0 ||
+    Number(stats.conversions || 0) > 0
+  );
+}
 
 export async function POST(req: NextRequest, ctx: Ctx) {
   const { instanceId } = await ctx.params;
@@ -74,7 +108,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     try {
       const { data: rows } = await supabase
         .from("images")
-        .select("id, metadata")
+        .select("id, metadata, instance_id")
         .eq("image_url", url)
         .limit(3);
       for (const row of rows || []) {
@@ -83,12 +117,42 @@ export async function POST(req: NextRequest, ctx: Ctx) {
         const stats =
           (meta as any).adventure_stats && typeof (meta as any).adventure_stats === "object"
             ? { ...(meta as any).adventure_stats }
-            : { shown: 0, selected: 0, saved: 0, conversions: 0 };
-        if (type === "shown") stats.shown = Number(stats.shown || 0) + 1;
-        if (type === "selected" || type === "favorite") stats.selected = Number(stats.selected || 0) + 1;
-        if (type === "saved") stats.saved = Number(stats.saved || 0) + 1;
-        if (type === "conversion" || type === "quote") stats.conversions = Number(stats.conversions || 0) + 1;
+            : emptyStats();
+        incrementStat(stats, type);
         (meta as any).adventure_stats = stats;
+
+        const usage =
+          (meta as any).adventure_usage && typeof (meta as any).adventure_usage === "object"
+            ? { ...(meta as any).adventure_usage }
+            : {};
+        const byInstance =
+          usage.by_instance && typeof usage.by_instance === "object"
+            ? { ...usage.by_instance }
+            : {};
+        const alreadyTracked = Boolean(byInstance[id]);
+        const localStats =
+          byInstance[id] && typeof byInstance[id] === "object"
+            ? { ...byInstance[id] }
+            : emptyStats();
+        incrementStat(localStats, type);
+        localStats.last_used_at = new Date().toISOString();
+        byInstance[id] = localStats;
+        const trackedEntries = Object.entries(byInstance);
+        if (trackedEntries.length > 40) {
+          trackedEntries
+            .sort((a, b) => String((b[1] as any)?.last_used_at || "").localeCompare(String((a[1] as any)?.last_used_at || "")))
+            .slice(40)
+            .forEach(([instanceKey]) => delete byInstance[instanceKey]);
+        }
+        usage.by_instance = byInstance;
+        usage.instance_count = Math.max(
+          Number(usage.instance_count || 0) + (alreadyTracked ? 0 : 1),
+          Object.keys(byInstance).length
+        );
+        usage.last_instance_id = id;
+        (meta as any).adventure_usage = usage;
+        (meta as any).worth_keeping = isWorthKeeping(stats);
+        (meta as any).reusable_status = isWorthKeeping(stats) ? "reusable" : "candidate";
         await supabase.from("images").update({ metadata: meta }).eq("id", row.id);
         eventsApplied += 1;
       }
@@ -122,6 +186,41 @@ export async function POST(req: NextRequest, ctx: Ctx) {
           ? (candidate as any).scopeKeys
           : [];
       const mode = String((wb as any).adventure_mode || "ideas");
+      const finishTier = String(
+        candidate.finishTier || (wb as any).finish_tier || candidate.priceTier || (wb as any).price_tier || ""
+      ).trim();
+      const demandKey = String((wb as any).catalog_demand_key || "").trim();
+      if (demandKey) {
+        const { data: cachedDemand } = await supabase
+          .from("images")
+          .select("id")
+          .eq("subcategory_id", subcategoryId)
+          .contains("metadata", { catalog_demand_key: demandKey })
+          .limit(1);
+        if (cachedDemand && cachedDemand.length > 0) continue;
+      }
+      const initialStats: Record<string, unknown> = emptyStats();
+      for (const event of events) {
+        if (String(event?.url || "").trim() !== url) continue;
+        incrementStat(initialStats, String(event?.type || "").trim().toLowerCase());
+      }
+      const hasUsage = Object.values(initialStats).some((value) => Number(value || 0) > 0);
+      const worthKeeping = isWorthKeeping(initialStats);
+      const projectManifest =
+        candidate.projectManifest && typeof candidate.projectManifest === "object"
+          ? candidate.projectManifest
+          : (wb as any).project_manifest && typeof (wb as any).project_manifest === "object"
+            ? (wb as any).project_manifest
+            : null;
+      const discovery =
+        (wb as any).discovery && typeof (wb as any).discovery === "object"
+          ? (wb as any).discovery
+          : null;
+      const manifestComponents = Array.isArray((projectManifest as any)?.components)
+        ? (projectManifest as any).components
+            .map((component: any) => String(component?.label || component?.key || "").trim())
+            .filter(Boolean)
+        : [];
       const metadata = {
         generated_for: "adventure_v8",
         catalog_key: `adventure:${id}:${Buffer.from(url).toString("base64url").slice(0, 24)}`,
@@ -135,8 +234,10 @@ export async function POST(req: NextRequest, ctx: Ctx) {
         tags: Array.isArray((wb as any).tags)
           ? (wb as any).tags.map((t: unknown) => String(t || "").trim()).filter(Boolean)
           : scopeKeys,
-        price_tier: candidate.priceTier || (wb as any).price_tier || "",
-        budget: (wb as any).budget || "",
+        finish_tier: finishTier,
+        price_range: candidate.priceRange || (wb as any).price_range || null,
+        price_relationship: String((wb as any).price_relationship || finishTier || ""),
+        catalog_demand_key: demandKey,
         category_name: candidate.industry || "",
         subcategory_name: candidate.serviceLabel || "",
         subcategory_id: subcategoryId,
@@ -149,14 +250,25 @@ export async function POST(req: NextRequest, ctx: Ctx) {
         palette: (wb as any).palette || "",
         surfaces: (wb as any).surfaces || "",
         fixtures: (wb as any).fixtures || "",
+        materials: Array.isArray((wb as any).materials)
+          ? (wb as any).materials.map((item: unknown) => String(item || "").trim()).filter(Boolean)
+          : [],
         style: (wb as any).style || "",
         palette_family: (wb as any).palette_family || "",
-        adventure_stats: {
-          shown: mode === "inspiration" ? 1 : 0,
-          selected: mode === "inspiration" ? 0 : 1,
-          saved: 0,
-          conversions: 0,
+        discovery,
+        project_manifest: projectManifest,
+        included_items: manifestComponents,
+        image_description: String((projectManifest as any)?.description || ""),
+        adventure_stats: initialStats,
+        adventure_usage: {
+          instance_count: hasUsage ? 1 : 0,
+          last_instance_id: hasUsage ? id : "",
+          by_instance: hasUsage
+            ? { [id]: { ...initialStats, last_used_at: new Date().toISOString() } }
+            : {},
         },
+        worth_keeping: worthKeeping,
+        reusable_status: worthKeeping ? "reusable" : "candidate",
         source: "adventure_v8_writeback",
       };
 

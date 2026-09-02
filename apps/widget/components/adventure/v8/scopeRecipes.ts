@@ -28,13 +28,68 @@ const QUESTION = "What would you like to include?";
 const SUBTITLE = "Pick everything that applies.";
 const OTHER_LABEL = "Other";
 
+// Scope choices should describe a visible element the customer can choose in a
+// design. Keep whole-project and custom paths, but omit mechanical systems,
+// behind-the-wall work, and process-only tasks.
+const NON_VISUAL_SCOPE_PART =
+  /\b(?:demolition|permits?|inspections?|labor|installation|project management|design services?|site prep|prep work|layout changes?|plumbing|electrical|structural work|framing|waterproofing|drainage|irrigation|ventilation|equipment|mechanicals?|hvac|ductwork|exhaust fans?|pumps?|filters?|heaters?|rough-?in|wiring|underlayment|footings?|excavation|grading|cleanup|disposal)\b/i;
+const AWKWARD_OR_NON_DESIGN_SCOPE_PART = /\bflooring\s*\(\s*non[-\s]?tile\s*\)/i;
+
+// Stored service taxonomies often mix visible selections with operational
+// work. Once the service is known, require a term that belongs in a finished
+// project image for that vertical.
+const VISUAL_SCOPE_PART_BY_VERTICAL: Record<string, RegExp> = {
+  bathroom:
+    /\b(?:shower|tub|bathtub|vanit(?:y|ies)|sink|cabinet|storage|countertops?|toilet|floor tile|wall tile|tiles?|faucets?|fixtures?|lighting|lights?|mirror|medicine cabinet|paint|trim|hardware|backsplash|niche|shelving|doors?|windows?|glass|partition|grab bars?|accessor(?:y|ies)|towel bars?)\b/i,
+  kitchen:
+    /\b(?:cabinets?|countertops?|islands?|backsplash|flooring|floors?|lighting|lights?|sinks?|faucets?|appliances?|pantry|shelving|range hood|hardware|paint|trim|tiles?|doors?|windows?)\b/i,
+  landscaping:
+    /\b(?:pavers?|hardscape|patios?|walkways?|paths?|driveways?|retaining walls?|rock walls?|planting|plants?|trees?|shrubs?|gardens?|flowers?|lawns?|sod|turf|mulch|gravel|stone|outdoor lighting|fire pits?|water features?|fountains?|ponds?|pergolas?|decks?|fences?|edging|raised beds?)\b/i,
+  painting:
+    /\b(?:rooms?|walls?|ceilings?|trim|doors?|cabinets?|exterior|interior|siding|fences?|decks?|railings?|accent walls?)\b/i,
+  pool:
+    /\b(?:pool shell|interior finish|plaster|pebble|decks?|coping|waterline tiles?|tiles?|lighting|lights?|water features?|fountains?|steps?|spas?|hot tubs?|benches?|seating|slides?)\b/i,
+  flooring:
+    /\b(?:living areas?|kitchens?|bedrooms?|stairs?|bathrooms?|entries?|entryways?|hallways?|basements?|floors?|flooring|hardwood|tiles?|carpet|vinyl|laminate)\b/i,
+  pergola:
+    /\b(?:structure|posts?|beams?|rafters?|roof|canopy|shade|screens?|ceiling fans?|lighting|lights?|paint|stain|color)\b/i,
+  windows:
+    /\b(?:windows?|entry doors?|sliding doors?|patio doors?|french doors?|frames?|trim|glass|grilles?|hardware|shutters?)\b/i,
+  roofing:
+    /\b(?:shingles?|metal roofing|roof tiles?|roof material|gutters?|fascia|soffit|skylights?)\b/i,
+  siding:
+    /\b(?:siding|trim|fascia|soffit|shutters?|accents?|stone veneer|brick veneer|paint|color)\b/i,
+  fencing:
+    /\b(?:fence lines?|fences?|gates?|posts?|panels?|privacy screens?|screening|lattice|paint|stain|color)\b/i,
+};
+
+export function isVisualScopePart(label: string, vertical?: string | null): boolean {
+  const clean = String(label || "").trim();
+  if (!clean || NON_VISUAL_SCOPE_PART.test(clean) || AWKWARD_OR_NON_DESIGN_SCOPE_PART.test(clean)) return false;
+  const verticalFilter = vertical ? VISUAL_SCOPE_PART_BY_VERTICAL[vertical] : null;
+  return verticalFilter ? verticalFilter.test(clean) : true;
+}
+
 const VERTICALS: Record<string, VerticalScopeRecipe> = {
   bathroom: {
     key: "bathroom",
     question: QUESTION,
     subtitle: SUBTITLE,
     fullScope: "Full Bathroom Remodel",
-    parts: ["Vanity", "Shower / Tub", "Tile", "Flooring", "Paint", "Lighting"],
+    parts: [
+      "Shower / Tub",
+      "Vanity",
+      "Cabinets & Storage",
+      "Countertop",
+      "Toilet",
+      "Floor Tile",
+      "Wall Tile",
+      "Faucets & Fixtures",
+      "Lighting",
+      "Mirror / Medicine Cabinet",
+      "Paint & Trim",
+      "Hardware",
+    ],
   },
   kitchen: {
     key: "kitchen",
@@ -48,7 +103,17 @@ const VERTICALS: Record<string, VerticalScopeRecipe> = {
     question: QUESTION,
     subtitle: SUBTITLE,
     fullScope: "Full Landscape Project",
-    parts: ["Pavers", "Rock Walls", "Planting", "Irrigation", "Outdoor Lighting", "Fire Pit"],
+    parts: [
+      "Pavers & Walkways",
+      "Patio",
+      "Retaining Walls",
+      "Planting",
+      "Lawn / Turf",
+      "Mulch / Gravel",
+      "Outdoor Lighting",
+      "Fire Pit",
+      "Water Feature",
+    ],
   },
   painting: {
     key: "painting",
@@ -62,7 +127,7 @@ const VERTICALS: Record<string, VerticalScopeRecipe> = {
     question: QUESTION,
     subtitle: SUBTITLE,
     fullScope: "Complete Pool Remodel",
-    parts: ["Shell", "Deck", "Waterline Tile", "Equipment", "Lighting", "Water Features"],
+    parts: ["Interior Finish", "Deck & Coping", "Waterline Tile", "Lighting", "Water Features"],
   },
   flooring: {
     key: "flooring",
@@ -76,7 +141,7 @@ const VERTICALS: Record<string, VerticalScopeRecipe> = {
     question: QUESTION,
     subtitle: SUBTITLE,
     fullScope: "Full Pergola Project",
-    parts: ["Structure", "Fan", "Lighting", "Shade"],
+    parts: ["Structure", "Ceiling Fan", "Lighting", "Shade"],
   },
   windows: {
     key: "windows",
@@ -90,7 +155,7 @@ const VERTICALS: Record<string, VerticalScopeRecipe> = {
     question: QUESTION,
     subtitle: SUBTITLE,
     fullScope: "Full Roof Replacement",
-    parts: ["Shingles", "Flashing", "Gutters", "Ventilation"],
+    parts: ["Shingles", "Metal Roofing", "Gutters", "Fascia & Soffit", "Skylights"],
   },
   siding: {
     key: "siding",
@@ -227,9 +292,10 @@ export function lookFitsSelectedScopes(opts: {
   }
   if (!parts.length) return true;
   if (selectedScopeHit(blob, parts)) return true;
-  if (looksLikeFinishedRoom(blob) && !looksLikeMaterialSwatch(blob)) return true;
-  if (OTHER_PART.test(blob)) return false;
-  return true;
+  // A finished adjacent room/yard is still the wrong pricing example for a
+  // focused choice. Library and generated rows both carry scope text, so an
+  // explicit scope hit is required here.
+  return false;
 }
 
 /** True when an image's labels clearly belong to a different trade than the selected service. */
@@ -292,28 +358,33 @@ function slug(label: string): string {
 export function storedScopeParts(opts: {
   knownParts?: Array<string | { label?: string; id?: string }> | null;
   componentLabels?: Array<string | { label?: string; key?: string }> | null;
+  vertical?: string | null;
 }): string[] {
   const fromKnown: string[] = [];
   for (const part of opts.knownParts || []) {
     const label = String(typeof part === "string" ? part : part?.label || part?.id || "").trim();
-    if (label && !isOtherPart(label) && !isOverallPart(label)) fromKnown.push(label);
+    if (label && !isOtherPart(label) && !isOverallPart(label) && isVisualScopePart(label, opts.vertical)) {
+      fromKnown.push(label);
+    }
   }
   if (fromKnown.length > 0) return Array.from(new Set(fromKnown));
 
   const fromComponents: string[] = [];
   for (const part of opts.componentLabels || []) {
     const label = String(typeof part === "string" ? part : part?.label || part?.key || "").trim();
-    if (label && !isOtherPart(label) && !isOverallPart(label)) fromComponents.push(label);
+    if (label && !isOtherPart(label) && !isOverallPart(label) && isVisualScopePart(label, opts.vertical)) {
+      fromComponents.push(label);
+    }
   }
   return Array.from(new Set(fromComponents));
 }
 
-export function scopeChoicesFromParts(fullScope: string, parts: string[]): ScopeChoice[] {
+export function scopeChoicesFromParts(fullScope: string, parts: string[], vertical?: string | null): ScopeChoice[] {
   const out: ScopeChoice[] = [{ id: "full", label: fullScope, role: "full" }];
   const seen = new Set([fullScope.toLowerCase(), "other", "everything"]);
   for (const part of parts) {
     const label = String(part || "").trim();
-    if (!label || seen.has(label.toLowerCase())) continue;
+    if (!label || !isVisualScopePart(label, vertical) || seen.has(label.toLowerCase())) continue;
     seen.add(label.toLowerCase());
     out.push({ id: slug(label), label, role: "part" });
   }
@@ -336,11 +407,12 @@ export function buildScopeQuestion(opts: {
   const stored = storedScopeParts({
     knownParts: opts.knownParts,
     componentLabels: opts.componentLabels,
+    vertical: recipe.key,
   });
   const parts = stored.length > 0 ? stored : recipe.parts;
   return {
     recipe,
-    choices: scopeChoicesFromParts(recipe.fullScope, parts),
+    choices: scopeChoicesFromParts(recipe.fullScope, parts, recipe.key),
     source: stored.length > 0 ? "service" : "recipe",
   };
 }

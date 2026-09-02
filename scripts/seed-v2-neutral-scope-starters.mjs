@@ -30,6 +30,28 @@ const starters = [
       "Intentionally plain builder-grade complete bathroom photographed from the doorway, showing a standard alcove tub-shower, toilet, single vanity, mirror, basic lighting, and simple floor. The entire compact room is the subject. Off-white walls, white fixtures, plain light-gray flooring, ordinary chrome, no decor, premium materials, people, text, logos, or watermark.",
   },
   {
+    file: "bathroom-full-renovation-neutral-angle-b.png",
+    service: "Bathroom Remodeling",
+    subcategoryId: bathroomSubcategoryId,
+    scope: "Full bathroom renovation",
+    variantId: "doorway-wide-white",
+    variantLabel: "Doorway wide · white vanity",
+    cameraAngle: "doorway-three-quarter-wide-white-vanity",
+    prompt:
+      "Intentionally plain, clean, newly installed compact American hall bathroom from a slightly off-center doorway angle. Exactly one white alcove tub-shower, one toilet, and one 30-inch single-sink white vanity are fully visible with plausible clearances. Fresh white ceramic tile, pale-gray floor tile, ordinary chrome, warm-white walls, and neutral daylight. No second wet zone or fixture, curtain, decor, personal items, premium styling, people, text, logos, or watermark.",
+  },
+  {
+    file: "bathroom-full-renovation-neutral-angle-c.png",
+    service: "Bathroom Remodeling",
+    subcategoryId: bathroomSubcategoryId,
+    scope: "Full bathroom renovation",
+    variantId: "opposite-corner-oak",
+    variantLabel: "Opposite corner · oak vanity",
+    cameraAngle: "opposite-doorway-three-quarter-wide-oak-vanity",
+    prompt:
+      "Intentionally plain, clean, newly installed compact American hall bathroom from the opposite doorway corner. Exactly one white alcove tub-shower, one toilet, and one 30-inch single-sink light-oak vanity are fully visible with plausible clearances. Fresh white ceramic tile, pale-gray floor tile, brushed nickel, off-white walls, and neutral daylight. No second wet zone or fixture, curtain, decor, personal items, premium styling, people, text, logos, or watermark.",
+  },
+  {
     file: "bathroom-shower-tub-neutral.png",
     service: "Bathroom Remodeling",
     subcategoryId: bathroomSubcategoryId,
@@ -76,6 +98,46 @@ const starters = [
     scope: "Full outdoor renovation",
     prompt:
       "Intentionally plain suburban backyard showing the basic zones a full outdoor renovation can transform: broad lawn, small plain concrete pad, simple walkway, sparse foundation bed, fence, and house edge. Wide realistic property photo, no pool, pergola, firepit, outdoor kitchen, luxury furniture, elaborate planting, people, text, logos, or watermark.",
+  },
+  {
+    file: "landscape-outdoor-kitchen-dining-neutral.png",
+    service: "Landscaping",
+    subcategoryId: landscapeSubcategoryId,
+    scope: "Outdoor kitchen",
+    variantId: "kitchen-dining-seating-wide",
+    variantLabel: "Outdoor kitchen · dining · seating",
+    prompt:
+      "Intentionally plain suburban patio with exactly one modest straight outdoor kitchen and grill, one simple outdoor dining table, and one separate two-chair seating zone. Wide house-to-yard view with ordinary concrete, lawn, realistic clearances, and neutral daylight. No duplicate zones, pergola, fire pit, pool, elaborate planting, luxury styling, people, text, logos, or watermark.",
+  },
+  {
+    file: "landscape-pergola-fire-pit-neutral.png",
+    service: "Landscaping",
+    subcategoryId: landscapeSubcategoryId,
+    scope: "Pergola",
+    variantId: "pergola-fire-pit-seating-wide",
+    variantLabel: "Pergola · fire pit · seating",
+    prompt:
+      "Intentionally plain suburban patio with exactly one simple rectangular wood pergola, one small round built-in fire pit, and one seating group of four ordinary chairs. Wide three-quarter view with complete structure and realistic clearances. No duplicate zones, outdoor kitchen, dining table, pool, luxury styling, people, text, logos, or watermark.",
+  },
+  {
+    file: "landscape-retaining-fence-drainage-neutral.png",
+    service: "Landscaping",
+    subcategoryId: landscapeSubcategoryId,
+    scope: "Retaining walls",
+    variantId: "retaining-fence-drainage-wide",
+    variantLabel: "Retaining wall · fence · drainage",
+    prompt:
+      "Intentionally plain residential side yard with exactly one low block retaining wall, one wood privacy fence and gate, one shallow drainage swale, and one catch basin. Wide view showing grade and clearances. No duplicate structures, diagrams, arrows, luxury landscaping, people, text, logos, or watermark.",
+  },
+  {
+    file: "landscape-water-feature-neutral.png",
+    service: "Landscaping",
+    subcategoryId: landscapeSubcategoryId,
+    scope: "Water feature",
+    variantId: "single-basin-wide",
+    variantLabel: "Single basin water feature",
+    prompt:
+      "Intentionally plain suburban garden bed with exactly one small rectangular recirculating water basin and one low spillway. Wide view includes lawn, bed boundaries, fence, and house context. No second pond, fountain, waterfall, pool, luxury styling, people, text, logos, or watermark.",
   },
   {
     file: "landscape-patio-walkway-neutral.png",
@@ -136,6 +198,8 @@ const starters = [
 ].map((starter) => ({
   ...starter,
   scopeKey: slug(starter.scope),
+  variantId: starter.variantId || "focused-neutral-control",
+  variantLabel: starter.variantLabel || "Focused neutral control",
 }));
 
 function slug(value) {
@@ -148,6 +212,139 @@ function slug(value) {
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "")
     .slice(0, 100) || "scope";
+}
+
+const starterProfileDetails = {
+  "full-bathroom-renovation": {
+    visible: ["shower-tub", "vanity", "cabinets-storage", "cabinets-and-storage", "countertop", "toilet", "floor-tile", "wall-tile", "faucets-fixtures", "faucets-and-fixtures", "lighting", "mirror-medicine", "mirror-medicine-cabinet", "paint-trim", "paint-and-trim", "hardware", "exhaust-fan", "flooring-non-tile", "layout-changes", "plumbing-updates"],
+    layout: "compact-hall-bath",
+    camera: "doorway-three-quarter-wide",
+    inventory: { wet_zone_type: "tub-shower-combo", wet_zone_count: 1, vanity_count: 1, toilet_count: 1 },
+  },
+  "shower-or-tub-area-only": {
+    visible: ["shower-tub", "floor-tile", "wall-tile", "faucets-fixtures", "faucets-and-fixtures"],
+    layout: "alcove-wet-zone",
+    camera: "wet-zone-front-three-quarter",
+    inventory: { wet_zone_type: "tub-shower-combo", wet_zone_count: 1, vanity_count: 0, toilet_count: 0 },
+  },
+  "vanity-cabinets-and-fixtures": {
+    visible: ["vanity", "cabinets-storage", "cabinets-and-storage", "countertop", "faucets-fixtures", "faucets-and-fixtures", "lighting", "mirror-medicine", "mirror-medicine-cabinet", "hardware"],
+    layout: "single-vanity-wall",
+    camera: "vanity-front-three-quarter",
+    inventory: { wet_zone_count: 0, vanity_count: 1, toilet_count: 0 },
+  },
+  "tile-and-flooring": {
+    visible: ["shower-tub", "floor-tile", "wall-tile"],
+    layout: "bathroom-surface-study",
+    camera: "wide-downward-three-quarter",
+    inventory: { wet_zone_count: 1, vanity_count: 0, toilet_count: 0 },
+  },
+  "cosmetic-refresh-paint-lighting-hardware": {
+    visible: ["vanity", "cabinets-storage", "cabinets-and-storage", "countertop", "faucets-fixtures", "faucets-and-fixtures", "lighting", "mirror-medicine", "mirror-medicine-cabinet", "paint-trim", "paint-and-trim", "hardware"],
+    layout: "single-vanity-wall",
+    camera: "vanity-wall-wide",
+    inventory: { wet_zone_count: 0, vanity_count: 1, toilet_count: 0 },
+  },
+  "layout-or-plumbing-changes": {
+    visible: ["layout-changes", "plumbing-updates", "shower-tub", "vanity", "toilet"],
+    layout: "compact-hall-bath",
+    camera: "doorway-layout-wide",
+    inventory: { wet_zone_type: "tub-shower-combo", wet_zone_count: 1, vanity_count: 1, toilet_count: 1 },
+  },
+  "full-outdoor-renovation": {
+    visible: ["patio", "patio-terrace", "walkways", "walkways-and-paths", "lawn", "planting-beds", "trees-shrubs", "trees-and-shrubs", "privacy", "privacy-screening", "lighting", "outdoor-lighting", "irrigation", "drainage"],
+    layout: "suburban-backyard-wide",
+    camera: "house-to-yard-wide",
+    inventory: { lawn_zones: 1, patio_zones: 1, walkway_zones: 1, planting_zones: 1 },
+  },
+  "outdoor-kitchen": {
+    visible: ["outdoor-kitchen", "outdoor-grill-kitchen", "outdoor-dining", "outdoor-dining-area", "seating", "outdoor-seating-and-furniture", "patio", "patio-terrace", "walkways", "walkways-and-paths", "lawn"],
+    layout: "patio-kitchen-dining-seating",
+    camera: "house-to-yard-wide",
+    inventory: { outdoor_kitchen_zones: 1, grill_count: 1, dining_zones: 1, seating_zones: 1, patio_zones: 1 },
+  },
+  "pergola": {
+    visible: ["pergola", "pergola-shade-structure", "fire-pit", "fire-pit-fireplace", "seating", "outdoor-seating-and-furniture", "patio", "patio-terrace", "lawn"],
+    layout: "pergola-fire-pit-patio",
+    camera: "yard-three-quarter-wide",
+    inventory: { pergola_count: 1, fire_feature_count: 1, seating_zones: 1, patio_zones: 1 },
+  },
+  "retaining-walls": {
+    visible: ["retaining-walls", "privacy", "privacy-screening", "fence-gate", "drainage", "walkways", "walkways-and-paths", "planting-beds"],
+    layout: "graded-side-yard",
+    camera: "side-yard-depth-wide",
+    inventory: { retaining_wall_count: 1, fence_zones: 1, gate_count: 1, drainage_zones: 1, catch_basin_count: 1 },
+  },
+  "water-feature": {
+    visible: ["water-feature", "planting-beds", "lawn", "privacy"],
+    layout: "garden-bed-water-basin",
+    camera: "garden-corner-three-quarter-wide",
+    inventory: { water_feature_count: 1, spillway_count: 1, planting_zones: 1, lawn_zones: 1 },
+  },
+  "patio-and-walkway-upgrade": {
+    visible: ["patio", "patio-terrace", "walkways", "walkways-and-paths"],
+    layout: "patio-walkway-connection",
+    camera: "hardscape-wide-three-quarter",
+    inventory: { patio_zones: 1, walkway_zones: 1 },
+  },
+  "new-lawn-and-garden-installation": {
+    visible: ["lawn", "planting-beds", "trees-shrubs", "trees-and-shrubs"],
+    layout: "lawn-perimeter-bed",
+    camera: "yard-wide",
+    inventory: { lawn_zones: 1, planting_zones: 1 },
+  },
+  "driveway-resurfacing-and-repair": {
+    visible: ["driveway"],
+    layout: "two-car-driveway",
+    camera: "street-to-garage-wide",
+    inventory: { driveway_zones: 1 },
+  },
+  "hardscape-color-scheme-refresh": {
+    visible: ["patio", "patio-terrace", "walkways", "walkways-and-paths", "retaining-walls"],
+    layout: "connected-hardscape",
+    camera: "hardscape-wide",
+    inventory: { hardscape_zones: 1 },
+  },
+  "outdoor-lighting-installation": {
+    visible: ["lighting", "outdoor-lighting", "walkways", "walkways-and-paths"],
+    layout: "path-and-foundation-bed",
+    camera: "blue-hour-yard-wide",
+    inventory: { walkway_zones: 1, lighting_zones: 0 },
+  },
+  "irrigation-system-installation": {
+    visible: ["irrigation", "lawn", "planting-beds"],
+    layout: "lawn-perimeter-bed",
+    camera: "coverage-zone-wide",
+    inventory: { lawn_zones: 1, planting_zones: 1, irrigation_zones: 0 },
+  },
+  "tree-and-shrub-pruning-service": {
+    visible: ["trees-shrubs", "trees-and-shrubs", "privacy", "privacy-screening"],
+    layout: "foundation-planting-edge",
+    camera: "tree-shrub-wide",
+    inventory: { tree_zones: 1, shrub_zones: 1 },
+  },
+};
+
+function buildStarterProfile(starter) {
+  const details = starterProfileDetails[starter.scopeKey];
+  if (!details) throw new Error(`Missing starter profile for ${starter.scopeKey}`);
+  const visible = Array.from(new Set([starter.scopeKey, ...details.visible]));
+  return {
+    version: 1,
+    eligible: true,
+    review_status: "approved",
+    service_id: starter.subcategoryId,
+    visible_scope_keys: visible,
+    hero_scope_keys: starter.scopeKey.startsWith("full-") ? visible : [starter.scopeKey, ...details.visible.slice(0, 3)],
+    finish_tier: "value",
+    layout_family: details.layout,
+    camera_angle: starter.cameraAngle || details.camera,
+    fixture_inventory: details.inventory,
+    plainness_score: 0.95,
+    editability_score: 0.9,
+    structural_valid: true,
+    defects: [],
+  };
 }
 
 function requireCredentials() {
@@ -187,18 +384,20 @@ async function validatePublishedScopes(db) {
   for (const subcategoryId of activeSubcategoryIds) {
     const row = byId.get(subcategoryId);
     if (!row) throw new Error(`Active subcategory is missing: ${subcategoryId}`);
-    const expected = starters
-      .filter((starter) => starter.subcategoryId === subcategoryId)
-      .map((starter) => starter.scope);
     const actual = Array.isArray(row.subcategory_scope)
       ? row.subcategory_scope
       : [];
-    if (
-      expected.length !== actual.length ||
-      expected.some((scope) => !actual.includes(scope))
-    ) {
+    const covered = new Set(
+      starters
+        .filter((starter) => starter.subcategoryId === subcategoryId)
+        .flatMap((starter) => buildStarterProfile(starter).visible_scope_keys)
+    );
+    const missing = actual
+      .map((scope) => slug(scope))
+      .filter((scopeKey) => scopeKey !== "other" && !covered.has(scopeKey));
+    if (missing.length > 0) {
       throw new Error(
-        `Neutral starter manifest does not exactly cover published scopes for ${row.subcategory}`
+        `Neutral starter manifest does not cover published scopes for ${row.subcategory}: ${missing.join(", ")}`
       );
     }
   }
@@ -214,6 +413,7 @@ async function currentStarter(db, starter) {
     .eq("metadata->>generated_for", generatedFor)
     .eq("metadata->>catalog_revision", catalogRevision)
     .eq("metadata->>starter_scope_key", starter.scopeKey)
+    .eq("metadata->>starter_variant_id", starter.variantId)
     .limit(1)
     .maybeSingle();
   if (result.error) throw result.error;
@@ -254,7 +454,7 @@ async function uploadStarter(db, starter) {
           generated_for: generatedFor,
           starter_experiment_key: experimentKey,
           starter_scope_key: starter.scopeKey,
-          starter_variant_id: "focused-neutral-control",
+          starter_variant_id: starter.variantId,
         },
       })
       .select("id")
@@ -282,8 +482,9 @@ async function uploadStarter(db, starter) {
           starter_role: "focused_neutral_sample_space",
           starter_scope: starter.scope,
           starter_scope_key: starter.scopeKey,
-          starter_variant_id: "focused-neutral-control",
-          starter_variant_label: "Focused neutral control",
+          starter_variant_id: starter.variantId,
+          starter_variant_label: starter.variantLabel,
+          starter_profile: buildStarterProfile(starter),
           subcategory_id: starter.subcategoryId,
         },
         model_id: null,
@@ -317,6 +518,25 @@ async function main() {
   for (const starter of starters) {
     const existing = await currentStarter(db, starter);
     if (existing) {
+      const currentVersion = Number(existing.metadata?.starter_profile?.version || 0);
+      if (currentVersion !== 1) {
+        if (apply) {
+          const metadata = {
+            ...(existing.metadata || {}),
+            starter_profile: buildStarterProfile(starter),
+          };
+          const update = await db.from("images").update({ metadata }).eq("id", existing.id);
+          if (update.error) throw update.error;
+        }
+        results.push({
+          action: apply ? "updated-profile" : "would-update-profile",
+          imageId: existing.id,
+          scope: starter.scope,
+          service: starter.service,
+          url: existing.image_url,
+        });
+        continue;
+      }
       results.push({
         action: "existing",
         imageId: existing.id,

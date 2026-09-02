@@ -52,6 +52,7 @@ export function FormLoader({
 
     return (
       <div
+        data-adventure-ui="loader"
         className={cn(
           pillClass,
           className
@@ -59,11 +60,13 @@ export function FormLoader({
         style={pillStyle}
       >
         <Loader2
+          data-adventure-ui="loader-spinner"
           className={cn(iconSize, "animate-spin shrink-0")}
           style={{ color: spinnerColor }}
         />
         <div className="flex min-w-0 flex-1 flex-col gap-0.5">
           <span
+            data-adventure-ui="loader-message"
             className="text-xs font-medium truncate"
             style={{ fontFamily: theme.fontFamily, color: primaryTextColor }}
           >
@@ -85,17 +88,20 @@ export function FormLoader({
 
   return (
     <div
+      data-adventure-ui="loader"
       className={cn(
         "flex flex-col items-center justify-center gap-4 px-6 py-10 min-h-[280px]",
         className
       )}
     >
       <Loader2
+        data-adventure-ui="loader-spinner"
         className={cn(iconSize, "animate-spin")}
         style={{ color: primaryColor }}
       />
       <div className="text-center space-y-1 max-w-[260px]">
         <p
+          data-adventure-ui="loader-message"
           className="text-sm font-medium tracking-tight opacity-90"
           style={{ color: textColor }}
         >

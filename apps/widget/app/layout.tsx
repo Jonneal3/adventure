@@ -1,4 +1,7 @@
 import type { Metadata } from 'next';
+
+import { ThemeProvider } from '@/components/theme-provider';
+
 import './globals.css';
 
 const BRAND_NAME = "Adventure";
@@ -36,7 +39,9 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className="min-h-screen" suppressHydrationWarning>
-        {children}
+        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+          {children}
+        </ThemeProvider>
       </body>
     </html>
   );

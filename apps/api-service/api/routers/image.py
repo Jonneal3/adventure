@@ -277,13 +277,14 @@ def register(router: APIRouter, compat_router: APIRouter) -> None:
     @router.post("/subcategory-catalog/generate")
     async def subcategory_catalog_generate(payload: Dict[str, Any] = Body(default_factory=dict)) -> Any:
         from programs.form_pipeline.orchestrator import _should_skip_option_image_for_label  # noqa: E402
+        from programs.gallery_enrichment.prompts import build_after_prompt  # noqa: E402
         from programs.image_generator.providers.image_generation import generate_option_images_for_step  # noqa: E402
         from programs.subcategory_catalog.orchestrator import generate_subcategory_catalog  # noqa: E402
 
         planned = generate_subcategory_catalog(payload)
         if not planned.get("ok"):
             error = str(planned.get("error") or "").strip().lower()
-            status = HTTP_400_BAD_REQUEST if error == "missing_service_context" else 500
+            status = HTTP_400_BAD_REQUEST if error in {"missing_service_context", "missing_service_id", "unsupported_gallery_family"} else 500
             return JSONResponse(status_code=status, content=planned)
 
         question = sanitize_visual_context_text(planned.get("question") or "", max_len=240) or "Choose a starting visual direction."
@@ -300,6 +301,12 @@ def register(router: APIRouter, compat_router: APIRouter) -> None:
             max_len=320,
         ) or "Service"
         context_prompt = f"{service_str}: {question}"
+        target_scope = sanitize_visual_context_text(
+            payload.get("scope") or payload.get("scopeLabel") or payload.get("scope_label") or "",
+            max_len=160,
+        )
+        if target_scope:
+            context_prompt = f"{context_prompt}. Exact visible project scope: {target_scope}"
 
         try:
             max_opts = int(os.getenv("AI_FORM_SUBCATEGORY_CATALOG_MAX_OPTIONS") or "40")
@@ -325,7 +332,9 @@ def register(router: APIRouter, compat_router: APIRouter) -> None:
             image_prompt = sanitize_visual_context_text(concept.get("image_prompt") or concept.get("imagePrompt") or label, max_len=320)
             description = sanitize_visual_context_text(concept.get("description") or concept.get("descriptor") or "", max_len=200)
             price_tier = str(concept.get("price_tier") or concept.get("priceTier") or "").strip()
-            if not label or not image_prompt:
+            manifest = concept.get("manifest") if isinstance(concept.get("manifest"), dict) else None
+            pricing_preflight = concept.get("pricing_preflight") if isinstance(concept.get("pricing_preflight"), dict) else None
+            if not label or not image_prompt or not manifest or pricing_preflight.get("status") != "complete":
                 continue
 
             item: Dict[str, Any] = {
@@ -337,20 +346,14 @@ def register(router: APIRouter, compat_router: APIRouter) -> None:
                 item["description"] = description
             if price_tier in _PRICE_TIER_DESCS:
                 item["price_tier"] = price_tier
+            item["manifest"] = manifest
+            item["pricing_preflight"] = pricing_preflight
             normalized.append(item)
 
             if _should_skip_option_image_for_label(label) or len(indices) >= max_opts:
                 continue
 
-            prompt_text = image_prompt
-            if description and description.lower() not in image_prompt.lower():
-                prompt_text = f"{prompt_text}, {description}"
-            tier_suffix = f" {_PRICE_TIER_DESCS[price_tier]}" if price_tier in _PRICE_TIER_DESCS else ""
-            prompts.append(
-                f"Photorealistic photo of one finished scene, not a split-screen or before-and-after layout. "
-                f"No text, no words, no letters, no labels, no captions, no watermarks, no signs. "
-                f"{context_prompt}. Option: {prompt_text}.{tier_suffix}"
-            )
+            prompts.append(build_after_prompt(manifest, concept_description=description or image_prompt))
             indices.append(len(normalized) - 1)
 
         stats: Dict[str, int] = {}
@@ -720,6 +723,7 @@ def register(router: APIRouter, compat_router: APIRouter) -> None:
             "instanceId": instance_id,
             "useCase": "scene-refinement",
             "routingPolicy": routing_policy,
+            "adventureBxLatencyMs": pred.get("adventureBxLatencyMs") if isinstance(pred, dict) else None,
         }
 
     @compat_router.post("/generate/scene")

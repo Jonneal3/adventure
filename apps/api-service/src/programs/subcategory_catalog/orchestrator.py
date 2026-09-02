@@ -8,6 +8,9 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from programs.common.dspy_runtime import configure_dspy, extract_dspy_usage, make_dspy_lm_for_module
 from programs.common.visual_text_safety import sanitize_visual_context_text
+from programs.gallery_enrichment.manifest import validate_manifest
+from programs.gallery_enrichment.pricing import price_manifest
+from programs.gallery_enrichment.registry import registry_contract, resolve_pricing_family
 from programs.subcategory_catalog.program import SubcategoryCatalogProgram
 
 
@@ -67,7 +70,13 @@ def _resolve_strings(payload: Dict[str, Any]) -> Tuple[str, str, str, str]:
     return service_summary, industry, service, subcategory_name
 
 
-def _normalize_concepts(raw_items: Any, *, limit: int) -> List[Dict[str, Any]]:
+def _normalize_concepts(
+    raw_items: Any,
+    *,
+    limit: int,
+    pricing_family: str,
+    service_id: str,
+) -> List[Dict[str, Any]]:
     if not isinstance(raw_items, list):
         return []
 
@@ -77,21 +86,27 @@ def _normalize_concepts(raw_items: Any, *, limit: int) -> List[Dict[str, Any]]:
         if len(out) >= limit:
             break
         if isinstance(raw, str):
-            label = raw.strip()
-            value = _slugify_value(label)
-            image_prompt = label
-            description = ""
-            price_tier = ""
+            # Manifest-first generation never accepts an unstructured concept.
+            continue
         elif isinstance(raw, dict):
             label = str(raw.get("label") or raw.get("name") or raw.get("value") or "").strip()
             value = str(raw.get("value") or "").strip() or _slugify_value(label)
             image_prompt = str(raw.get("image_prompt") or raw.get("imagePrompt") or label).strip()
             description = str(raw.get("description") or raw.get("descriptor") or "").strip()
             price_tier = str(raw.get("price_tier") or raw.get("priceTier") or "").strip()
+            manifest_result = validate_manifest(
+                raw.get("manifest") or raw.get("priceableManifest") or raw.get("priceable_manifest"),
+                expected_family=pricing_family,
+                expected_service_id=service_id,
+                source="planned",
+            )
         else:
             continue
 
-        if not label or not image_prompt:
+        if not label or not image_prompt or not manifest_result.valid or not manifest_result.manifest:
+            continue
+        preflight = price_manifest(manifest_result.manifest)
+        if preflight.get("status") != "complete":
             continue
         key = f"{label.lower()}::{image_prompt.lower()}::{price_tier}"
         if key in seen:
@@ -107,6 +122,8 @@ def _normalize_concepts(raw_items: Any, *, limit: int) -> List[Dict[str, Any]]:
             item["description"] = description
         if price_tier in _PRICE_TIERS:
             item["price_tier"] = price_tier
+        item["manifest"] = manifest_result.manifest
+        item["pricing_preflight"] = preflight
         out.append(item)
     return out
 
@@ -118,16 +135,44 @@ def _fallback_question(service: str) -> str:
 
 def generate_subcategory_catalog(payload: Dict[str, Any]) -> Dict[str, Any]:
     request_id = f"subcategory_catalog_{int(time.time() * 1000)}"
-    target_count = max(8, min(40, _coerce_int(payload.get("count") or payload.get("targetCount"), 20)))
+    target_count = max(1, min(40, _coerce_int(payload.get("count") or payload.get("targetCount"), 20)))
     service_summary, industry, service, subcategory_name = _resolve_strings(payload)
     service_name = subcategory_name or service
+    service_id = str(payload.get("subcategoryId") or payload.get("subcategory_id") or payload.get("serviceId") or payload.get("service_id") or "").strip()
     category_name = sanitize_visual_context_text(payload.get("categoryName") or payload.get("category_name") or industry, max_len=160)
+    target_scope = sanitize_visual_context_text(
+        payload.get("scope") or payload.get("scopeLabel") or payload.get("scope_label") or "",
+        max_len=160,
+    )
 
     if not service_summary and not industry and not service_name:
         return {
             "ok": False,
             "error": "missing_service_context",
             "message": "Provide serviceSummary or industry/service context.",
+            "requestId": request_id,
+        }
+
+    pricing_family = resolve_pricing_family(
+        payload.get("pricingFamily"),
+        payload.get("pricing_family"),
+        service_name,
+        service_summary,
+        industry,
+    )
+    registry = registry_contract(pricing_family)
+    if not pricing_family or not registry:
+        return {
+            "ok": False,
+            "error": "unsupported_gallery_family",
+            "message": "Forward gallery generation is disabled because this service is not in the before/after launch registry.",
+            "requestId": request_id,
+        }
+    if not service_id:
+        return {
+            "ok": False,
+            "error": "missing_service_id",
+            "message": "subcategoryId or serviceId is required for manifest-first gallery generation.",
             "requestId": request_id,
         }
 
@@ -157,7 +202,11 @@ def generate_subcategory_catalog(payload: Dict[str, Any]) -> Dict[str, Any]:
             "service": service_name,
             "service_summary": service_summary or f"{category_name}: {service_name}".strip(": "),
             "subcategory_name": subcategory_name or service_name,
+            "service_id": service_id,
+            "target_scope": target_scope,
             "target_count": target_count,
+            "pricing_family": pricing_family,
+            "priceable_registry": registry,
         }
     )
 
@@ -179,7 +228,23 @@ def generate_subcategory_catalog(payload: Dict[str, Any]) -> Dict[str, Any]:
             parsed = None
         if isinstance(parsed, dict):
             question = str(parsed.get("question") or "").strip() or question
-            concepts = _normalize_concepts(parsed.get("concepts"), limit=target_count)
+            concepts = _normalize_concepts(
+                parsed.get("concepts"),
+                limit=target_count,
+                pricing_family=pricing_family,
+                service_id=service_id,
+            )
+
+    if not concepts:
+        return {
+            "ok": False,
+            "error": "manifest_generation_failed",
+            "message": "The catalog planner did not return any registry-valid, priceable concepts.",
+            "requestId": request_id,
+            "pricingFamily": pricing_family,
+            "registryVersion": registry.get("version"),
+            "lmUsage": lm_usage,
+        }
 
     return {
         "concepts": concepts,
@@ -189,6 +254,8 @@ def generate_subcategory_catalog(payload: Dict[str, Any]) -> Dict[str, Any]:
         "requestId": request_id,
         "source": source,
         "targetCount": target_count,
+        "pricingFamily": pricing_family,
+        "registryVersion": registry.get("version"),
     }
 
 

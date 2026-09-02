@@ -10,12 +10,17 @@ Does NOT replace form_pipeline / image_generator / pricing. It decides:
 from __future__ import annotations
 
 import hashlib
+import math
 import os
 import re
 from concurrent.futures import ThreadPoolExecutor
 from typing import Any, Dict, List, Optional
 
 from programs.adventure_pipeline.budget_bands import propose_budget_bands
+from programs.adventure_pipeline.catalog_tag import (
+    project_manifest_from_catalog_tags,
+    tag_catalog_photo,
+)
 from programs.adventure_pipeline.consult import consult
 from programs.adventure_pipeline.curation import curation_bundle
 from programs.adventure_pipeline.discovery import discovery_page
@@ -606,6 +611,16 @@ def _pricing_payload(design: DesignState) -> Dict[str, Any]:
     }
 
 
+def _round_estimate_bounds(low: float, high: float, step: int) -> tuple[int, int]:
+    """Round outward and preserve a useful interval for customer-facing ranges."""
+    range_low = max(step, int(math.floor(min(low, high) / step) * step))
+    range_high = max(step, int(math.ceil(max(low, high) / step) * step))
+    if range_high <= range_low:
+        range_low = max(step, range_low - step)
+        range_high += step
+    return range_low, range_high
+
+
 def _normalized_estimate(design: DesignState) -> Dict[str, Any]:
     """Pricing engine owns the number; refinements shift it by the interpreted impact."""
     result = estimate_pricing(_pricing_payload(design))
@@ -623,10 +638,7 @@ def _normalized_estimate(design: DesignState) -> Dict[str, Any]:
     low, high = low * impact, high * impact
     step = 500 if high < 20000 else 1000
 
-    def _round(value: float) -> int:
-        return max(step, int(round(value / step) * step))
-
-    range_low, range_high = _round(low), _round(high)
+    range_low, range_high = _round_estimate_bounds(low, high, step)
     # Levers are sized against what this design actually costs, not the budget slider —
     # otherwise "save ~$300" shows up next to a $15,000 estimate.
     basis = (range_low + range_high) / 2
@@ -802,7 +814,7 @@ def library_action(payload: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def discovery_action(payload: Dict[str, Any]) -> Dict[str, Any]:
-    """Library-only Pinterest feed. Hard scope + finish-tier filter, no AI fill."""
+    """Ranked library feed; thin neighborhoods are replenished asynchronously by the widget."""
     design = parse_design_state(payload)
     finish_tier = str(
         payload.get("finishTier")
@@ -816,11 +828,34 @@ def discovery_action(payload: Dict[str, Any]) -> Dict[str, Any]:
         finish_tier=finish_tier,
         offset=int(payload.get("offset") or 0),
         limit=int(payload.get("limit") or 24),
+        candidates=payload.get("libraryImages") or payload.get("library_images") or None,
+        unfiltered=bool(payload.get("unfiltered")),
     )
     return {
         **page,
         "design": design.model_dump(by_alias=True),
         "project": design.to_project_state().model_dump(by_alias=True),
+    }
+
+
+def project_manifest_action(payload: Dict[str, Any]) -> Dict[str, Any]:
+    """VLM-verify what a single project image actually contains."""
+    image_url = str(
+        payload.get("imageUrl")
+        or payload.get("image_url")
+        or (payload.get("design") or {}).get("selectedIdeaUrl")
+        or ""
+    ).strip()
+    if not image_url.startswith(("http://", "https://")):
+        return {"ok": False, "error": "missing_image_url", "manifest": None}
+    tags = tag_catalog_photo(image_url)
+    if not tags:
+        return {"ok": False, "error": "manifest_analysis_failed", "manifest": None}
+    manifest = project_manifest_from_catalog_tags(tags)
+    return {
+        "ok": manifest.get("analysisStatus") == "verified",
+        "manifest": manifest,
+        "discovery": tags,
     }
 
 
@@ -848,6 +883,20 @@ def visual_directions_action(payload: Dict[str, Any]) -> Dict[str, Any]:
         return {
             "ok": False,
             "error": "visual_directions_exception",
+            "message": str(exc)[:240],
+        }
+
+
+def refinement_suggestions_action(payload: Dict[str, Any]) -> Dict[str, Any]:
+    """Fast Groq-authored one-click refinements for the selected image target."""
+    from programs.adventure_pipeline.refinement_suggestions import plan_refinement_suggestions
+
+    try:
+        return plan_refinement_suggestions(payload)
+    except Exception as exc:
+        return {
+            "ok": False,
+            "error": "refinement_suggestions_exception",
             "message": str(exc)[:240],
         }
 
@@ -1014,10 +1063,14 @@ def run_adventure_action(action: str, payload: Dict[str, Any]) -> Dict[str, Any]
         return library_action(payload)
     if key in ("discovery", "discover_gallery", "gallery"):
         return discovery_action(payload)
+    if key in ("project_manifest", "project-manifest", "manifest", "analyze_project"):
+        return project_manifest_action(payload)
     if key in ("intake", "intent", "intake_question"):
         return intake_action(payload)
     if key in ("visual_directions", "visual-directions", "directions", "discover"):
         return visual_directions_action(payload)
+    if key in ("refinement_suggestions", "refinement-suggestions", "refine_suggestions", "quick_changes"):
+        return refinement_suggestions_action(payload)
     if key in ("suggest_scopes", "suggest-scopes", "scope_suggest", "scopes"):
         return suggest_scopes_action(payload)
     if key in ("scope_covers", "scope-covers", "generate_scope_covers"):

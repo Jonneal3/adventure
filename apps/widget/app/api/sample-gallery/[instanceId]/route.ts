@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { logger } from '@/lib/server/logger';
+import { localizeGalleryPricing, type GalleryPricingResult } from '@/components/adventure/v8/galleryEnrichment';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -22,7 +23,18 @@ export async function GET(
     const limit = parseInt(searchParams.get('limit') || '12');
     const offset = parseInt(searchParams.get('offset') || '0');
 
-
+    const { data: instance } = await supabase
+      .from('instances')
+      .select('*')
+      .eq('id', params.instanceId)
+      .maybeSingle();
+    const instanceMetadata = instance?.metadata && typeof instance.metadata === 'object'
+      ? instance.metadata as Record<string, unknown>
+      : {};
+    const pricingLocation = {
+      city: instance?.location_city || instance?.business_city || instance?.city || instanceMetadata.city || '',
+      state: instance?.location_state || instance?.business_state || instance?.state || instanceMetadata.state || '',
+    };
 
     // Fetch sample gallery images with their associated image data and prompts
     const { data: galleryImages, error } = await supabase
@@ -42,8 +54,7 @@ export async function GET(
         )
       `)
       .eq('instance_id', params.instanceId)
-      .order('sort_order')
-      .range(offset, offset + limit - 1);
+      .order('sort_order');
 
     if (error) {
       logger.error('Error fetching sample gallery:', error);
@@ -54,18 +65,38 @@ export async function GET(
     }
 
     // Transform the data to match the expected format
-    const transformedImages = galleryImages?.map(item => ({
-      id: item.images?.id || item.image_id,
-      image: item.images?.image_url || '',
-      prompt: item.images?.prompts?.prompt || null, // Get prompt from prompts table
-      category: item.images?.metadata?.category || null,
-      subcategory: item.images?.metadata?.subcategory || null,
-      generated_for_gallery: true, // These are sample gallery images
-      created_at: item.images?.created_at || item.created_at,
-      prompt_id: item.images?.prompt_id || null,
-      subcategory_id: item.images?.metadata?.subcategory_id || null,
-      sort_order: item.sort_order
-    })).filter(img => img.image) || [];
+    const readyGalleryImages = (galleryImages || []).filter((item: any) =>
+      item?.images?.metadata?.gallery_enrichment?.version === 1 &&
+      item?.images?.metadata?.gallery_enrichment?.publish?.status === "ready"
+    );
+    const transformedImages = readyGalleryImages.slice(offset, offset + limit).map((item: any) => {
+      const enrichment = item.images?.metadata?.gallery_enrichment;
+      const pricing = localizeGalleryPricing(enrichment.pricing as GalleryPricingResult, pricingLocation);
+      return {
+        id: item.images?.id || item.image_id,
+        image: item.images?.image_url || '',
+        prompt: item.images?.prompts?.prompt || null,
+        category: item.images?.metadata?.category || null,
+        subcategory: item.images?.metadata?.subcategory || null,
+        generated_for_gallery: true,
+        created_at: item.images?.created_at || item.created_at,
+        prompt_id: item.images?.prompt_id || null,
+        subcategory_id: item.images?.metadata?.subcategory_id || null,
+        sort_order: item.sort_order,
+        gallery_enrichment: { ...enrichment, pricing },
+        before_image_url: enrichment.before?.url || null,
+        priceable_manifest: enrichment.priceableManifest || null,
+        verification_confidence: enrichment.verification?.confidence ?? null,
+        pricing_confidence: pricing.confidence || null,
+        price_range: pricing.localizedRange,
+        pricing_breakdown: pricing.breakdown,
+        pricing_assumptions: pricing.assumptions || [],
+        badge: item.images?.metadata?.gallery_badge || "Project example",
+        disclosure: enrichment.before?.status === "success" && enrichment.before?.url
+          ? "AI-generated illustrative before"
+          : null,
+      };
+    }).filter(img => img.image) || [];
 
 
     
@@ -75,7 +106,7 @@ export async function GET(
       success: true,
       images: transformedImages,
       total: transformedImages.length,
-      hasMore: transformedImages.length === limit
+      hasMore: offset + transformedImages.length < readyGalleryImages.length
     });
 
   } catch (error) {

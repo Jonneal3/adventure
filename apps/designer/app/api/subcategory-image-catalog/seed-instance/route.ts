@@ -7,8 +7,9 @@ import {
   isSystemOwnedSubcategory,
   listCatalogImages,
   persistGeneratedCatalogImages,
+  SUBCATEGORY_IMAGE_CATALOG_MAX_SCOPE_BUCKETS,
+  SUBCATEGORY_IMAGE_CATALOG_MIN_PER_SCOPE,
   SUBCATEGORY_IMAGE_CATALOG_MODEL_ID,
-  SUBCATEGORY_IMAGE_CATALOG_SEED_COUNT,
 } from "@/lib/subcategory-image-catalog";
 import {
   ensureRefinementLibraryForSubcategory,
@@ -17,6 +18,12 @@ import {
 } from "@adventure/refinement-server";
 
 export const dynamic = "force-dynamic";
+// Quality catalog generation is intentionally off the visitor path and can
+// take several provider rounds. Give the authenticated setup job enough room
+// to finish its scope floor instead of dying at the platform's short default.
+export const maxDuration = 300;
+
+const SCOPE_SEED_CONCURRENCY = 3;
 
 function resolveFormServiceBaseUrls(): string[] {
   return resolveDspyServiceBaseUrls();
@@ -29,6 +36,34 @@ function logSeed(label: string, data: Record<string, unknown>) {
   } catch {
     console.log(`[subcategory-seed] ${label}`);
   }
+}
+
+function scopeKey(value: unknown): string {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+function catalogScopeBuckets(subcategory: any, subcategoryName: string): Array<{ key: string; label: string }> {
+  const configured = Array.isArray(subcategory?.subcategory_scope) ? subcategory.subcategory_scope : [];
+  const components = Array.isArray(subcategory?.subcategory_components) ? subcategory.subcategory_components : [];
+  const raw = configured.length
+    ? configured
+    : components.map((item: any) => typeof item === "string" ? item : item?.label || item?.key);
+  const fullLabel = /^full\b/i.test(subcategoryName) ? subcategoryName : `Full ${subcategoryName}`;
+  const seen = new Set<string>();
+  const out: Array<{ key: string; label: string }> = [];
+  for (const value of [fullLabel, ...raw]) {
+    const label = String(value || "").trim();
+    const key = scopeKey(label);
+    if (!label || !key || /^other$/i.test(label) || seen.has(key)) continue;
+    seen.add(key);
+    out.push({ key, label });
+    if (out.length >= SUBCATEGORY_IMAGE_CATALOG_MAX_SCOPE_BUCKETS) break;
+  }
+  return out;
 }
 
 async function callFormServiceUpstream(params: {
@@ -66,6 +101,133 @@ async function callFormServiceUpstream(params: {
     }
   }
   return { error: lastErr, ok: false };
+}
+
+async function seedScopeCatalog(params: {
+  admin: any;
+  baseUrls: string[];
+  categoryName: string | null;
+  instanceId: string;
+  scopeValues: string[];
+  serviceSummary: string;
+  subcategory: any;
+  subcategoryId: string;
+  subcategoryName: string;
+}): Promise<{ failures: string[]; skipped: boolean; stored: number }> {
+  const scopedSubcategory = { ...params.subcategory, subcategory_scope: params.scopeValues };
+  const scopeBuckets = catalogScopeBuckets(scopedSubcategory, params.subcategoryName);
+  const existingCatalog = await listCatalogImages({
+    accountId: null,
+    includeGlobal: true,
+    requireScopeTag: true,
+    subcategoryId: params.subcategoryId,
+    supabase: params.admin,
+  });
+  const existingByScope = new Map<string, number>();
+  for (const row of existingCatalog) {
+    const key = scopeKey(row?.metadata?.scope_key || row?.metadata?.scope);
+    if (key) existingByScope.set(key, (existingByScope.get(key) || 0) + 1);
+  }
+  const missingBuckets = scopeBuckets
+    .map((bucket) => ({
+      ...bucket,
+      missing: Math.max(0, SUBCATEGORY_IMAGE_CATALOG_MIN_PER_SCOPE - (existingByScope.get(bucket.key) || 0)),
+    }))
+    .filter((bucket) => bucket.missing > 0);
+  if (!missingBuckets.length) return { failures: [], skipped: true, stored: 0 };
+
+  const failures: string[] = [];
+  let stored = 0;
+  for (let offset = 0; offset < missingBuckets.length; offset += SCOPE_SEED_CONCURRENCY) {
+    const batch = missingBuckets.slice(offset, offset + SCOPE_SEED_CONCURRENCY);
+    await Promise.all(batch.map(async (bucket) => {
+      const upstreamCatalog = await callFormServiceUpstream({
+      baseUrls: params.baseUrls,
+      path: "/v1/api/subcategory-catalog/generate",
+      payload: {
+        categoryName: params.categoryName,
+        count: bucket.missing,
+        industry: params.categoryName,
+        instanceId: params.instanceId,
+        modelId: SUBCATEGORY_IMAGE_CATALOG_MODEL_ID,
+        scope: bucket.label,
+        scopeKey: bucket.key,
+        service: params.subcategoryName,
+        serviceSummary: params.serviceSummary,
+        session: {
+          instanceId: params.instanceId,
+          sessionId: `subcategory-seed:${params.subcategoryId}:${bucket.key}`,
+        },
+        subcategoryId: params.subcategoryId,
+        subcategoryName: params.subcategoryName,
+      },
+    });
+    if (!upstreamCatalog.ok || !Array.isArray(upstreamCatalog.json?.options)) {
+      const error = upstreamCatalog.ok
+        ? "Subcategory catalog response was missing generated options"
+        : typeof upstreamCatalog.error === "string"
+          ? upstreamCatalog.error
+          : "Failed to generate subcategory catalog images";
+      failures.push(`${bucket.label}: ${error}`);
+      logSeed("scope_style_seed_failed", {
+        error,
+        instanceId: params.instanceId,
+        scopeKey: bucket.key,
+        subcategoryId: params.subcategoryId,
+      });
+      return;
+    }
+
+    const rawSeedOptions = Array.isArray(upstreamCatalog.json?.concepts)
+      ? upstreamCatalog.json.concepts
+      : upstreamCatalog.json.options;
+    const options = rawSeedOptions
+      .filter((item: any) => item && typeof item === "object")
+      .map((item: any) => ({
+        description: typeof item.description === "string" ? item.description : item.descriptor || null,
+        imagePrompt: typeof item.imagePrompt === "string" ? item.imagePrompt : item.image_prompt || null,
+        label: typeof item.label === "string" ? item.label : null,
+        finishTier: item.finishTier || item.finish_tier || item.priceTier || item.price_tier || null,
+        manifest: item.manifest && typeof item.manifest === "object" ? item.manifest : null,
+        pricingPreflight:
+          item.pricingPreflight && typeof item.pricingPreflight === "object"
+            ? item.pricingPreflight
+            : item.pricing_preflight && typeof item.pricing_preflight === "object"
+              ? item.pricing_preflight
+              : null,
+        scope: bucket.label,
+        scopeKey: bucket.key,
+        value: typeof item.value === "string" ? item.value : null,
+      }));
+    const generatedOptions = upstreamCatalog.json.options.map((item: any) => ({
+      ...item,
+      scope: bucket.label,
+      scope_key: bucket.key,
+    }));
+    const bucketStored = await persistGeneratedCatalogImages({
+      categoryName: params.categoryName,
+      generatedOptions,
+      instanceId: params.instanceId,
+      options,
+      question: `Pick a ${bucket.label.toLowerCase()} look you like.`,
+      scope: "global",
+      serviceSummary: params.serviceSummary,
+      source: "instance_seed",
+      stepId: `scope-catalog-seed:${params.subcategoryId}:${bucket.key}`,
+      subcategoryId: params.subcategoryId,
+      subcategoryName: params.subcategoryName,
+      supabase: params.admin,
+    });
+      stored += bucketStored;
+      logSeed("scope_style_seed_stored", {
+        instanceId: params.instanceId,
+        scopeKey: bucket.key,
+        stored: bucketStored,
+        subcategoryId: params.subcategoryId,
+      });
+    }));
+  }
+  return { failures, skipped: false, stored };
 }
 
 export async function POST(request: NextRequest) {
@@ -140,6 +302,7 @@ export async function POST(request: NextRequest) {
           subcategory,
           service_summary,
           subcategory_components,
+          subcategory_scope,
           account_id,
           user_id,
           categories ( name )
@@ -210,125 +373,6 @@ export async function POST(request: NextRequest) {
           ? String(subcategory.service_summary).trim()
           : [categoryName, subcategoryName].filter(Boolean).join(": ");
 
-      const existingCatalog = await listCatalogImages({
-        accountId: null,
-        includeGlobal: true,
-        subcategoryId,
-        supabase: admin,
-      });
-
-      if (existingCatalog.length > 0) {
-        logSeed("style_seed_skip_existing", {
-          existingCount: existingCatalog.length,
-          instanceId,
-          subcategoryId,
-        });
-        summary.catalogSkippedExisting += 1;
-      } else {
-        const catalogPayload = {
-          categoryName,
-          count: SUBCATEGORY_IMAGE_CATALOG_SEED_COUNT,
-          industry: categoryName,
-          instanceId,
-          modelId: SUBCATEGORY_IMAGE_CATALOG_MODEL_ID,
-          service: subcategoryName,
-          serviceSummary,
-          session: {
-            instanceId,
-            sessionId: `subcategory-seed:${subcategoryId}`,
-          },
-          subcategoryId,
-          subcategoryName,
-        };
-
-        const upstreamCatalog = await callFormServiceUpstream({
-          baseUrls,
-          path: "/v1/api/subcategory-catalog/generate",
-          payload: catalogPayload,
-        });
-
-        if (!upstreamCatalog.ok) {
-          logSeed("style_seed_upstream_failed", {
-            error: upstreamCatalog.error,
-            instanceId,
-            subcategoryId,
-          });
-          summary.failures.push({
-            error: typeof upstreamCatalog.error === "string" ? upstreamCatalog.error : "Failed to generate subcategory catalog images",
-            subcategoryId,
-          });
-        } else if (!Array.isArray(upstreamCatalog.json?.options)) {
-          summary.failures.push({
-            error: "Subcategory catalog response was missing generated options",
-            subcategoryId,
-          });
-        } else {
-          const rawSeedOptions = Array.isArray(upstreamCatalog.json?.concepts)
-            ? upstreamCatalog.json.concepts
-            : Array.isArray(upstreamCatalog.json?.options)
-              ? upstreamCatalog.json.options
-              : [];
-          const seedOptions = rawSeedOptions
-            .filter((item: any) => item && typeof item === "object")
-            .map((item: any) => ({
-              description:
-                typeof item.description === "string"
-                  ? item.description
-                  : typeof item.descriptor === "string"
-                    ? item.descriptor
-                    : null,
-              imagePrompt:
-                typeof item.imagePrompt === "string"
-                  ? item.imagePrompt
-                  : typeof item.image_prompt === "string"
-                    ? item.image_prompt
-                    : null,
-              label: typeof item.label === "string" ? item.label : null,
-              priceTier:
-                typeof item.priceTier === "string"
-                  ? item.priceTier
-                  : typeof item.price_tier === "string"
-                    ? item.price_tier
-                    : null,
-              value: typeof item.value === "string" ? item.value : null,
-            }));
-          const question =
-            typeof upstreamCatalog.json?.question === "string" && upstreamCatalog.json.question.trim()
-              ? String(upstreamCatalog.json.question).trim()
-              : `Choose a starting visual direction for ${subcategoryName}.`;
-
-          const storedCatalogImages = await persistGeneratedCatalogImages({
-            categoryName,
-            generatedOptions: upstreamCatalog.json.options,
-            instanceId,
-            options: seedOptions,
-            question,
-            scope: "global",
-            serviceSummary,
-            source: "instance_seed",
-            stepId: `internal-subcategory-seed:${subcategoryId}`,
-            subcategoryId,
-            subcategoryName,
-            supabase: admin,
-          });
-
-          if (storedCatalogImages > 0) {
-            summary.catalogSeededSubcategories += 1;
-            summary.catalogStoredImages += storedCatalogImages;
-            logSeed("style_seed_stored_success", {
-              instanceId,
-              storedCatalogImages,
-              subcategoryId,
-            });
-          } else {
-            summary.failures.push({
-              error: "Catalog generation completed but no images were stored",
-              subcategoryId,
-            });
-          }
-        }
-      }
-
       const refinementResult = await ensureRefinementLibraryForSubcategory({
         baseUrls,
         categoryId,
@@ -373,6 +417,9 @@ export async function POST(request: NextRequest) {
         }
       }
 
+      let finalScopeValues = Array.isArray((subcategory as any)?.subcategory_scope)
+        ? (subcategory as any).subcategory_scope.filter((value: unknown) => typeof value === "string" && value.trim())
+        : [];
       const { data: scopeRow, error: scopeRowError } = await admin
         .from("categories_subcategories")
         .select("subcategory_components, subcategory_scope")
@@ -393,6 +440,11 @@ export async function POST(request: NextRequest) {
           subcategoryName,
           supabase: admin,
         });
+        finalScopeValues = Array.isArray(scopeResult.scopes) && scopeResult.scopes.length > 0
+          ? scopeResult.scopes
+          : Array.isArray((scopeRow as any)?.subcategory_scope)
+            ? (scopeRow as any).subcategory_scope
+            : finalScopeValues;
         if (scopeResult.skipped) {
           summary.scopeSkippedExisting += 1;
         } else if (scopeResult.plannerCalled) {
@@ -412,6 +464,24 @@ export async function POST(request: NextRequest) {
             subcategoryId,
           });
         }
+      }
+
+      const catalogResult = await seedScopeCatalog({
+        admin,
+        baseUrls,
+        categoryName,
+        instanceId,
+        scopeValues: finalScopeValues,
+        serviceSummary,
+        subcategory,
+        subcategoryId,
+        subcategoryName,
+      });
+      summary.catalogStoredImages += catalogResult.stored;
+      if (catalogResult.stored > 0) summary.catalogSeededSubcategories += 1;
+      if (catalogResult.skipped) summary.catalogSkippedExisting += 1;
+      for (const error of catalogResult.failures) {
+        summary.failures.push({ error, subcategoryId });
       }
     }
 

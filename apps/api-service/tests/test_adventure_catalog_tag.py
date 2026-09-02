@@ -1,9 +1,11 @@
 from programs.adventure_pipeline.catalog_tag import (
+    CATALOG_METADATA_SPEC_VERSION,
     already_tagged,
     discovery_hidden,
     inspiration_blocked,
     needs_review,
     normalize_catalog_tags,
+    project_manifest_from_catalog_tags,
 )
 from programs.adventure_pipeline.discovery import hard_filter_discovery
 
@@ -26,6 +28,7 @@ def test_normalize_rejects_hard_defects() -> None:
     assert tags["verdict"] == "reject"
     assert "watermark" in tags["defects"]
     assert tags["model"] == "gemini-2.5-flash-lite"
+    assert tags["schema_version"] == CATALOG_METADATA_SPEC_VERSION
 
 
 def test_normalize_keeps_clean_catalog_shot() -> None:
@@ -65,6 +68,47 @@ def test_untagged_rows_are_not_hidden() -> None:
     assert already_tagged({}) is False
     assert discovery_hidden({}) is False
     assert discovery_hidden(None) is False
+
+
+def test_project_manifest_uses_only_vlm_verified_components() -> None:
+    manifest = project_manifest_from_catalog_tags(
+        {
+            "primary_scope": "vanity",
+            "contains": ["vanity", "countertop", "faucets-fixtures"],
+            "quality_score": 0.91,
+            "description": "A double vanity with a stone top and two faucets.",
+            "defects": [],
+            "model": "gemini-2.5-flash-lite",
+            "tagged_at": "2026-08-25T12:00:00Z",
+        }
+    )
+
+    assert manifest["analysisStatus"] == "verified"
+    assert manifest["sceneType"] == "component"
+    assert [item["key"] for item in manifest["components"]] == [
+        "vanity",
+        "countertop",
+        "faucets-fixtures",
+    ]
+    assert all(item["confidence"] == 0.91 for item in manifest["components"])
+    assert "toilet" not in [item["key"] for item in manifest["components"]]
+    assert "shower-tub" not in [item["key"] for item in manifest["components"]]
+
+
+def test_project_manifest_rejects_unverified_or_defective_inventory() -> None:
+    empty = project_manifest_from_catalog_tags({"primary_scope": "vanity", "contains": []})
+    defective = project_manifest_from_catalog_tags(
+        {
+            "primary_scope": "full-bathroom-remodel",
+            "contains": ["vanity", "toilet"],
+            "quality_score": 0.8,
+            "defects": ["watermark"],
+        }
+    )
+
+    assert empty["analysisStatus"] == "rejected"
+    assert defective["analysisStatus"] == "rejected"
+    assert defective["sceneType"] == "full-project"
 
 
 def test_gallery_drops_rejected_photos() -> None:

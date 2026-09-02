@@ -144,6 +144,7 @@ def propose_budget_bands(
         high = max(low + 2500, _round_to(typical_high * mult * 1.35, 1000))
         plus_high = max(high, _round_to(high * 1.5, 1000))
 
+    step = 500 if high <= 20000 else 1000 if high <= 60000 else 2500
     bands: List[Dict[str, Any]] = []
     for key in ("starter", "standard", "premium", "luxury"):
         rng = tiers.get(key)  # type: ignore[arg-type]
@@ -151,18 +152,25 @@ def propose_budget_bands(
             continue
         b_lo = max(low, _round_to(rng.low * mult, 500))
         b_hi = max(b_lo + 1000, _round_to(rng.high * mult, 1000))
-        b_hi = min(b_hi, high) if key != "luxury" else max(min(b_hi, high), high)
+        if key == "luxury":
+            b_lo = min(b_lo, high)
+            b_hi = max(b_lo + step, plus_high)
+        else:
+            if b_lo >= high:
+                continue
+            b_hi = min(b_hi, high)
+            if b_hi <= b_lo:
+                continue
         bands.append(
             {
                 "id": key,
                 "label": key.title(),
                 "min": b_lo,
                 "max": b_hi,
-                "source": "ai",
+                "source": "calibrated",
             }
         )
 
-    step = 500 if high <= 20000 else 1000 if high <= 60000 else 2500
     default_amount = _round_to((low + high) / 2, step)
     finish_tiers = split_finish_tiers(
         low,
@@ -174,7 +182,7 @@ def propose_budget_bands(
     )
     return {
         "ok": True,
-        "source": "ai",
+        "source": "calibrated",
         "currency": "USD",
         "min": low,
         "max": plus_high,
@@ -247,7 +255,7 @@ def _min_band_width(high: int) -> int:
     return 2500
 
 
-def _fill_cuts(cuts: List[int], *, min_width: int, round_to: int, target: int = 5, cap: int = 8) -> List[int]:
+def _fill_cuts(cuts: List[int], *, min_width: int, round_to: int, target: int = 6, cap: int = 8) -> List[int]:
     """Pad or merge so the customer sees about 5–8 dollar ranges, not 2–3 huge buckets."""
     out = list(cuts)
     while len(out) - 1 < target:
@@ -317,7 +325,7 @@ def split_finish_tiers(
         if lo < cut < hi:
             cuts.append(cut)
     cuts.append(hi)
-    cuts = _fill_cuts(cuts, min_width=min_width, round_to=round_to, target=5, cap=8)
+    cuts = _fill_cuts(cuts, min_width=min_width, round_to=round_to, target=6, cap=8)
     ids = _ids_for_count(len(cuts) - 1)
     out: List[Dict[str, Any]] = []
     for i, tid in enumerate(ids):

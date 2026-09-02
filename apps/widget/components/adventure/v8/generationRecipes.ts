@@ -1,9 +1,10 @@
 /**
- * No-photo visual discovery: Explore → Narrow → Design.
+ * Adventure V8 visual generation: one starter canvas → refine → price.
  *
  * Scope is the hard constraint (WHAT we show).
  * Style is the variable — Groq writes a fresh set of visual directions per batch.
- * Fast models render the gallery (Schnell vs Imagen 4 Fast split).
+ * The no-photo path uses an approved neutral reference to create one intentionally plain starter image.
+ * Fast models are reserved for interactive edits where latency matters.
  */
 
 import { verticalKey } from "./scopeRecipes";
@@ -12,6 +13,7 @@ export const DISCOVERY_BATCH = 12;
 export const STYLE_BOARD_COUNT = 28;
 
 export const DISCOVERY_MODELS = {
+  libraryQuality: "black-forest-labs/flux-2-pro",
   schnell: "black-forest-labs/flux-schnell",
   imagen: "google/imagen-4-fast",
   edit: "black-forest-labs/flux-2-pro",
@@ -22,6 +24,25 @@ export const DISCOVERY_MODELS = {
 } as const;
 
 export type DiscoveryModelId = (typeof DISCOVERY_MODELS)[keyof typeof DISCOVERY_MODELS];
+
+export type RefinementMode =
+  | "global_style"
+  | "targeted_component"
+  | "component_tier_shift"
+  | "budget_shift"
+  | "camera_shift"
+  | "balanced";
+
+export type RefinementPlan = {
+  mode: RefinementMode;
+  target: string | null;
+  interpretedNote: string;
+  estimatedBudgetDelta: number;
+  generationIntent: string;
+  modelPath: "fast-first" | "quality-first";
+  loaderLabel: string;
+  prompt: string;
+};
 
 export type ColorMood = {
   id: string;
@@ -264,6 +285,32 @@ export function pickDiverseLooks(opts: {
   return out.slice(0, n);
 }
 
+/**
+ * Keep the pricing board from being flooded by alternate finishes of the same
+ * synthetic starter scene. Exact URLs are always de-duplicated; the starter
+ * cap is intentionally narrow so genuinely different catalog projects remain.
+ */
+export function curateGalleryProjectDiversity<
+  T extends { url: string; generatedFor?: string | null; primaryScope?: string | null },
+>(rows: T[], maxStarterVariants = 1): T[] {
+  const seenUrls = new Set<string>();
+  const starterFamilies = new Map<string, number>();
+  const limit = Math.max(1, Math.round(maxStarterVariants) || 1);
+
+  return rows.filter((row) => {
+    const urlKey = String(row.url || "").split("?")[0].trim().toLowerCase();
+    if (!urlKey || seenUrls.has(urlKey)) return false;
+    seenUrls.add(urlKey);
+
+    if (String(row.generatedFor || "").toLowerCase() !== "v2_scope_starter") return true;
+    const scopeKey = String(row.primaryScope || "starter").trim().toLowerCase() || "starter";
+    const used = starterFamilies.get(scopeKey) || 0;
+    if (used >= limit) return false;
+    starterFamilies.set(scopeKey, used + 1);
+    return true;
+  });
+}
+
 const ROOMS: Record<string, string> = {
   bathroom: "residential bathroom",
   kitchen: "residential kitchen",
@@ -303,14 +350,11 @@ export function focalScopeParts(scopes: string[]): string[] {
 }
 
 export function assignDiscoveryModel(sessionId: string, override?: string | null): DiscoveryModelId {
-  const raw = String(override || "").trim().toLowerCase();
-  if (raw.includes("imagen")) return DISCOVERY_MODELS.imagen;
-  if (raw.includes("schnell") || raw.includes("flux")) return DISCOVERY_MODELS.schnell;
-  let hash = 0;
-  for (let i = 0; i < sessionId.length; i += 1) {
-    hash = (hash * 31 + sessionId.charCodeAt(i)) >>> 0;
-  }
-  return hash % 2 === 0 ? DISCOVERY_MODELS.schnell : DISCOVERY_MODELS.imagen;
+  // Keep the old entry point, but make the policy deterministic: persistent
+  // gallery inventory never trades quality for latency or a client override.
+  void sessionId;
+  void override;
+  return DISCOVERY_MODELS.libraryQuality;
 }
 
 export function discoveryModelOverrideFromSearch(search = ""): string | null {
@@ -400,6 +444,46 @@ export function scopeBudgetMultiplier(scopes: string[]): number {
   const extras = [...scores].sort((a, b) => b - a).slice(1);
   const combined = primary + 0.35 * extras.reduce((sum, n) => sum + n, 0);
   return Math.max(0.15, Math.min(primary < 0.95 ? 0.95 : 1.05, combined));
+}
+
+/**
+ * Relative share used only when a project total is apportioned into estimate
+ * rows. These intentionally differ from the broad scope multipliers above:
+ * choosing a scope changes the size of the whole budget, while a line-item
+ * weight describes that item's share of an already-selected project.
+ */
+export function scopeLineItemWeight(label: string): number {
+  const text = String(label || "").trim().toLowerCase();
+  if (!text) return 0.2;
+
+  const rows: Array<{ pattern: RegExp; weight: number }> = [
+    { pattern: /\b(full|whole|complete|project total)\b/, weight: 1 },
+    { pattern: /\b(addition|expansion|layout changes?|structural|plumbing|electrical)\b/, weight: 0.7 },
+    { pattern: /\b(outdoor kitchen|pizza oven|grill)\b/, weight: 0.48 },
+    { pattern: /\b(shower|tub|wet room|bath surround)\b/, weight: 0.42 },
+    { pattern: /\b(island|appliances?|pantry)\b/, weight: 0.4 },
+    { pattern: /\b(countertop|counter top|worktop)\b/, weight: 0.34 },
+    { pattern: /\b(wall tile|backsplash)\b/, weight: 0.3 },
+    { pattern: /\b(vanity|vanities)\b/, weight: 0.29 },
+    { pattern: /\b(floor tile|flooring|hardwood|\blvp\b)\b/, weight: 0.27 },
+    { pattern: /\b(cabinets?|cabinetry|storage)\b/, weight: 0.26 },
+    { pattern: /\b(deck|patio|terrace|hardscape|retaining wall)\b/, weight: 0.4 },
+    { pattern: /\b(fence|gate|driveway)\b/, weight: 0.36 },
+    { pattern: /\b(pergola|fire pit|fireplace|shade)\b/, weight: 0.33 },
+    { pattern: /\b(water feature|irrigation|drainage)\b/, weight: 0.25 },
+    { pattern: /\b(planting|garden beds?|trees?|shrubs?|privacy)\b/, weight: 0.22 },
+    { pattern: /\b(lawn|sod)\b/, weight: 0.18 },
+    { pattern: /\b(faucets?|fixtures?|sink)\b/, weight: 0.16 },
+    { pattern: /\b(toilet|commode)\b/, weight: 0.13 },
+    { pattern: /\b(paint|painting|trim|cosmetic refresh)\b/, weight: 0.13 },
+    { pattern: /\b(lighting|lights?|sconces?)\b/, weight: 0.11 },
+    { pattern: /\b(mirror|medicine cabinet)\b/, weight: 0.1 },
+    { pattern: /\b(exhaust|ventilation|hardware)\b/, weight: 0.08 },
+    { pattern: /\b(extensions?|color|colour|chemical treatment)\b/, weight: 0.42 },
+    { pattern: /\b(cut|haircut|style|blowout)\b/, weight: 0.24 },
+    { pattern: /\b(manicure|pedicure|facial|makeup|make-up)\b/, weight: 0.26 },
+  ];
+  return rows.find((row) => row.pattern.test(text))?.weight ?? 0.2;
 }
 
 export function proposeClientBudgetBounds(opts: {
@@ -497,7 +581,7 @@ function idsForCount(n: number): FinishTierId[] {
   return IDS_FOR_COUNT[n] || FINISH_TIER_IDS.slice(0, Math.min(n, FINISH_TIER_IDS.length));
 }
 
-function fillCuts(cuts: number[], minWidth: number, roundTo: number, target = 5, cap = 8): number[] {
+function fillCuts(cuts: number[], minWidth: number, roundTo: number, target = 6, cap = 8): number[] {
   const round = (n: number) => Math.round(n / roundTo) * roundTo;
   while (cuts.length - 1 < target) {
     let bestI = -1;
@@ -582,7 +666,7 @@ export function splitFinishTiers(
     if (cut > low && cut < high) cuts.push(cut);
   }
   cuts.push(high);
-  fillCuts(cuts, minWidth, roundTo, 5, 8);
+  fillCuts(cuts, minWidth, roundTo, 6, 8);
   const ids = idsForCount(cuts.length - 1);
   return ids.map((id, i) => {
     const lo = cuts[i];
@@ -706,6 +790,71 @@ export function pinEstimate(budget: number, seed: string): { min: number; max: n
   if (max < b) max = Math.min(hi, b + roundTo);
   if (max <= min) max = Math.min(hi, min + roundTo);
   return { min, max, source: "local" };
+}
+
+/**
+ * Give catalog projects distinct, believable sub-ranges inside the customer's
+ * selected price band. Deterministic seeding keeps a card's price stable while
+ * preventing a whole gallery from displaying one repeated estimate.
+ */
+export function projectEstimateForBand(
+  bandMin: number,
+  bandMax: number,
+  seed: string
+): { min: number; max: number; source: "local" } {
+  const low = Math.max(0, Math.min(Number(bandMin) || 0, Number(bandMax) || 0));
+  const high = Math.max(low, Math.max(Number(bandMin) || 0, Number(bandMax) || 0));
+  if (!(high > low)) return pinEstimate(high || low, seed);
+
+  const span = high - low;
+  const step = high <= 10_000 ? 500 : high <= 50_000 ? 1_000 : 2_500;
+  if (span <= step) return { min: low, max: high, source: "local" };
+
+  const hash = hashString(seed);
+  const widthRatio = 0.28 + ((hash >>> 5) % 4) * 0.035;
+  const width = Math.min(span, Math.max(step * 2, span * widthRatio));
+  const travel = Math.max(0, span - width);
+  const position = 0.04 + (hash % 920) / 1000;
+  const rawMin = low + travel * position;
+  const rawMax = rawMin + width;
+  let min = Math.max(low, Math.floor(rawMin / step) * step);
+  let max = Math.min(high, Math.ceil(rawMax / step) * step);
+
+  if (max <= min) {
+    max = Math.min(high, min + step);
+    if (max <= min) min = Math.max(low, max - step);
+  }
+  return { min, max, source: "local" };
+}
+
+/** Round outward for display so a legitimate range never collapses to one value. */
+export function roundPriceRangeForDisplay(min: number, max: number): { min: number; max: number } {
+  const rawMin = Math.max(0, Math.min(Number(min) || 0, Number(max) || 0));
+  const rawMax = Math.max(0, Math.max(Number(min) || 0, Number(max) || 0));
+  if (rawMax <= 0) return { min: 0, max: 0 };
+
+  const step = rawMax < 20_000 ? 500 : 1_000;
+  let roundedMin = Math.max(step, Math.floor(rawMin / step) * step);
+  let roundedMax = Math.max(step, Math.ceil(rawMax / step) * step);
+  if (roundedMax <= roundedMin) {
+    roundedMin = Math.max(step, roundedMin - step);
+    roundedMax += step;
+  }
+  return { min: roundedMin, max: roundedMax };
+}
+
+/** Present estimates as a focused ±5% window around the source range midpoint. */
+export function tightenPriceRangeForDisplay(min: number, max: number): { min: number; max: number } {
+  const rawMin = Math.max(0, Math.min(Number(min) || 0, Number(max) || 0));
+  const rawMax = Math.max(0, Math.max(Number(min) || 0, Number(max) || 0));
+  if (rawMax <= 0) return { min: 0, max: 0 };
+
+  const midpoint = (rawMin + rawMax) / 2;
+  const step = midpoint < 10_000 ? 100 : midpoint < 50_000 ? 500 : 1_000;
+  const tightenedMin = Math.max(0, Math.round((midpoint * 0.95) / step) * step);
+  let tightenedMax = Math.round((midpoint * 1.05) / step) * step;
+  if (tightenedMax <= tightenedMin) tightenedMax = tightenedMin + step;
+  return { min: tightenedMin, max: tightenedMax };
 }
 
 export function withinBudgetWindow(opts: {
@@ -913,7 +1062,7 @@ export function splitMasonryColumns<T>(
 /**
  * How many tiles of a page come from stored catalog vs new generation.
  * ~2/3 library when we have stock (e.g. 8 stored + 4 new). Skip generation
- * entirely once this scope + price combo has a deep well of saved looks.
+ * entirely once this service + scope + finish-quality neighborhood is deep.
  */
 export function retrievalMix(opts: { requested: number; libraryAvailable: number }): {
   library: number;
@@ -932,18 +1081,14 @@ export function catalogTags(opts: {
   serviceLabel?: string | null;
   scopes?: string[];
   scope?: string | null;
-  priceTier?: string | null;
-  budget?: number | null;
+  finishTier?: string | null;
   direction?: VisualDirection | null;
 }): string[] {
-  const budget = Math.round(Number(opts.budget || 0));
   const raw = [
     opts.serviceLabel,
     opts.scope,
     ...(opts.scopes || []),
-    opts.priceTier,
-    budget > 0 ? `$${budget}` : "",
-    budget > 0 ? budgetTierLabel(budget) : "",
+    opts.finishTier,
     opts.direction?.family,
     opts.direction?.palette,
     opts.direction?.style,
@@ -1237,6 +1382,10 @@ export function spatialKitBlock(room: string): string {
     return [
       "Photoreal listing photo of a real American hall bath with a proven layout.",
       "ONE toilet only. ONE vanity only. ONE tub or shower. Never two toilets, never two vanities, never a second tub.",
+      "The bathroom must look newly remodeled and unused: clean fresh grout, clean porcelain, new-looking fixtures, dry surfaces, no stains, no old caulk, no yellowing.",
+      "It should read as a simple after-photo of a basic new bathroom install, not a before-photo, rental bathroom, or dated lived-in bathroom.",
+      "Plain and empty, not lived-in: no shower curtain, no towels, no bath mats, no soap bottles, no toiletries, no plants, no personal items, no clutter.",
+      "No worn fiberglass, no dingy beige tub, no dirty grout, no dated rental lighting, no loose curtains, no overstuffed shelves.",
       "Even daylight, fixtures sitting correctly on the floor with real shadows.",
       "Not a vacant gutted rental. Not warped plastic or a 3D sketch.",
     ].join(" ");
@@ -1262,7 +1411,7 @@ export function buildStarterPrompt(opts: {
   const budget = Math.max(0, Math.round(opts.budget || 0));
   const subject =
     opts.mode === "component"
-      ? `Clean, focused view of ${scopeText} only. Crop tight on the element. Do not show a full unrelated room.`
+      ? `Clean, focused starter-canvas view of ${scopeText}. Keep the whole relevant fixture and surrounding context visible. Do not crop off edges or show a full unrelated room.`
       : `Realistic full ${opts.room} in a typical American house. ${scopeText} must be clearly visible.`;
   const defaultPlan = opts.mode === "component"
     ? `Show only ${scopeText} as the project that will be built at this budget.`
@@ -1285,6 +1434,288 @@ export function buildStarterPrompt(opts: {
   ]
     .filter(Boolean)
     .join(" ");
+}
+
+const REFINEMENT_TARGETS: Array<{ label: string; pattern: RegExp; upgradeDetail: string }> = [
+  {
+    label: "ceiling",
+    pattern: /\b(ceiling|coffered|tray ceiling|ceiling beams?|ceiling detail)\b/i,
+    upgradeDetail:
+      "use professionally proportioned, symmetrical ceiling detailing scaled to the visible ceiling height, with clean beam intersections, sensible panel spacing, and believable trim transitions",
+  },
+  {
+    label: "vanity",
+    pattern: /\b(vanity|vanities|bathroom cabinet|cabinets|cabinetry)\b/i,
+    upgradeDetail:
+      "use a noticeably better vanity cabinet, cleaner custom-looking doors, stronger hardware, and a better countertop/sink detail",
+  },
+  {
+    label: "countertop",
+    pattern: /\b(counter|countertop|worktop|surface)\b/i,
+    upgradeDetail: "use a visibly better countertop slab, cleaner edge profile, and more premium surface finish",
+  },
+  {
+    label: "shower / tub",
+    pattern: /\b(shower|tub|bathtub|wet wall|glass door|shower door)\b/i,
+    upgradeDetail: "use cleaner tile, more premium shower/tub fixtures, and a more finished enclosure detail",
+  },
+  {
+    label: "floor tile",
+    pattern: /\b(floor|flooring|floor tile)\b/i,
+    upgradeDetail: "use a better floor tile material, cleaner grout lines, and a more premium installed finish",
+  },
+  {
+    label: "wall tile",
+    pattern: /\b(wall tile|backsplash|tile wall|surround)\b/i,
+    upgradeDetail: "use a better wall tile material, cleaner layout, and more premium grout/detailing",
+  },
+  {
+    label: "tile",
+    pattern: /\btile|tiles|grout\b/i,
+    upgradeDetail: "use better tile material, cleaner layout, and more premium grout/detailing",
+  },
+  {
+    label: "lighting",
+    pattern: /\b(light|lighting|sconce|fixture|pendant|recessed)\b/i,
+    upgradeDetail: "use more refined lighting fixtures and better layered light quality",
+  },
+  {
+    label: "mirror",
+    pattern: /\b(mirror|medicine cabinet)\b/i,
+    upgradeDetail: "use a cleaner, more premium mirror or medicine cabinet detail",
+  },
+  {
+    label: "fixtures",
+    pattern: /\b(faucet|faucets|fixture|fixtures|hardware|handles|pulls|metal|chrome|brass|nickel|black)\b/i,
+    upgradeDetail: "use more refined plumbing fixtures and hardware with a visibly better metal finish",
+  },
+  {
+    label: "walls / paint",
+    pattern: /\b(paint|wall color|walls|trim|ceiling)\b/i,
+    upgradeDetail: "use a cleaner wall finish, sharper trim detail, and a more refined paint color",
+  },
+];
+
+const GLOBAL_STYLE_PATTERN =
+  /\b(total|overall|entire|whole|all over|full|complete|vibe|mood|palette|color story|theme|style|feel|warmer|cooler|moody|bright|airy|terracotta|terra cotta|earthy|coastal|modern|traditional|transitional|farmhouse|industrial|minimal|minimalist|spa|zen|organic)\b/i;
+
+const UPGRADE_PATTERN =
+  /\b(higher[- ]?end|high[- ]?end|premium|luxury|luxurious|upscale|nicer|upgrade|upgraded|more expensive|custom|designer|better quality|fancier|elevated)\b/i;
+
+const STRONG_PATTERN = /\b(total|overall|entire|whole|all over|full|complete|really|much more|bold|dramatic|strong)\b/i;
+
+const CAMERA_SHIFT_PATTERN =
+  /\b(side view|alternate view|another view|45 degrees?|camera angle|wider view|wide view|zoom out|from the (left|right|side))\b/i;
+
+const BUDGET_DOWN_PATTERN =
+  /\b(value engineer|value engineering|lower (the )?(cost|price|budget)|reduce (the )?(cost|price|budget)|save (about )?\$?|less expensive|more affordable|simpler specification)\b/i;
+
+const BUDGET_UP_PATTERN =
+  /\b(higher[- ]?end|raise (the )?(cost|price|budget)|increase (the )?(cost|price|budget)|spend (about )?\$?|invest (about )?\$?|more premium)\b/i;
+
+function cleanUserRefinement(note: string): string {
+  return String(note || "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 500);
+}
+
+function positiveDesignIntent(note: string): string {
+  return cleanUserRefinement(note)
+    .replace(/\b(?:not |doesn['’]t |does not )?look like (?:crap|shit|garbage|trash)\b/gi, "look intentional, well-proportioned, and professionally designed")
+    .replace(/\bmake (?:it|this|the ([a-z /-]+)) (?:not ugly|less ugly)\b/gi, (_match, target) =>
+      `make ${target ? `the ${target}` : "it"} visually balanced, refined, and professionally detailed`
+    )
+    .replace(/\b(?:cheap-looking|crappy|ugly|bad-looking)\b/gi, "visually refined and well detailed");
+}
+
+function requestedBudgetAmount(note: string): number | null {
+  const match = cleanUserRefinement(note).match(/\$?\s*(\d{1,3}(?:,\d{3})+|\d+(?:\.\d+)?)\s*([kK])?\b/);
+  if (!match) return null;
+  const raw = Number(match[1].replace(/,/g, ""));
+  if (!Number.isFinite(raw) || raw <= 0) return null;
+  const amount = match[2] ? raw * 1_000 : raw;
+  if (amount < 500) return null;
+  return Math.min(50_000, Math.round(amount / 500) * 500);
+}
+
+function detectRefinementTarget(note: string): { label: string; upgradeDetail: string } | null {
+  const text = cleanUserRefinement(note);
+  for (const target of REFINEMENT_TARGETS) {
+    if (target.pattern.test(text)) return { label: target.label, upgradeDetail: target.upgradeDetail };
+  }
+  return null;
+}
+
+export function buildRefinementPlan(opts: {
+  note: string;
+  serviceLabel?: string | null;
+  scopeLabel?: string | null;
+  budget?: number | null;
+}): RefinementPlan {
+  const note = positiveDesignIntent(opts.note);
+  const target = detectRefinementTarget(note);
+  const isUpgrade = UPGRADE_PATTERN.test(note);
+  const isGlobal = GLOBAL_STYLE_PATTERN.test(note) && !target;
+  const isStrong = STRONG_PATTERN.test(note);
+  const isCameraShift = CAMERA_SHIFT_PATTERN.test(note);
+  const budgetDirection = BUDGET_DOWN_PATTERN.test(note)
+    ? "down"
+    : BUDGET_UP_PATTERN.test(note)
+      ? "up"
+      : null;
+  const requestedAmount = requestedBudgetAmount(note) || 5_000;
+  const service = cleanUserRefinement(opts.serviceLabel || "Project");
+  const scope = cleanUserRefinement(opts.scopeLabel || "selected scope");
+  const budget = Math.max(0, Math.round(Number(opts.budget) || 0));
+  const context = `Project context: ${service} · ${scope}${budget ? ` · about $${budget.toLocaleString()}` : ""}.`;
+
+  const sharedRules = [
+    "Use the current image as the starting canvas.",
+    "Preserve the same camera, perspective, room geometry, fixture locations, doors, windows, and full image framing.",
+    "Do not crop tighter, do not zoom in, do not create a split-screen or before/after image.",
+    "Use a restrained professional designer's eye: correct scale, balanced proportions, coherent materials, plausible construction, and clean transitions.",
+    "Never make an element intentionally ugly, damaged, cheap-looking, distorted, or badly proportioned; translate negative wording into a positive quality improvement.",
+    "No text, labels, people, logos, or watermarks.",
+  ].join(" ");
+
+  if (isCameraShift) {
+    const prompt = [
+      `User request: ${note}.`,
+      context,
+      "REFINEMENT SCOPE: CAMERA-ONLY VARIATION.",
+      "Change only the camera position or framing requested by the user.",
+      "Treat the source as one fixed physical space: preserve its dimensions, architecture, layout, material selections, and exact fixture or outdoor-zone inventory.",
+      "Never reveal invented floor area, add a second fixture or zone, or relocate doors, windows, plumbing, cabinetry, paths, or structures.",
+      "Keep the result photorealistic and coherent with the source image. No text, labels, people, logos, or watermarks.",
+    ].join(" ");
+    return {
+      mode: "camera_shift",
+      target: null,
+      interpretedNote: note,
+      estimatedBudgetDelta: 0,
+      generationIntent: "camera_shift",
+      modelPath: "fast-first",
+      loaderLabel: "Creating the alternate view…",
+      prompt,
+    };
+  }
+
+  if (target && isUpgrade) {
+    const prompt = [
+      `User request: ${note}.`,
+      context,
+      "REFINEMENT SCOPE: TARGETED FINISH-TIER UPGRADE.",
+      `Primary target: ${target.label}.`,
+      `Make the ${target.label} change visually obvious: ${target.upgradeDetail}.`,
+      "This target component may move one to two finish tiers higher than the original starter canvas, even if the surrounding room stays simple.",
+      `Do not turn the whole room luxury; keep non-${target.label} materials substantially the same unless they physically touch the target.`,
+      "A tiny color shift is not enough — the named component must clearly look upgraded.",
+      sharedRules,
+    ].join(" ");
+    return {
+      mode: "component_tier_shift",
+      target: target.label,
+      interpretedNote: note,
+      estimatedBudgetDelta: requestedAmount,
+      generationIntent: "component_tier_shift",
+      modelPath: "quality-first",
+      loaderLabel: `Upgrading the ${target.label}…`,
+      prompt,
+    };
+  }
+
+  if (target) {
+    const prompt = [
+      `User request: ${note}.`,
+      context,
+      "REFINEMENT SCOPE: TARGETED COMPONENT EDIT.",
+      `Primary target: ${target.label}.`,
+      `Make the requested change visually obvious on the ${target.label}.`,
+      target.label === "ceiling" ? `Designer execution: ${target.upgradeDetail}.` : "",
+      `Preserve the rest of the room, especially non-${target.label} surfaces, colors, materials, and fixtures.`,
+      sharedRules,
+    ].join(" ");
+    return {
+      mode: "targeted_component",
+      target: target.label,
+      interpretedNote: note,
+      estimatedBudgetDelta: 0,
+      generationIntent: "targeted_refine",
+      modelPath: "fast-first",
+      loaderLabel: `Changing the ${target.label}…`,
+      prompt,
+    };
+  }
+
+  if (budgetDirection) {
+    const movingUp = budgetDirection === "up";
+    const prompt = [
+      `User request: ${note}.`,
+      context,
+      "REFINEMENT SCOPE: VALUE-ENGINEERED FINISH SHIFT.",
+      movingUp
+        ? "Move the design up one realistic finish tier by upgrading the two or three most visible materials, fixtures, or built-ins. Make the added value easy to see without making the room gaudy."
+        : "Move the design down one realistic finish tier by simplifying the two or three costliest visible materials, fixtures, or built-ins. Keep the room intentional and attractive, never cheap or deliberately ugly.",
+      "Do not change the floor plan, camera, room geometry, fixture locations, doors, windows, or exact fixture count.",
+      "Keep untouched components visually consistent with the source. No text, labels, people, logos, or watermarks.",
+    ].join(" ");
+    return {
+      mode: "budget_shift",
+      target: null,
+      interpretedNote: note,
+      estimatedBudgetDelta: movingUp ? requestedAmount : -requestedAmount,
+      generationIntent: movingUp ? "budget_upgrade" : "value_engineering",
+      modelPath: "fast-first",
+      loaderLabel: movingUp ? "Upgrading the finish level…" : "Value engineering the design…",
+      prompt,
+    };
+  }
+
+  if (isGlobal) {
+    const prompt = [
+      `User request: ${note}.`,
+      context,
+      "REFINEMENT SCOPE: WHOLE-CANVAS STYLE SHIFT.",
+      "Apply the requested vibe across the visible service-touched finishes as one coherent direction.",
+      "Change palette, surface tone, tile/wall color, vanity finish, metal finish, and lighting warmth as needed.",
+      isStrong
+        ? "Make the shift strong and immediately readable, not a small accent."
+        : "Make the shift clearly readable, but keep it tasteful and plausible.",
+      "Preserve fixture locations and the basic starter-canvas layout.",
+      sharedRules,
+    ].join(" ");
+    return {
+      mode: "global_style",
+      target: null,
+      interpretedNote: note,
+      estimatedBudgetDelta: 0,
+      generationIntent: "style_shift",
+      modelPath: "quality-first",
+      loaderLabel: "Changing the overall style…",
+      prompt,
+    };
+  }
+
+  const prompt = [
+    `User request: ${note}.`,
+    context,
+    "REFINEMENT SCOPE: BALANCED EDIT.",
+    "Apply the requested change clearly, but avoid unrelated redesign.",
+    "If the request implies a whole-room feel, update the visible palette/surfaces enough to be readable.",
+    "If the request names or implies a component, make that component visibly change and preserve everything else.",
+    sharedRules,
+  ].join(" ");
+  return {
+    mode: "balanced",
+    target: null,
+    interpretedNote: note,
+    estimatedBudgetDelta: 0,
+    generationIntent: "refine",
+    modelPath: "fast-first",
+    loaderLabel: "Making that change…",
+    prompt,
+  };
 }
 
 export function buildNeutralizePrompt(opts: { room: string; scopes: string[] }): string {

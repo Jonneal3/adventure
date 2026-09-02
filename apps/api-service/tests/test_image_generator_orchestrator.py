@@ -149,6 +149,50 @@ def test_scene_refinement_inputs_budget_tier_shift_expands_refinement_scope() ->
     assert "new budget tier" in inputs["reference_adherence"].lower()
 
 
+def test_scene_refinement_inputs_style_shift_allows_whole_canvas_changes() -> None:
+    inputs = orchestrator._extract_scene_refinement_inputs(
+        {
+            "useCase": "scene-refinement",
+            "generationIntent": "style_shift",
+            "refinementNotes": "User request: give the bathroom a total terracotta vibe.",
+            "instanceContext": {
+                "serviceSummary": "Bathroom remodeling service.",
+            },
+            "sceneImage": "https://example.com/scene.png",
+            "stepDataSoFar": {
+                "step-budget-range": 18000,
+            },
+        }
+    )
+
+    assert inputs["refinement_notes"].lower().startswith("whole-canvas style shift requested.")
+    assert "allow broad color" in inputs["reference_adherence"].lower()
+    assert "tiny accent" in inputs["reference_adherence"].lower()
+    assert "18,000" in inputs["budget_requirements"]
+
+
+def test_scene_refinement_inputs_component_tier_shift_softens_budget_for_target_only() -> None:
+    inputs = orchestrator._extract_scene_refinement_inputs(
+        {
+            "useCase": "scene-refinement",
+            "generationIntent": "component_tier_shift",
+            "refinementNotes": "User request: change the vanity to something higher end. Primary target: vanity.",
+            "instanceContext": {
+                "serviceSummary": "Bathroom remodeling service.",
+            },
+            "sceneImage": "https://example.com/scene.png",
+            "stepDataSoFar": {
+                "step-budget-range": 6500,
+            },
+        }
+    )
+
+    assert inputs["refinement_notes"].lower().startswith("targeted component finish-tier upgrade requested.")
+    assert "all non-target materials" in inputs["reference_adherence"].lower()
+    assert "tiny color shift" in inputs["reference_adherence"].lower()
+    assert "component only" in inputs["budget_requirements"].lower()
+
+
 def test_fast_schnell_scene_prompt_builds_without_reference(monkeypatch) -> None:
     monkeypatch.delenv("IMAGE_SCENE_USE_DSPY_PROMPT", raising=False)
     payload = {

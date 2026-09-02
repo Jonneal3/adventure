@@ -13,7 +13,11 @@ CONTEXT_JSON_FIELDS = """`catalog_context_json` typically includes:
 - `service`: the service / subcategory name
 - `category_name`: optional broader category label
 - `subcategory_name`: optional explicit subcategory label
+- `service_id`: exact service/subcategory id required in every manifest
+- `target_scope`: optional exact Step-2 scope bucket; when present every concept must visibly feature it
 - `target_count`: desired number of starter catalog concepts
+- `pricing_family`: the one launch pricing family for this service
+- `priceable_registry`: the closed set of components, enums, quantity bounds, pricing units, and before strategies
 """.strip()
 
 
@@ -61,7 +65,7 @@ def build_subcategory_catalog_prompt() -> str:
             [
                 "Return JSON only in `catalog_plan_json`.",
                 "Return a single JSON object with this shape: "
-                '{"question":"...","concepts":[{"label":"...","value":"...","image_prompt":"...","description":"...","price_tier":"$|$$|$$$|$$$$"}]}',
+                '{"question":"...","concepts":[{"label":"...","value":"...","image_prompt":"...","description":"...","price_tier":"$|$$|$$$|$$$$","manifest":{"version":1,"source":"planned","serviceId":"...","serviceKey":"...","pricingFamily":"...","components":[{"componentKey":"...","subtypeKey":"...","materialKey":"...","tier":"value|mid|premium|luxury","quantity":{"low":1,"likely":1,"high":1,"unit":"each"},"attributes":{}}],"assumptions":[],"normalizationNotes":[]}}]}',
                 "`question` should be a short user-facing prompt for the image grid.",
                 "`concepts` should contain as many high-quality options as possible up to `target_count`.",
             ],
@@ -70,6 +74,11 @@ def build_subcategory_catalog_prompt() -> str:
             "CONCEPT RULES:",
             [
                 "Every concept must be visually distinct from the others.",
+                "Every concept must include a complete manifest using only values and units from `priceable_registry`.",
+                "Use the exact service id and pricing family supplied in context. Do not create pricing rules or dollar amounts.",
+                "Every component in the manifest must be explicitly visible in `image_prompt`; do not mention or depict unrelated scope.",
+                "Quantity ranges must stay inside the registry bounds and low <= likely <= high.",
+                "When `target_scope` is present, every concept must visibly and explicitly center that scope; do not substitute a generic full-service scene.",
                 "Use concrete, service-specific labels such as design directions, material stories, or aesthetic clusters.",
                 "Each `label` should be short, natural, and user-facing.",
                 "Each `value` must be snake_case and stable.",
@@ -96,7 +105,8 @@ def build_subcategory_catalog_prompt() -> str:
                 "Output JSON only. No prose, markdown, or code fences.",
                 "Do not echo the prompt or inputs.",
                 "Do not emit more than `target_count` concepts.",
-                "Prefer 12 or more concepts when enough service-specific variety exists.",
+                "Never emit a concept without a manifest or with an unregistered component, subtype, material, tier, attribute, or unit.",
+                "Emit the requested `target_count`; small scope-floor jobs may intentionally request only 1–5 concepts.",
             ],
         ),
     )

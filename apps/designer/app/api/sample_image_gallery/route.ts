@@ -71,7 +71,11 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to fetch gallery images' }, { status: 500 });
     }
 
-    return NextResponse.json({ galleryImages });
+    const readyGalleryImages = (galleryImages || []).filter((item: any) =>
+      item?.images?.metadata?.gallery_enrichment?.version === 1 &&
+      item?.images?.metadata?.gallery_enrichment?.publish?.status === 'ready'
+    );
+    return NextResponse.json({ galleryImages: readyGalleryImages });
   } catch (error) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
@@ -155,6 +159,12 @@ export async function POST(request: NextRequest) {
     const processedImages = [];
     
     for (const image of imagesToAddData || []) {
+      if (
+        image?.metadata?.gallery_enrichment?.version !== 1 ||
+        image?.metadata?.gallery_enrichment?.publish?.status !== 'ready'
+      ) {
+        continue;
+      }
       let promptId = image.prompt_id;
       
       // If the image doesn't have a prompt_id but has prompt_text in metadata, create a prompt entry
@@ -197,6 +207,13 @@ export async function POST(request: NextRequest) {
         image_id: image.id,
         sort_order: sortOrder ? sortOrder + processedImages.length : nextSortOrder + processedImages.length,
       });
+    }
+
+    if (processedImages.length === 0) {
+      return NextResponse.json(
+        { error: 'Only fully enriched, publish-ready images can be added to the gallery' },
+        { status: 422 }
+      );
     }
 
     // Add the images to the gallery
@@ -334,4 +351,4 @@ export async function DELETE(request: NextRequest) {
   } catch (error) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
-} 
+}

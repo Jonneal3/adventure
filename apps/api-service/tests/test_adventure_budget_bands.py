@@ -4,6 +4,10 @@ from programs.adventure_pipeline.budget_bands import adjacent_finish_tiers, prop
 def test_vanity_slider_is_smaller_than_full_bath() -> None:
     vanity = propose_budget_bands(service_label="Bathroom Remodel", scopes=["Vanity"])
     full = propose_budget_bands(service_label="Bathroom Remodel", scopes=["Full Bathroom Remodel"])
+    assert vanity["source"] == "calibrated"
+    assert vanity["calibrationKey"] == "bathroom_remodel"
+    assert vanity["scopes"] == ["Vanity"]
+    assert all(band["min"] < band["max"] for band in vanity["bands"])
     assert vanity["min"] == 500
     assert vanity["max"] < full["max"]
     assert vanity["min"] <= vanity["defaultAmount"] <= vanity["max"]
@@ -23,10 +27,10 @@ def test_finish_tiers_are_scope_aware() -> None:
     vanity_tiers = vanity["finishTiers"]
     full_tiers = full["finishTiers"]
     assert vanity_tiers[0]["min"] == 500
-    assert 5 <= len(vanity_tiers) <= 8
+    assert 6 <= len(vanity_tiers) <= 8
     assert vanity_tiers[-1]["openEnded"] is True
     assert full_tiers[0]["min"] <= 1_500
-    assert 5 <= len(full_tiers) <= 8
+    assert 6 <= len(full_tiers) <= 8
     assert full_tiers[-1]["openEnded"] is True
     assert full_tiers[-1]["min"] >= 40_000
     allowed = adjacent_finish_tiers("value", vanity_tiers)
@@ -39,8 +43,8 @@ def test_each_service_uses_its_own_rungs() -> None:
     kitchen = propose_budget_bands(service_label="Kitchen Remodel", scopes=["Full Kitchen Remodel"])
     assert paint["finishTiers"][0]["min"] == 250
     assert paint["finishTiers"][-1]["openEnded"] is True
-    assert 2 <= len(paint["finishTiers"]) <= 8
+    assert 6 <= len(paint["finishTiers"]) <= 8
     assert kitchen["finishTiers"][0]["min"] <= 3_000
-    assert 5 <= len(kitchen["finishTiers"]) <= 8
+    assert 6 <= len(kitchen["finishTiers"]) <= 8
     assert kitchen["finishTiers"][-1]["openEnded"] is True
     assert kitchen["finishTiers"][-1]["min"] >= 60_000

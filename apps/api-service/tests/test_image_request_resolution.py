@@ -129,6 +129,20 @@ def test_build_replicate_request_uses_p_image_edit_shape() -> None:
     ]
     assert request["input"]["aspect_ratio"] == "match_input_image"
 
+
+def test_p_image_edit_folds_negative_constraints_into_prompt() -> None:
+    request = build_replicate_request(
+        prompt="Preserve the approved bathroom reference exactly.",
+        negative_prompt="duplicate showerhead, light fixture inside wet zone",
+        model_id="prunaai/p-image-edit",
+        scene_image="https://example.com/scene.png",
+        num_outputs=1,
+    )
+
+    assert "Strictly avoid:" in request["input"]["prompt"]
+    assert "duplicate showerhead" in request["input"]["prompt"]
+    assert "light fixture inside wet zone" in request["input"]["prompt"]
+
 def test_build_replicate_request_uses_flux_2_successive_edit_shape() -> None:
     request = build_replicate_request(
         prompt="Edit the supplied current image by adding a physically buildable half wall for the shower.",
@@ -153,6 +167,39 @@ def test_build_replicate_request_uses_flux_2_successive_edit_shape() -> None:
     assert request["input"]["resolution"] == "match_input_image"
     assert request["input"]["output_format"] == "png"
     assert request["input"]["output_quality"] == 100
+
+
+def test_quality_catalog_generation_uses_flux_2_provider_shape(monkeypatch) -> None:
+    captured: dict[str, object] = {}
+
+    def _fake_create_prediction(*, model_id, input):
+        captured["model_id"] = model_id
+        captured["input"] = input
+        return {
+            "id": "pred_catalog_quality",
+            "status": "succeeded",
+            "output": ["https://example.com/catalog-quality.png"],
+        }
+
+    monkeypatch.setattr(image_generation, "_replicate_create_prediction", _fake_create_prediction)
+
+    urls, stats = image_generation.generate_option_images_for_step(
+        ["A polished photorealistic bathroom"],
+        model_id="black-forest-labs/flux-2-pro",
+        seed_base="quality-catalog-test",
+    )
+
+    assert urls == ["https://example.com/catalog-quality.png"]
+    assert stats["succeeded"] == 1
+    assert captured["model_id"] == "black-forest-labs/flux-2-pro"
+    provider_input = captured["input"]
+    assert isinstance(provider_input, dict)
+    assert provider_input["resolution"] == "2 MP"
+    assert provider_input["output_quality"] == 100
+    assert provider_input["output_format"] == "png"
+    assert "num_inference_steps" not in provider_input
+    assert "disable_safety_checker" not in provider_input
+    assert "seed" not in provider_input
 
 
 def test_build_replicate_request_uses_fast_p_image_generation_shape() -> None:

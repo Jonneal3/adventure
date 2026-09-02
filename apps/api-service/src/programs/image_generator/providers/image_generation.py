@@ -10,6 +10,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import requests
 
+from programs.image_generator.model_catalog import get_model_entry
 from programs.image_generator.provider_request_builder import build_replicate_request
 
 
@@ -385,14 +386,18 @@ def generate_option_images_for_step(
 ) -> Tuple[List[Optional[str]], Dict[str, int]]:
     """
     Generate one image per prompt for multiple-choice option images.
-    Uses flux-schnell; runs one Replicate call per prompt in parallel (up to 24)
-    so 10-20 option style grids return quickly. Returns list of image URLs in same order as prompts
-    (None for failures so caller can leave option without imageUrl).
+    The caller chooses the model policy: interactive thumbnails may use a fast
+    model, while persistent gallery seeding uses a quality model. Calls run in
+    parallel and return URLs in prompt order (None for failures).
     """
     if not prompts:
         return ([], {"optionsTotal": 0, "optionsAttempted": 0, "cacheHits": 0, "succeeded": 0, "failed": 0})
     model = str(model_id or "").strip() or _option_images_model_id()
-    timeout_sec = float(os.getenv("REPLICATE_TIMEOUT_SEC") or "60")
+    profile = get_model_entry(model)
+    quality_first = bool(profile and profile.quality in {"very_high", "highest"})
+    timeout_default = "180" if quality_first else str(os.getenv("REPLICATE_TIMEOUT_SEC") or "60")
+    timeout_sec = float(os.getenv("AI_FORM_OPTION_IMAGES_TIMEOUT_SEC") or timeout_default)
+    output_format = str(profile.output_format if profile else "webp").strip() or "webp"
     seed_base_s = str(seed_base or "").strip()
     results: List[Optional[str]] = [None] * len(prompts)
     stats: Dict[str, int] = {
@@ -431,21 +436,28 @@ def generate_option_images_for_step(
         seed = _seed_for_prompt(prompt)
         # Cache must include model/version and seed so results are stable within a session
         # but not incorrectly shared across sessions.
-        cache_key = f"{model}::1:1::4::webp::seed={seed if seed is not None else 'none'}::{prompt}"
+        cache_key = f"{model}::1:1::{output_format}::seed={seed if seed is not None else 'none'}::{prompt}"
         cached = _option_images_cache_get(cache_key)
         if cached:
             return idx, cached, True
 
         _option_images_rate_limit_wait(qps)
-        inp: Dict[str, Any] = {
-            "prompt": prompt,
-            "num_outputs": 1,
-            "aspect_ratio": "1:1",
-            "num_inference_steps": _option_image_inference_steps(model),
-            "output_format": "webp",
-            "disable_safety_checker": False,
-        }
-        if seed is not None:
+        provider_request = build_replicate_request(
+            prompt=prompt,
+            model_id=model,
+            num_outputs=1,
+            aspect_ratio="1:1",
+            output_format=output_format,
+            num_inference_steps=_option_image_inference_steps(model),
+            guidance_scale=profile.guidance_scale if profile else None,
+            safety_tolerance=profile.safety_tolerance if profile else None,
+            prompt_upsampling=profile.prompt_upsampling if profile else None,
+            go_fast=profile.go_fast if profile else None,
+        )
+        inp = provider_request["input"] if isinstance(provider_request.get("input"), dict) else {}
+        # Stable seeds are part of the Schnell thumbnail contract. Do not add
+        # Schnell-only inputs to quality models with different schemas.
+        if seed is not None and _is_flux_schnell_model(model):
             inp["seed"] = seed
         try:
             created = _replicate_create_prediction(model_id=model, input=inp)

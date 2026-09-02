@@ -82,8 +82,13 @@ def build_replicate_request(
             "disable_safety_checker": False,
         }
     elif style == "p-image-edit":
+        # p-image-edit has no separate negative_prompt input. Preserve critical
+        # artifact exclusions by folding them into its authored edit instruction.
+        edit_prompt = prompt_text
+        if negative_prompt and str(negative_prompt).strip():
+            edit_prompt = f"{prompt_text}\nStrictly avoid: {str(negative_prompt).strip()}."
         request_input = {
-            "prompt": prompt_text,
+            "prompt": edit_prompt,
             "images": [primary_edit_image, *[ref for ref in refs if ref != primary_edit_image]][:4],
         }
         request_input["images"] = [image for image in request_input["images"] if image]

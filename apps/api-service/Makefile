@@ -1,4 +1,4 @@
-PYTHON?=python3
+PYTHON?=$(if $(wildcard .venv/bin/python),.venv/bin/python,python3)
 PYTHONPATH?=.
 PLANNER_OPT_DIR?=src/programs/question_planner/data/optimized_outputs
 PLANNER_RUNS_DIR?=$(PLANNER_OPT_DIR)/runs
@@ -17,6 +17,14 @@ PLANNER_TRAINSET_SHUFFLE?=false
 .PHONY: dev
 dev:
 	PYTHONPATH=.:src $(PYTHON) -m uvicorn api.main:app --host 127.0.0.1 --port 8008 --reload
+
+.PHONY: gallery-enrichment-dry-run
+gallery-enrichment-dry-run:
+	PYTHONPATH=.:src $(PYTHON) scripts/enrich_gallery_images.py --limit 20 --dry-run
+
+.PHONY: gallery-enrichment-run
+gallery-enrichment-run:
+	PYTHONPATH=.:src $(PYTHON) scripts/enrich_gallery_images.py --limit 0
 
 .PHONY: optimize-planner-core
 optimize-planner-core:
