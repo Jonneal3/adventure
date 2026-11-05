@@ -9,15 +9,16 @@ import dotenv from "dotenv";
 import pg from "pg";
 
 const runtime = dotenv.parse(fs.readFileSync("env/.env.shared.local"));
-const migration = dotenv.parse(fs.readFileSync("env/.env.migration.local"));
+const migration = fs.existsSync("env/.env.migration.local") ? dotenv.parse(fs.readFileSync("env/.env.migration.local")) : {};
 const offline = process.argv.includes("--offline");
+const apiBackup = process.argv.includes("--api-backup");
 const sourceUrl = runtime.NEXT_PUBLIC_SUPABASE_URL;
 const sourceKey = runtime.SUPABASE_SECRET_KEY || runtime.SUPABASE_SERVICE_ROLE_KEY;
 const projectRef = runtime.ADVENTURE_SUPABASE_PROJECT_REF || new URL(runtime.NEXT_PUBLIC_SUPABASE_URL).hostname.split(".")[0];
 if (!offline && (!sourceUrl || !sourceKey || !projectRef || new URL(sourceUrl).hostname !== `${projectRef}.supabase.co`))
   throw new Error("Source Supabase configuration is incomplete or mismatched");
 const sourceDbUrl = migration.ADVENTURE_DATABASE_URL;
-if (!offline && (!sourceDbUrl || !(
+if (!offline && !apiBackup && (!sourceDbUrl || !(
   new URL(sourceDbUrl).hostname === `db.${projectRef}.supabase.co` ||
   (new URL(sourceDbUrl).hostname.endsWith(".pooler.supabase.com") && decodeURIComponent(new URL(sourceDbUrl).username) === `postgres.${projectRef}`)
 )))
@@ -26,11 +27,37 @@ if (!offline && (!sourceDbUrl || !(
 const root = path.resolve(".local/backups/storage");
 fs.mkdirSync(root, { recursive: true, mode: 0o700 });
 const source = offline ? null : createClient(sourceUrl, sourceKey, { auth: { persistSession: false } });
-const db = offline ? null : new pg.Client({ connectionString: sourceDbUrl, ssl: { rejectUnauthorized: false }, connectionTimeoutMillis: 15000 });
+const db = offline || apiBackup ? null : new pg.Client({ connectionString: sourceDbUrl, ssl: { rejectUnauthorized: false }, connectionTimeoutMillis: 15000 });
 const sha256 = (bytes) => createHash("sha256").update(bytes).digest("hex");
 const allowedBuckets = new Set((migration.ADVENTURE_STORAGE_BUCKETS || "").split(",").map(value => value.trim()).filter(Boolean));
 const target = process.argv.includes("--upload");
 if (offline && !target) throw new Error("--offline requires --upload");
+if (apiBackup && target) throw new Error("--api-backup cannot upload; reconcile against the database first");
+
+async function listStorageObjects() {
+  const { data: buckets, error } = await source.storage.listBuckets();
+  if (error || !buckets) throw new Error(`Storage bucket listing failed: ${error?.message || "empty response"}`);
+  const rows = [];
+  for (const bucket of buckets) {
+    const pending = [""];
+    while (pending.length) {
+      const prefix = pending.shift();
+      for (let offset = 0; ; offset += 1000) {
+        const { data: entries, error: listError } = await source.storage.from(bucket.id).list(prefix, {
+          limit: 1000, offset, sortBy: { column: "name", order: "asc" },
+        });
+        if (listError || !entries) throw new Error(`Storage listing failed for ${bucket.id}/${prefix}: ${listError?.message || "empty response"}`);
+        for (const entry of entries) {
+          const name = prefix ? `${prefix}/${entry.name}` : entry.name;
+          if (entry.id) rows.push({ bucket_id: bucket.id, name, mime: entry.metadata?.mimetype, size: entry.metadata?.size });
+          else pending.push(name);
+        }
+        if (entries.length < 1000) break;
+      }
+    }
+  }
+  return rows.sort((a, b) => a.bucket_id.localeCompare(b.bucket_id) || a.name.localeCompare(b.name));
+}
 
 let s3;
 if (target) {
@@ -47,14 +74,20 @@ try {
     const saved = JSON.parse(fs.readFileSync(path.join(root, "manifest.json"), "utf8"));
     if (!Array.isArray(saved.objects)) throw new Error("Storage manifest is malformed");
     rows = saved.objects.map((object) => ({ bucket_id: object.bucket, name: object.key, mime: object.mime, size: object.bytes, expectedHash: object.sha256 }));
+  } else if (apiBackup) {
+    rows = await listStorageObjects();
   } else {
     await db.connect();
     await db.query("BEGIN READ ONLY");
     ({ rows } = await db.query("SELECT bucket_id,name,metadata->>'mimetype' AS mime,metadata->>'size' AS size FROM storage.objects ORDER BY bucket_id,name"));
   }
   if (allowedBuckets.size && rows.some((row) => !allowedBuckets.has(row.bucket_id))) throw new Error("An unknown storage bucket needs a migration rule");
-  const manifest = [];
-  for (const row of rows) {
+  const manifest = new Array(rows.length);
+  let cursor = 0;
+  async function copyNext() {
+    while (cursor < rows.length) {
+      const index = cursor++;
+      const row = rows[index];
     const parts = row.name.split("/");
     if (parts.some((part) => !part || part === "." || part === "..")) throw new Error("Unsafe source object key");
     const file = path.join(root, row.bucket_id, ...parts);
@@ -87,11 +120,13 @@ try {
       if (!verified.Body || sha256(Buffer.from(await verified.Body.transformToByteArray())) !== hash)
         throw new Error(`S3 checksum mismatch for ${row.bucket_id}/${row.name}`);
     }
-    manifest.push({ bucket: row.bucket_id, key: row.name, targetKey: `legacy/${row.bucket_id}/${row.name}`, bytes: bytes.length, sha256: hash, mime: row.mime });
+      manifest[index] = { bucket: row.bucket_id, key: row.name, targetKey: `legacy/${row.bucket_id}/${row.name}`, bytes: bytes.length, sha256: hash, mime: row.mime };
+    }
   }
+  await Promise.all(Array.from({ length: apiBackup ? Math.min(8, rows.length) : 1 }, () => copyNext()));
   if (!offline) fs.writeFileSync(path.join(root, "manifest.json"), JSON.stringify({ projectRef, checkedAt: new Date().toISOString(), objects: manifest }, null, 2), { mode: 0o600 });
   await db?.query("ROLLBACK");
-  console.log(JSON.stringify({ mode: target ? "uploaded-and-verified" : "backed-up", objects: manifest.length, bytes: manifest.reduce((sum, item) => sum + item.bytes, 0), manifest: path.join(root, "manifest.json") }));
+  console.log(JSON.stringify({ mode: target ? "uploaded-and-verified" : apiBackup ? "api-backup-unreconciled" : "backed-up", objects: manifest.length, bytes: manifest.reduce((sum, item) => sum + item.bytes, 0), manifest: path.join(root, "manifest.json") }));
 } catch (error) {
   await db?.query("ROLLBACK").catch(() => {});
   console.error(`Storage migration failed: ${error.message}`);
