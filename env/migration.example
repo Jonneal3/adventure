@@ -1,0 +1,10 @@
+# Copy to ignored env/.env.migration.local. Keep source and target on distinct hosts.
+ADVENTURE_DATABASE_URL=postgresql://source-user:password@source-host:5432/postgres
+ADVENTURE_TARGET_DATABASE_URL=postgresql://target-user:password@target-host:5432/adventure
+# Optional allowlist. Leave unset to include every Supabase storage bucket.
+ADVENTURE_STORAGE_BUCKETS=
+S3_ENDPOINT=https://private-adventure-storage.example
+S3_REGION=auto
+S3_ACCESS_KEY_ID=
+S3_SECRET_ACCESS_KEY=
+S3_ASSET_BUCKET=adventure-assets

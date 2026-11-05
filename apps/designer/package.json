@@ -34,6 +34,7 @@
     "backfill:refinement-library": "tsx scripts/backfill-refinement-library.ts"
   },
   "dependencies": {
+    "@adventure/experience": "file:../../shared/experience",
     "@adventure/refinement-server": "file:../../shared/api/refinement-server",
     "@aws-sdk/client-s3": "^3.842.0",
     "@aws-sdk/s3-request-presigner": "^3.842.0",

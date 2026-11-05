@@ -74,6 +74,12 @@ export async function middleware(request: NextRequest) {
   try {
     const res = NextResponse.next();
     const pathname = request.nextUrl.pathname;
+    if (process.env.ADVENTURE_PLATFORM_V2 === 'true') {
+      if (pathname.startsWith('/api/platform/')) return res;
+      if (pathname.startsWith('/api/')) return new NextResponse('Legacy API is unavailable in Adventure staging', { status: 410 });
+      if (pathname === '/platform' || pathname.startsWith('/platform/')) return res;
+      return NextResponse.redirect(new URL('/platform', request.url));
+    }
     // Hard bypass for all API routes, including webhooks and Shopify
     if (pathname.startsWith('/api/')) {
       return res;
@@ -150,6 +156,6 @@ export const config = {
      * - public folder
      * - api routes (handled separately)
      */
-    '/((?!_next/static|_next/image|favicon.ico|public/|api/).*)',
+    '/((?!_next/static|_next/image|favicon.ico|public/).*)',
   ],
-} 
+}

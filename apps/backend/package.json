@@ -1,0 +1,43 @@
+{
+  "name": "@adventure/backend",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/main.ts",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/main.js",
+    "worker:visual": "tsx src/visual-worker.ts",
+    "worker:start": "node dist/visual-worker.js",
+    "db:generate": "drizzle-kit generate"
+  },
+  "dependencies": {
+    "@adventure/api-contract": "file:../../shared/api-contract",
+    "@adventure/experience": "file:../../shared/experience",
+    "@aws-sdk/client-s3": "^3.842.0",
+    "@aws-sdk/s3-request-presigner": "^3.842.0",
+    "@better-auth/drizzle-adapter": "1.7.12",
+    "@nestjs/common": "^11.0.0",
+    "@nestjs/core": "^11.0.0",
+    "@nestjs/platform-express": "^11.0.0",
+    "@ts-rest/nest": "^3.0.0",
+    "better-auth": "1.7.12",
+    "bcryptjs": "^3.0.0",
+    "drizzle-orm": "^0.45.0",
+    "express": "^5.0.0",
+    "ipaddr.js": "^1.9.1",
+    "pg": "^8.23.1",
+    "reflect-metadata": "^0.2.0",
+    "rxjs": "^7.8.0",
+    "stripe": "^14.25.0",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.0",
+    "@types/node": "^20.19.4",
+    "@types/pg": "^8.23.1",
+    "drizzle-kit": "^0.31.0",
+    "tsx": "^4.19.2",
+    "typescript": "5.8.3"
+  }
+}

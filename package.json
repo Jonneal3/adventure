@@ -3,9 +3,12 @@
   "private": true,
   "packageManager": "npm@10.2.4",
   "workspaces": [
+    "apps/backend",
     "apps/designer",
     "apps/widget",
     "apps/shopify",
+    "shared/api-contract",
+    "shared/experience",
     "shared/api/*"
   ],
   "scripts": {
@@ -41,10 +44,10 @@
     "env:sync:prod": "bash env/sync-production-env.sh",
     "vercel:clear-install-override": "node scripts/vercel-clear-install-override.js",
     "env:cleanup-local": "node scripts/sync-local-envs.js",
-    "prod:designer": "sh -c 'cd \"$(git rev-parse --show-toplevel)\" && VERCEL_ORG_ID=team_0sb91b5I1x127Fui6GDnIDl9 VERCEL_PROJECT_ID=prj_eiJM6RfCCEc3xaP1E8ORCvbwwWr3 vercel --prod --yes -A apps/designer/vercel.json'",
-    "prod:widget": "sh -c 'cd \"$(git rev-parse --show-toplevel)\" && VERCEL_ORG_ID=team_0sb91b5I1x127Fui6GDnIDl9 VERCEL_PROJECT_ID=prj_F1sNyaZ5JyxlZI6XR6hBron5jEim vercel --prod --yes -A apps/widget/vercel.json'",
+    "prod:designer": "sh -c 'cd \"$(git rev-parse --show-toplevel)\" && VERCEL_ORG_ID=team_M37dtTJ5WQVYQwUKrIVnRuQW VERCEL_PROJECT_ID=prj_CmFWhAj27QRo5CEVNYnQrAEhEGO8 vercel --prod --yes -A apps/designer/vercel.json'",
+    "prod:widget": "sh -c 'cd \"$(git rev-parse --show-toplevel)\" && VERCEL_ORG_ID=team_M37dtTJ5WQVYQwUKrIVnRuQW VERCEL_PROJECT_ID=prj_LTrbI2dUFp8MbuHc2we6kSMfOCUc vercel --prod --yes -A apps/widget/vercel.json'",
     "prod:shopify": "sh -c 'cd apps/shopify && vercel --prod --yes'",
-    "prod:api-service": "sh -c 'cd apps/api-service && vercel --prod --yes'",
+    "prod:api-service": "sh -c 'cd apps/api-service && VERCEL_ORG_ID=team_M37dtTJ5WQVYQwUKrIVnRuQW VERCEL_PROJECT_ID=prj_On3BhZ1wYrHcE6U3HfwfMfflDGC7 vercel --prod --yes'",
     "prod": "sh -c 'npm run prod:designer & npm run prod:widget & wait'",
     "prod:all": "sh -c 'npm run prod:designer & npm run prod:widget & npm run prod:api-service & wait'",
     "deploy:designer": "npm run prod:designer",
@@ -57,5 +60,9 @@
   },
   "dependencies": {
     "switchboard": "^1.3.0"
+  },
+  "overrides": {
+    "@better-auth/core": "1.7.12",
+    "better-call": "1.4.4"
   }
 }

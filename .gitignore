@@ -22,4 +22,6 @@ env/generated/
 **/dist
 **/coverage
 **/.turbo
+.local/
+**/.next-dev/
 *.tsbuildinfo

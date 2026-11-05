@@ -28,6 +28,7 @@
     "scripts:fill-suggestion-labels": "node ./scripts/fill-prompt-suggestion-labels.mjs"
   },
   "dependencies": {
+    "@adventure/experience": "file:../../shared/experience",
     "@adventure/ai-form-ui-contract": "file:../../shared/api/ai-form-ui-contract",
     "@adventure/refinement-server": "file:../../shared/api/refinement-server",
     "@ai-sdk/react": "^1.2.12",

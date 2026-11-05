@@ -24,6 +24,10 @@ export default function AppShellClient({ children }: { children: React.ReactNode
     return <>{children}</>;
   }
 
+  if (pathname === '/platform' || pathname.startsWith('/platform/')) {
+    return <>{children}</>;
+  }
+
   return (
     <Providers>
       <AuthGate>
