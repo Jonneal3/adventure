@@ -21,10 +21,19 @@ async function digest(client, table) {
   return { count: result.rowCount, sha256: hash.digest("hex") };
 }
 
-async function catalogDigest(client, query) {
+// PostgreSQL versions render the same varchar-array CHECK with casts either
+// around the array or around each element. Normalize only that known form.
+function normalizeConstraintDefinition(value) {
+  return value.replace(/\(\(ARRAY\[([^\]]+)\]\)::text\[\]\)/g, '(ARRAY[$1])')
+    .replace(/\('([^']*)'::character varying\)::text/g, "'$1'")
+    .replace(/'([^']*)'::character varying/g, "'$1'");
+}
+
+async function catalogDigest(client, query, name) {
   const result = await client.query(query);
   const hash = createHash("sha256");
-  for (const row of result.rows.map((item) => JSON.stringify(item)).sort()) hash.update(row).update("\n");
+  for (const row of result.rows.map((item) => JSON.stringify(name === "constraints"
+    ? { ...item, definition: normalizeConstraintDefinition(item.definition) } : item)).sort()) hash.update(row).update("\n");
   return { count: result.rowCount, sha256: hash.digest("hex") };
 }
 
@@ -72,7 +81,7 @@ try {
   const schemaMismatches = [];
   const schemaCounts = {};
   for (const [name, query] of Object.entries(catalogChecks)) {
-    const a = await catalogDigest(source, query), b = await catalogDigest(target, query);
+    const a = await catalogDigest(source, query, name), b = await catalogDigest(target, query, name);
     schemaCounts[name] = a.count;
     if (a.count !== b.count || a.sha256 !== b.sha256)
       schemaMismatches.push({ catalog: name, sourceCount: a.count, targetCount: b.count });

@@ -79,6 +79,9 @@ try {
     $$ SELECT COALESCE(nullif(current_setting('app.user_id', true), ''),
       nullif(current_setting('request.jwt.claim.sub', true), ''),
       nullif(current_setting('request.jwt.claims', true), '')::jsonb->>'sub')::uuid $$`);
+  await target.query(`CREATE OR REPLACE FUNCTION auth.role() RETURNS text LANGUAGE sql STABLE AS
+    $$ SELECT COALESCE(nullif(current_setting('request.jwt.claim.role', true), ''),
+      nullif(current_setting('request.jwt.claims', true), '')::jsonb->>'role') $$`);
   for (const user of users) {
     const name = String(user.raw_user_meta_data?.full_name || user.raw_user_meta_data?.name || user.email.split("@")[0]);
     await target.query(`INSERT INTO app_auth."user" (id,name,email,email_verified,created_at,updated_at)

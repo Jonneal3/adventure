@@ -43,6 +43,13 @@ try {
     if (!present.rowCount) await target.query(`CREATE ROLE ${role} NOLOGIN`);
   }
   await target.query("CREATE SCHEMA IF NOT EXISTS public");
+  // Supabase places uuid-ossp in `extensions`, while the application schema
+  // refers to extensions.uuid_generate_v4() in table defaults.
+  await target.query("CREATE SCHEMA IF NOT EXISTS extensions");
+  await target.query('CREATE EXTENSION IF NOT EXISTS "uuid-ossp" WITH SCHEMA extensions');
+  // Supabase installed unaccent in public. Extension-owned functions are
+  // excluded from pg_dump, so recreate them before checking schema parity.
+  await target.query('CREATE EXTENSION IF NOT EXISTS unaccent WITH SCHEMA public');
   run(["--dbname", pgEnv.PGDATABASE, "--schema=public", "--no-owner", "--no-acl", "--single-transaction", "--exit-on-error", archive]);
 
   // Copy only application-role ACLs from the source dump. Supabase's internal roles

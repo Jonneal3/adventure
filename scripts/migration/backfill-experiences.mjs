@@ -19,7 +19,7 @@ try {
       VALUES ($1,'usage','trialing',now()+interval '30 days',now()+interval '30 days') ON CONFLICT (account_id) DO NOTHING`, [account.id]);
     report.accounts++;
   }
-  const instances = await client.query(`SELECT i.id,i.account_id,i.config,i.flow_config,i.instance_type,i.use_case,
+  const instances = await client.query(`SELECT i.id,i.account_id,i.config,i.instance_type,i.use_case,
     jsonb_agg(jsonb_build_object('id',s.id,'industryId',s.category_id,'name',s.subcategory,'instanceType',s.instance_type)
       ORDER BY s.subcategory) FILTER (WHERE s.id IS NOT NULL) AS services
     FROM public.instances i LEFT JOIN public.instance_subcategories link ON link.instance_id=i.id
@@ -35,7 +35,7 @@ try {
     const draft = composeExperience(industryId, presets);
     await client.query(`INSERT INTO adventure_experiences (instance_id,account_id,draft,legacy_config)
       VALUES ($1,$2,$3::jsonb,$4::jsonb) ON CONFLICT (instance_id) DO NOTHING`,
-      [item.id, item.account_id, JSON.stringify(draft), JSON.stringify({ config: item.config, flowConfig: item.flow_config, instanceType: item.instance_type, useCase: item.use_case })]);
+      [item.id, item.account_id, JSON.stringify(draft), JSON.stringify({ config: item.config, instanceType: item.instance_type, useCase: item.use_case })]);
     report.converted++;
   }
   console.log(JSON.stringify(report));
